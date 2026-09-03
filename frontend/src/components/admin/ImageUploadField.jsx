@@ -1,5 +1,7 @@
 import React, { useState, useRef } from 'react';
-import { UploadCloud, Link as LinkIcon, Image as ImageIcon, X, RefreshCw, AlertCircle } from 'lucide-react';
+import { UploadCloud, Link as LinkIcon, Image as ImageIcon, X, RefreshCw, AlertCircle, Loader2 } from 'lucide-react';
+import api from '../../services/api';
+import { compressImages } from '../../utils/imageCompressor';
 
 export default function ImageUploadField({
   label = 'Image Upload',
@@ -11,37 +13,76 @@ export default function ImageUploadField({
 }) {
   const [urlInput, setUrlInput] = useState('');
   const [isDragging, setIsDragging] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState(null);
   const fileInputRef = useRef(null);
 
   const images = multiple ? (Array.isArray(value) ? value : value ? [value] : []) : (value ? [value] : []);
 
-  const handleFileSelect = (files) => {
+  const handleFileSelect = async (files) => {
     setError(null);
-    const validFiles = [];
+    const fileList = Array.from(files);
 
-    Array.from(files).forEach((file) => {
-      if (!file.type.startsWith('image/')) {
-        setError('Only image files (JPEG, PNG, WebP) are supported.');
-        return;
-      }
-      if (file.size > 5 * 1024 * 1024) {
-        setError('File size exceeds 5MB limit.');
-        return;
-      }
+    const validFiles = fileList.filter((file) => {
+      const isImg = file.type.startsWith('image/');
+      const isValidExt = /\.(jpe?g|png|webp)$/i.test(file.name);
+      return isImg || isValidExt;
+    });
 
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const dataUrl = e.target.result;
+    if (validFiles.length === 0) {
+      setError('Only image files (JPEG, PNG, WebP) are supported.');
+      return;
+    }
+
+    const availableSlots = multiple ? maxFiles - images.length : 1;
+    if (availableSlots <= 0) {
+      setError(`Maximum limit of ${maxFiles} image(s) reached.`);
+      return;
+    }
+
+    const filesToProcess = validFiles.slice(0, availableSlots);
+
+    try {
+      setIsUploading(true);
+
+      // Step 1: Client-side compression (resizes <= 2000px, targets <= 5MB)
+      const compressedFiles = await compressImages(filesToProcess);
+
+      // Step 2: Prepare multipart FormData
+      const formData = new FormData();
+      compressedFiles.forEach((file) => {
+        formData.append('images', file);
+      });
+
+      // Step 3: POST /api/admin/upload -> multer memoryStorage -> Cloudinary
+      const res = await api.post('/admin/upload', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      if (res.data?.success && Array.isArray(res.data?.urls)) {
         if (multiple) {
-          const updated = [...images, dataUrl].slice(0, maxFiles);
+          const updated = [...images, ...res.data.urls].slice(0, maxFiles);
           onChange(updated);
         } else {
-          onChange(dataUrl);
+          onChange(res.data.urls[0] || '');
         }
-      };
-      reader.readAsDataURL(file);
-    });
+      } else {
+        throw new Error(res.data?.message || 'Failed to upload images.');
+      }
+    } catch (err) {
+      const errorMsg =
+        err.response?.data?.message ||
+        err.message ||
+        'Image upload failed. Please try again.';
+      setError(errorMsg);
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
   };
 
   const handleDragOver = (e) => {
@@ -168,22 +209,34 @@ export default function ImageUploadField({
               multiple={multiple}
               className="hidden"
             />
-            <div className="flex flex-col items-center justify-center space-y-2">
-              <div className="w-10 h-10 rounded-2xl bg-white border border-[#D6CFFF]/60 shadow-sm flex items-center justify-center text-[#7464B8]">
-                <UploadCloud className="w-5 h-5" />
+            {isUploading ? (
+              <div className="flex flex-col items-center justify-center space-y-2 py-1">
+                <div className="w-10 h-10 rounded-2xl bg-white border border-[#D6CFFF]/60 shadow-sm flex items-center justify-center text-[#7464B8]">
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                </div>
+                <div className="text-xs font-semibold text-[#7464B8]">
+                  Compressing & uploading to Cloudinary...
+                </div>
+                <p className="text-[10px] text-[#6F6B78]">Optimizing quality and storing permanently</p>
               </div>
-              <div className="text-xs text-[#171522]">
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="font-semibold text-[#7464B8] hover:underline"
-                >
-                  Choose file
-                </button>{' '}
-                or drag & drop
+            ) : (
+              <div className="flex flex-col items-center justify-center space-y-2">
+                <div className="w-10 h-10 rounded-2xl bg-white border border-[#D6CFFF]/60 shadow-sm flex items-center justify-center text-[#7464B8]">
+                  <UploadCloud className="w-5 h-5" />
+                </div>
+                <div className="text-xs text-[#171522]">
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="font-semibold text-[#7464B8] hover:underline"
+                  >
+                    Choose file
+                  </button>{' '}
+                  or drag & drop
+                </div>
+                <p className="text-[10px] text-[#6F6B78]">{helperText}</p>
               </div>
-              <p className="text-[10px] text-[#6F6B78]">{helperText}</p>
-            </div>
+            )}
           </div>
 
           {/* URL Input Form */}

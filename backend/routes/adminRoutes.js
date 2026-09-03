@@ -11,9 +11,12 @@ import {
   getAdminCoupons,
   createCoupon,
   deleteCoupon,
+  uploadProductImages,
 } from '../controllers/adminController.js';
 import { protect } from '../middleware/authMiddleware.js';
 import { adminOnly } from '../middleware/adminMiddleware.js';
+import { handleUploadMiddleware } from '../middleware/uploadMiddleware.js';
+
 
 const router = express.Router();
 
@@ -21,6 +24,10 @@ const router = express.Router();
 router.use(protect, adminOnly);
 
 router.get('/metrics', getDashboardMetrics);
+
+// Product image upload (supports up to 10 images, memoryStorage -> Cloudinary)
+router.post('/upload', handleUploadMiddleware, uploadProductImages);
+
 
 // Product management
 router.route('/products')

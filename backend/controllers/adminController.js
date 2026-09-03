@@ -4,6 +4,7 @@ import User from '../models/User.js';
 import Coupon from '../models/Coupon.js';
 import { isMongoConnected } from '../config/db.js';
 import { mockStore } from '../config/mockStore.js';
+import { uploadStreamToCloudinary } from '../config/cloudinary.js';
 
 export const getDashboardMetrics = async (req, res) => {
   try {
@@ -359,3 +360,36 @@ export const deleteCoupon = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+export const uploadProductImages = async (req, res) => {
+  try {
+    const files = req.files || (req.file ? [req.file] : []);
+
+    if (!files || files.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'No image files provided for upload.',
+      });
+    }
+
+    // Upload each buffer to Cloudinary in ocean_jewel/products folder
+    const uploadPromises = files.map((file) =>
+      uploadStreamToCloudinary(file.buffer, 'ocean_jewel/products')
+    );
+
+    const uploadResults = await Promise.all(uploadPromises);
+    const urls = uploadResults.map((r) => r.secure_url);
+
+    return res.json({
+      success: true,
+      urls,
+    });
+  } catch (error) {
+    console.error('❌ [Cloudinary Upload Error]', error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to upload images to Cloudinary.',
+    });
+  }
+};
+
