@@ -1,5 +1,7 @@
-import mongoose from 'mongoose';
 import dotenv from 'dotenv';
+dotenv.config();
+
+import mongoose from 'mongoose';
 import User from '../models/User.js';
 import Product from '../models/Product.js';
 import Category from '../models/Category.js';
@@ -9,7 +11,6 @@ import Review from '../models/Review.js';
 import RewardTransaction from '../models/RewardTransaction.js';
 import { connectDB } from '../config/db.js';
 
-dotenv.config();
 
 const categories = [
   // MEN CATEGORIES
@@ -534,12 +535,8 @@ export const seedDatabase = async () => {
       `);
       process.exit(1);
     }
+    await connectDB();
 
-    const isConnected = await connectDB();
-    if (!isConnected) {
-      console.log('Skipping DB write since MongoDB is offline. Server fallback mode will handle requests.');
-      return;
-    }
 
     console.log('Clearing existing product catalog collections...');
     await Product.deleteMany({});

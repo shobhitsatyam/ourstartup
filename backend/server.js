@@ -1,6 +1,8 @@
+import dotenv from 'dotenv';
+dotenv.config();
+
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import { connectDB } from './config/db.js';
 import { errorHandler, notFound } from './middleware/errorHandler.js';
 
@@ -14,7 +16,6 @@ import rewardRoutes from './routes/rewardRoutes.js';
 import reviewRoutes from './routes/reviewRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 
-dotenv.config();
 
 // Environment Validation
 const validateEnvironment = () => {
@@ -87,15 +88,24 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 
-// Start server immediately & connect to DB asynchronously in background
-app.listen(PORT, () => {
-  console.log(`
+// Connect to MongoDB first; start server only after connection succeeds
+const startServer = async () => {
+  try {
+    await connectDB();
+
+    app.listen(PORT, () => {
+      console.log(`
 💎 =======================================================
 💎  OCEAN JEWEL — LUXURY JEWELLERY API SERVER
 💎  Listening on http://localhost:${PORT}
 💎  Brand Theme: #D6CFFF | Pure Pearl & Frosted Lavender
 💎 =======================================================
-  `);
-  // Asynchronous MongoDB connection attempt
-  connectDB().catch((err) => console.log('DB connect err:', err.message));
-});
+      `);
+    });
+  } catch (error) {
+    console.error(`❌ [Server Startup] Failed to connect to MongoDB: ${error.name} - ${error.message}`);
+    process.exit(1);
+  }
+};
+
+startServer();
