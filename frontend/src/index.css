@@ -1,0 +1,144 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    border-color: rgba(214, 207, 255, 0.3);
+  }
+  
+  body {
+    background-color: #FAF9FF;
+    color: #17151F;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  /* Custom Luxury Scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #F8F7FF;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #D6CFFF;
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #B6ABF4;
+  }
+}
+
+/* Glassmorphism Design System */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.68);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 0 10px 30px -10px rgba(23, 21, 31, 0.05);
+}
+
+.glass-panel-dark {
+  background: rgba(23, 21, 31, 0.85);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(214, 207, 255, 0.18);
+  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.5);
+}
+
+.glass-nav {
+  background: rgba(250, 249, 255, 0.82);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(214, 207, 255, 0.35);
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(214, 207, 255, 0.4);
+  box-shadow: 0 8px 24px -6px rgba(23, 21, 31, 0.04);
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glass-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(214, 207, 255, 0.85);
+  box-shadow: 0 20px 35px -10px rgba(214, 207, 255, 0.3);
+}
+
+/* Subtle Pearl Glow */
+.pearl-glow {
+  box-shadow: 0 0 25px 3px rgba(214, 207, 255, 0.45);
+}
+
+.pearl-glow-subtle {
+  box-shadow: 0 0 15px 1px rgba(214, 207, 255, 0.25);
+}
+
+/* Luxury Shine Effect on Hover */
+.btn-shine {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-shine::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -60%;
+  width: 40%;
+  height: 200%;
+  background: linear-gradient(
+    60deg,
+    rgba(255, 255, 255, 0) 20%,
+    rgba(255, 255, 255, 0.45) 50%,
+    rgba(255, 255, 255, 0) 80%
+  );
+  transform: rotate(25deg);
+  transition: all 0.75s ease;
+}
+
+.btn-shine:hover::after {
+  left: 130%;
+}
+
+/* Editorial Gradient Text */
+.text-gradient-luxury {
+  background: linear-gradient(135deg, #17151F 30%, #4A4458 70%, #17151F 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.text-gradient-pearl {
+  background: linear-gradient(135deg, #FFFFFF 0%, #D6CFFF 50%, #FFFFFF 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Ambient Animated Blobs */
+@keyframes blob-float {
+  0%, 100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  33% {
+    transform: translate(30px, -50px) scale(1.08);
+  }
+  66% {
+    transform: translate(-20px, 20px) scale(0.95);
+  }
+}
+
+.animate-blob {
+  animation: blob-float 18s infinite ease-in-out;
+}
+
+.animation-delay-2000 {
+  animation-delay: 2s;
+}
+
+.animation-delay-4000 {
+  animation-delay: 4s;
+}
