@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import api from '../services/api';
+import api, { API_BASE_URL } from '../services/api';
 import { useToast } from './ToastContext';
 
 const AuthContext = createContext();
@@ -18,7 +18,7 @@ export const AuthProvider = ({ children }) => {
           setUser(parsed);
           // Sync fresh profile in background
           try {
-            const res = await api.get('/auth/me');
+            const res = await api.get(`${API_BASE_URL}/api/auth/me`);
             if (res.data?.success) {
               const freshData = { ...res.data.data, token: parsed.token };
               setUser(freshData);
@@ -39,7 +39,7 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
-      const res = await api.post('/auth/login', { email, password });
+      const res = await api.post(`${API_BASE_URL}/api/auth/login`, { email, password });
       if (res.data?.success) {
         const userData = res.data.data;
         setUser(userData);
@@ -56,7 +56,7 @@ export const AuthProvider = ({ children }) => {
 
   const register = async (name, email, phone, password) => {
     try {
-      const res = await api.post('/auth/register', { name, email, phone, password });
+      const res = await api.post(`${API_BASE_URL}/api/auth/register`, { name, email, phone, password });
       if (res.data?.success) {
         const userData = res.data.data;
         setUser(userData);
@@ -79,7 +79,7 @@ export const AuthProvider = ({ children }) => {
 
   const refreshUser = async () => {
     try {
-      const res = await api.get('/auth/me');
+      const res = await api.get(`${API_BASE_URL}/api/auth/me`);
       if (res.data?.success) {
         const updated = { ...res.data.data, token: user?.token };
         setUser(updated);
@@ -92,7 +92,7 @@ export const AuthProvider = ({ children }) => {
 
   const updateProfile = async (profileData) => {
     try {
-      const res = await api.put('/auth/profile', profileData);
+      const res = await api.put(`${API_BASE_URL}/api/auth/profile`, profileData);
       if (res.data?.success) {
         const updated = { ...res.data.data, token: user?.token };
         setUser(updated);
