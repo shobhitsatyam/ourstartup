@@ -20,6 +20,12 @@ export default function QuickViewModal({ product, isOpen, onClose }) {
     onClose();
   };
 
+  const effectiveDiscount = (product?.discount && product.discount > 0)
+    ? product.discount
+    : (product?.originalPrice && product.originalPrice > product.price)
+    ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
+    : 0;
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -50,23 +56,23 @@ export default function QuickViewModal({ product, isOpen, onClose }) {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 items-center">
               {/* Product Image */}
-              <div className="rounded-2xl overflow-hidden aspect-square md:aspect-[4/5] bg-gray-100 border border-[#D6CFFF]/40">
+              <div className="relative aspect-square rounded-2xl overflow-hidden bg-[#F3EFFF] border border-[#D6CFFF]/40">
                 <img
-                  src={product.images && product.images[0] ? product.images[0] : ''}
+                  src={product.images?.[0] || 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=800&q=80'}
                   alt={product.name}
                   className="w-full h-full object-cover"
                 />
               </div>
 
-              {/* Details */}
+              {/* Product Info */}
               <div className="space-y-4">
                 <div>
-                  <span className="text-[11px] font-bold uppercase tracking-widest text-[#7464B8]">
-                    {product.category} &bull; {product.gender}
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-[#7464B8]">
+                    {product.category}
                   </span>
-                  <h3 className="font-serif text-2xl font-light text-[#17151F] mt-1">
+                  <h2 className="font-serif text-xl sm:text-2xl font-normal text-[#17151F] leading-snug mt-1">
                     {product.name}
-                  </h3>
+                  </h2>
 
                   {/* Rating */}
                   <div className="flex items-center gap-1.5 mt-1 text-xs">
@@ -90,9 +96,9 @@ export default function QuickViewModal({ product, isOpen, onClose }) {
                       ₹{product.originalPrice.toLocaleString('en-IN')}
                     </span>
                   )}
-                  {product.discount > 0 && (
+                  {effectiveDiscount > 0 && (
                     <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-rose-600 text-white">
-                      {product.discount}% OFF
+                      {effectiveDiscount}% OFF
                     </span>
                   )}
                 </div>

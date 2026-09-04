@@ -62,13 +62,14 @@ export default function AdminDashboardPage() {
   // Modals State
   const [showProductModal, setShowProductModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
+  const [skuLoading, setSkuLoading] = useState(false);
   const [productForm, setProductForm] = useState({
     name: '',
-    category: 'Earrings',
+    category: 'Rings',
     gender: 'women',
     price: '',
     originalPrice: '',
-    sku: 'OJ-JW-001',
+    sku: '',
     stock: 20,
     description: '',
     images: ['https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?auto=format&fit=crop&w=800&q=80'],
@@ -80,6 +81,7 @@ export default function AdminDashboardPage() {
   });
 
   const [showCouponModal, setShowCouponModal] = useState(false);
+  const [editingCoupon, setEditingCoupon] = useState(null);
   const [couponForm, setCouponForm] = useState({
     code: '',
     description: '',
@@ -87,10 +89,27 @@ export default function AdminDashboardPage() {
     discountAmount: 15,
     minOrderAmount: 999,
     maxDiscountAmount: 1500,
+    expiryDate: '',
+    usageLimit: 1000,
+    isActive: true,
   });
 
   const { addToast } = useToast();
   const { user, logout } = useAuth();
+
+  const fetchNextSku = async (category) => {
+    setSkuLoading(true);
+    try {
+      const res = await api.get(`/admin/products/next-sku?category=${encodeURIComponent(category || 'Rings')}`);
+      if (res.data?.success && res.data.sku) {
+        setProductForm((prev) => ({ ...prev, sku: res.data.sku }));
+      }
+    } catch (err) {
+      console.error('Failed fetching next SKU:', err);
+    } finally {
+      setSkuLoading(false);
+    }
+  };
 
   const fetchAllAdminData = async () => {
     setSyncing(true);
@@ -123,6 +142,10 @@ export default function AdminDashboardPage() {
 
   const handleSaveProduct = async (e) => {
     e.preventDefault();
+    if (productForm.originalPrice && Number(productForm.originalPrice) > 0 && Number(productForm.price) > Number(productForm.originalPrice)) {
+      addToast('Selling price cannot be greater than original price when a discount is intended', 'error');
+      return;
+    }
     try {
       if (editingProduct) {
         await api.put(`/admin/products/${editingProduct._id}`, productForm);
@@ -166,25 +189,91 @@ export default function AdminDashboardPage() {
     }
   };
 
+  const handleOpenCreateCoupon = () => {
+    setEditingCoupon(null);
+    const futureDate = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    setCouponForm({
+      code: '',
+      description: '',
+      discountType: 'percentage',
+      discountAmount: 15,
+      minOrderAmount: 999,
+      maxDiscountAmount: 1500,
+      expiryDate: futureDate,
+      usageLimit: 1000,
+      isActive: true,
+    });
+    setShowCouponModal(true);
+  };
+
+  const handleOpenEditCoupon = (c) => {
+    setEditingCoupon(c);
+    let expDate = '';
+    if (c.expiryDate) {
+      expDate = new Date(c.expiryDate).toISOString().split('T')[0];
+    }
+    setCouponForm({
+      code: c.code,
+      description: c.description || '',
+      discountType: c.discountType || 'percentage',
+      discountAmount: c.discountAmount || 0,
+      minOrderAmount: c.minOrderAmount || 0,
+      maxDiscountAmount: c.maxDiscountAmount || 5000,
+      expiryDate: expDate,
+      usageLimit: c.usageLimit || 1000,
+      isActive: c.isActive !== false,
+    });
+    setShowCouponModal(true);
+  };
+
   const handleSaveCoupon = async (e) => {
     e.preventDefault();
+    if (!couponForm.code || !couponForm.code.trim()) {
+      addToast('Please enter a coupon code', 'error');
+      return;
+    }
     try {
-      await api.post('/admin/coupons', couponForm);
-      addToast(`Coupon '${couponForm.code}' created!`, 'success');
+      if (editingCoupon) {
+        await api.put(`/admin/coupons/${editingCoupon._id || editingCoupon.id}`, couponForm);
+        addToast(`Coupon '${couponForm.code}' updated successfully!`, 'success');
+      } else {
+        await api.post('/admin/coupons', couponForm);
+        addToast(`Coupon '${couponForm.code}' created successfully!`, 'success');
+      }
       setShowCouponModal(false);
-      setCouponForm({
-        code: '',
-        description: '',
-        discountType: 'percentage',
-        discountAmount: 15,
-        minOrderAmount: 999,
-        maxDiscountAmount: 1500,
-      });
+      setEditingCoupon(null);
       fetchAllAdminData();
     } catch (e) {
-      setCoupons([...coupons, { ...couponForm, id: Date.now().toString(), usageCount: 0, active: true }]);
-      addToast(`Coupon '${couponForm.code}' created!`, 'success');
-      setShowCouponModal(false);
+      addToast(e.response?.data?.message || 'Failed to save coupon', 'error');
+    }
+  };
+
+  const handleToggleCouponStatus = async (coupon) => {
+    const couponId = coupon._id || coupon.id;
+    try {
+      const res = await api.patch(`/admin/coupons/${couponId}/status`);
+      addToast(res.data?.message || 'Coupon status updated', 'success');
+      fetchAllAdminData();
+    } catch (err) {
+      setCoupons((prev) =>
+        prev.map((c) => ((c._id || c.id) === couponId ? { ...c, isActive: !c.isActive } : c))
+      );
+      addToast('Coupon status updated', 'success');
+    }
+  };
+
+  const handleDeleteCoupon = async (coupon) => {
+    const couponId = coupon._id || coupon.id;
+    if (!window.confirm(`Are you sure you want to delete coupon '${coupon.code}'? Existing orders will not be affected.`)) {
+      return;
+    }
+    try {
+      await api.delete(`/admin/coupons/${couponId}`);
+      addToast(`Coupon '${coupon.code}' deleted successfully`, 'info');
+      fetchAllAdminData();
+    } catch (err) {
+      setCoupons((prev) => prev.filter((c) => (c._id || c.id) !== couponId));
+      addToast('Coupon removed', 'info');
     }
   };
 
@@ -572,14 +661,15 @@ export default function AdminDashboardPage() {
                 </div>
                 <button
                   onClick={() => {
+                    const defaultCat = 'Rings';
                     setEditingProduct(null);
                     setProductForm({
                       name: '',
-                      category: 'Earrings',
+                      category: defaultCat,
                       gender: 'women',
                       price: '',
                       originalPrice: '',
-                      sku: 'OJ-JW-' + Math.floor(100 + Math.random() * 900),
+                      sku: '',
                       stock: 25,
                       description: '',
                       images: ['https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?auto=format&fit=crop&w=800&q=80'],
@@ -589,6 +679,7 @@ export default function AdminDashboardPage() {
                       isBestseller: false,
                       isAntiTarnish: true,
                     });
+                    fetchNextSku(defaultCat);
                     setShowProductModal(true);
                   }}
                   className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-semibold bg-[#7464B8] text-white hover:bg-[#5f509e] transition-all shadow-xs"
@@ -618,9 +709,9 @@ export default function AdminDashboardPage() {
                     className="px-3.5 py-2 rounded-xl text-xs bg-[#FAF9FF] border border-[#D6CFFF]/60 focus:border-[#7464B8] outline-hidden text-[#171522]"
                   >
                     <option value="all">All Categories</option>
-                    <option value="Earrings">Earrings</option>
                     <option value="Rings">Rings</option>
-                    <option value="Chains">Chains</option>
+                    <option value="Earrings">Earrings</option>
+                    <option value="Necklaces">Necklaces</option>
                     <option value="Bracelets">Bracelets</option>
                     <option value="Anklets">Anklets</option>
                     <option value="Saree Accessories">Saree Accessories</option>
@@ -669,9 +760,14 @@ export default function AdminDashboardPage() {
                           </td>
                           <td className="py-3 px-4 font-semibold text-[#171522]">
                             ₹{(p.price || 1499).toLocaleString('en-IN')}
-                            {p.originalPrice && (
+                            {p.originalPrice && p.originalPrice > p.price && (
                               <span className="block text-[10px] text-gray-400 line-through">
                                 ₹{p.originalPrice.toLocaleString('en-IN')}
+                              </span>
+                            )}
+                            {p.discount > 0 && (
+                              <span className="inline-block mt-0.5 px-1.5 py-0.2 rounded text-[9px] font-bold bg-rose-50 text-rose-600 border border-rose-200">
+                                {p.discount}% OFF
                               </span>
                             )}
                           </td>
@@ -896,7 +992,7 @@ export default function AdminDashboardPage() {
                   </p>
                 </div>
                 <button
-                  onClick={() => setShowCouponModal(true)}
+                  onClick={handleOpenCreateCoupon}
                   className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-semibold bg-[#7464B8] text-white hover:bg-[#5f509e] transition-all shadow-xs"
                 >
                   <Plus className="w-4 h-4" />
@@ -905,29 +1001,104 @@ export default function AdminDashboardPage() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                {coupons.map((c) => (
-                  <div
-                    key={c._id || c.id || c.code}
-                    className="bg-white rounded-2xl p-5 border border-[#D6CFFF]/50 shadow-xs space-y-3"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="px-3 py-1 rounded-xl bg-[#FAF9FF] border border-[#D6CFFF] font-mono text-xs font-bold text-[#7464B8]">
-                        {c.code}
-                      </span>
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                        Active
-                      </span>
+                {coupons.map((c) => {
+                  const isExpired = c.expiryDate && new Date(c.expiryDate) < new Date();
+                  const isActive = c.isActive !== false;
+                  const formattedExpiry = c.expiryDate
+                    ? new Date(c.expiryDate).toLocaleDateString('en-IN', {
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric',
+                      })
+                    : 'No Expiry';
+
+                  return (
+                    <div
+                      key={c._id || c.id || c.code}
+                      className={`bg-white rounded-2xl p-5 border shadow-xs space-y-3 transition-all ${
+                        !isActive
+                          ? 'border-gray-200 opacity-75 bg-gray-50/50'
+                          : isExpired
+                          ? 'border-amber-200 bg-amber-50/20'
+                          : 'border-[#D6CFFF]/50 hover:border-[#7464B8]/50'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="px-3 py-1 rounded-xl bg-[#FAF9FF] border border-[#D6CFFF] font-mono text-xs font-bold text-[#7464B8]">
+                          {c.code}
+                        </span>
+                        <div>
+                          {!isActive ? (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-50 text-rose-700 border border-rose-200">
+                              Inactive
+                            </span>
+                          ) : isExpired ? (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                              Expired
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              Active
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <p className="text-xs text-[#171522] font-semibold">
+                        {c.discountType === 'percentage'
+                          ? `${c.discountAmount}% OFF ${c.maxDiscountAmount ? `(Up to ₹${c.maxDiscountAmount})` : ''}`
+                          : `Flat ₹${c.discountAmount} OFF`}
+                      </p>
+                      <p className="text-[11px] text-[#6F6B78] line-clamp-2">
+                        {c.description || 'Valid on fine jewellery orders.'}
+                      </p>
+
+                      <div className="pt-2 border-t border-[#D6CFFF]/20 text-[10px] text-gray-500 space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span>Min Order: ₹{c.minOrderAmount || 0}</span>
+                          <span>{c.usedCount || c.usageCount || 0} / {c.usageLimit || '∞'} used</span>
+                        </div>
+                        <div className="flex items-center justify-between text-gray-400">
+                          <span>Expires: {formattedExpiry}</span>
+                        </div>
+                      </div>
+
+                      {/* Action Bar */}
+                      <div className="pt-2 border-t border-[#D6CFFF]/20 flex items-center justify-between gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleToggleCouponStatus(c)}
+                          className={`px-2.5 py-1 rounded-lg text-[10px] font-semibold transition-colors ${
+                            isActive
+                              ? 'text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200'
+                              : 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200'
+                          }`}
+                        >
+                          {isActive ? 'Deactivate' : 'Activate'}
+                        </button>
+
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEditCoupon(c)}
+                            className="p-1.5 rounded-lg text-gray-500 hover:text-[#7464B8] hover:bg-[#FAF9FF] border border-transparent hover:border-[#D6CFFF]/50 transition-all"
+                            title="Edit Coupon"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteCoupon(c)}
+                            className="p-1.5 rounded-lg text-gray-400 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-200 transition-all"
+                            title="Delete Coupon"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
                     </div>
-                    <p className="text-xs text-[#171522] font-semibold">
-                      {c.discountType === 'percentage' ? `${c.discountAmount}% Discount` : `Flat ₹${c.discountAmount} OFF`}
-                    </p>
-                    <p className="text-[11px] text-[#6F6B78]">{c.description || 'Valid on all fine jewellery orders.'}</p>
-                    <div className="pt-2 border-t border-[#D6CFFF]/20 text-[10px] text-gray-400 flex items-center justify-between">
-                      <span>Min Order: ₹{c.minOrderAmount || 999}</span>
-                      <span>{c.usageCount || 0} times used</span>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
@@ -1013,14 +1184,15 @@ export default function AdminDashboardPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-[#171522] mb-1">SKU Code</label>
-                  <input
-                    type="text"
-                    required
-                    value={productForm.sku}
-                    onChange={(e) => setProductForm({ ...productForm, sku: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl text-xs bg-[#FAF9FF] border border-[#D6CFFF]/60 focus:border-[#7464B8] outline-hidden text-[#171522] font-mono"
-                  />
+                  <label className="block text-xs font-semibold text-[#171522] mb-1">
+                    SKU Code <span className="text-[10px] text-[#7464B8] font-normal">(Auto-Generated)</span>
+                  </label>
+                  <div className="w-full px-3.5 py-2.5 rounded-xl text-xs bg-gray-100/70 border border-[#D6CFFF]/60 text-[#171522] font-mono flex items-center justify-between select-none">
+                    <span className="font-semibold">{skuLoading ? 'Generating SKU...' : (productForm.sku || 'Assigned automatically')}</span>
+                    <span className="px-2 py-0.5 rounded-md text-[9px] font-bold tracking-wider uppercase bg-[#FAF9FF] text-[#7464B8] border border-[#D6CFFF]">
+                      {editingProduct ? 'Current' : 'Sequence'}
+                    </span>
+                  </div>
                 </div>
               </div>
 
@@ -1029,12 +1201,18 @@ export default function AdminDashboardPage() {
                   <label className="block text-xs font-semibold text-[#171522] mb-1">Category</label>
                   <select
                     value={productForm.category}
-                    onChange={(e) => setProductForm({ ...productForm, category: e.target.value })}
+                    onChange={(e) => {
+                      const newCat = e.target.value;
+                      setProductForm({ ...productForm, category: newCat });
+                      if (!editingProduct) {
+                        fetchNextSku(newCat);
+                      }
+                    }}
                     className="w-full px-3.5 py-2.5 rounded-xl text-xs bg-[#FAF9FF] border border-[#D6CFFF]/60 focus:border-[#7464B8] outline-hidden text-[#171522]"
                   >
-                    <option value="Earrings">Earrings</option>
                     <option value="Rings">Rings</option>
-                    <option value="Chains">Chains</option>
+                    <option value="Earrings">Earrings</option>
+                    <option value="Necklaces">Necklaces</option>
                     <option value="Bracelets">Bracelets</option>
                     <option value="Anklets">Anklets</option>
                     <option value="Saree Accessories">Saree Accessories</option>
@@ -1069,21 +1247,54 @@ export default function AdminDashboardPage() {
                   <input
                     type="number"
                     required
+                    min="1"
+                    placeholder="e.g. 1500"
                     value={productForm.price}
-                    onChange={(e) => setProductForm({ ...productForm, price: parseFloat(e.target.value) || '' })}
-                    className="w-full px-3.5 py-2.5 rounded-xl text-xs bg-[#FAF9FF] border border-[#D6CFFF]/60 focus:border-[#7464B8] outline-hidden text-[#171522]"
+                    onChange={(e) => setProductForm({ ...productForm, price: e.target.value === '' ? '' : parseFloat(e.target.value) })}
+                    className={`w-full px-3.5 py-2.5 rounded-xl text-xs bg-[#FAF9FF] border outline-hidden text-[#171522] ${
+                      productForm.originalPrice && Number(productForm.originalPrice) > 0 && Number(productForm.price) > Number(productForm.originalPrice)
+                        ? 'border-rose-400 focus:border-rose-500'
+                        : 'border-[#D6CFFF]/60 focus:border-[#7464B8]'
+                    }`}
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-[#171522] mb-1">Original Price (₹)</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-semibold text-[#171522]">Original Price / MRP (₹)</label>
+                    {productForm.originalPrice && Number(productForm.originalPrice) > Number(productForm.price) && Number(productForm.price) > 0 && (
+                      <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-rose-50 text-rose-600 border border-rose-200">
+                        {Math.round(((Number(productForm.originalPrice) - Number(productForm.price)) / Number(productForm.originalPrice)) * 100)}% OFF
+                      </span>
+                    )}
+                  </div>
                   <input
                     type="number"
+                    min="0"
+                    placeholder="e.g. 2000"
                     value={productForm.originalPrice}
-                    onChange={(e) => setProductForm({ ...productForm, originalPrice: parseFloat(e.target.value) || '' })}
+                    onChange={(e) => setProductForm({ ...productForm, originalPrice: e.target.value === '' ? '' : parseFloat(e.target.value) })}
                     className="w-full px-3.5 py-2.5 rounded-xl text-xs bg-[#FAF9FF] border border-[#D6CFFF]/60 focus:border-[#7464B8] outline-hidden text-[#171522]"
                   />
                 </div>
               </div>
+
+              {/* Live discount feedback & validation */}
+              {productForm.originalPrice && Number(productForm.originalPrice) > Number(productForm.price) && Number(productForm.price) > 0 && (
+                <div className="p-2.5 rounded-xl bg-rose-50/80 border border-rose-200 flex items-center justify-between text-xs text-rose-700">
+                  <span>
+                    Customer Saves: <strong>₹{(Number(productForm.originalPrice) - Number(productForm.price)).toLocaleString('en-IN')}</strong>
+                  </span>
+                  <span className="px-2 py-0.5 rounded-lg bg-rose-600 text-white font-bold text-[10px] tracking-wider uppercase">
+                    {Math.round(((Number(productForm.originalPrice) - Number(productForm.price)) / Number(productForm.originalPrice)) * 100)}% OFF
+                  </span>
+                </div>
+              )}
+
+              {productForm.originalPrice && Number(productForm.originalPrice) > 0 && Number(productForm.price) > Number(productForm.originalPrice) && (
+                <p className="text-[11px] text-rose-600 font-medium">
+                  ⚠️ Selling price (₹{productForm.price}) cannot be greater than Original price (₹{productForm.originalPrice}) when a discount is intended.
+                </p>
+              )}
 
               {/* Multi-Image Upload */}
               <ImageUploadField
@@ -1156,12 +1367,14 @@ export default function AdminDashboardPage() {
         </div>
       )}
 
-      {/* MODAL: CREATE COUPON */}
+      {/* MODAL: CREATE / EDIT COUPON */}
       {showCouponModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full border border-[#D6CFFF]/60 shadow-2xl space-y-5">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs overflow-y-auto">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full border border-[#D6CFFF]/60 shadow-2xl space-y-5 my-8 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-3 border-b border-[#D6CFFF]/30">
-              <h3 className="font-serif text-xl text-[#171522] font-light">Create New Promo Coupon</h3>
+              <h3 className="font-serif text-xl text-[#171522] font-light">
+                {editingCoupon ? 'Edit Promo Coupon' : 'Create New Promo Coupon'}
+              </h3>
               <button
                 onClick={() => setShowCouponModal(false)}
                 className="p-2 rounded-xl text-gray-400 hover:text-gray-700 hover:bg-gray-100"
@@ -1183,6 +1396,17 @@ export default function AdminDashboardPage() {
                 />
               </div>
 
+              <div>
+                <label className="block text-xs font-semibold text-[#171522] mb-1">Description / Benefit</label>
+                <input
+                  type="text"
+                  value={couponForm.description}
+                  onChange={(e) => setCouponForm({ ...couponForm, description: e.target.value })}
+                  placeholder="e.g. 20% off on all luxury earrings"
+                  className="w-full px-3.5 py-2.5 rounded-xl text-xs bg-[#FAF9FF] border border-[#D6CFFF]/60 focus:border-[#7464B8] outline-hidden text-[#171522]"
+                />
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-[#171522] mb-1">Discount Type</label>
@@ -1192,7 +1416,7 @@ export default function AdminDashboardPage() {
                     className="w-full px-3.5 py-2.5 rounded-xl text-xs bg-[#FAF9FF] border border-[#D6CFFF]/60 focus:border-[#7464B8] outline-hidden text-[#171522]"
                   >
                     <option value="percentage">Percentage (%)</option>
-                    <option value="flat">Flat Cash (₹)</option>
+                    <option value="fixed">Flat Cash (₹)</option>
                   </select>
                 </div>
                 <div>
@@ -1200,6 +1424,7 @@ export default function AdminDashboardPage() {
                   <input
                     type="number"
                     required
+                    min="1"
                     value={couponForm.discountAmount}
                     onChange={(e) => setCouponForm({ ...couponForm, discountAmount: parseFloat(e.target.value) || 0 })}
                     className="w-full px-3.5 py-2.5 rounded-xl text-xs bg-[#FAF9FF] border border-[#D6CFFF]/60 focus:border-[#7464B8] outline-hidden text-[#171522]"
@@ -1207,14 +1432,64 @@ export default function AdminDashboardPage() {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-[#171522] mb-1">Min Order Amount (₹)</label>
-                <input
-                  type="number"
-                  value={couponForm.minOrderAmount}
-                  onChange={(e) => setCouponForm({ ...couponForm, minOrderAmount: parseFloat(e.target.value) || 0 })}
-                  className="w-full px-3.5 py-2.5 rounded-xl text-xs bg-[#FAF9FF] border border-[#D6CFFF]/60 focus:border-[#7464B8] outline-hidden text-[#171522]"
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-[#171522] mb-1">Min Order (₹)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={couponForm.minOrderAmount}
+                    onChange={(e) => setCouponForm({ ...couponForm, minOrderAmount: parseFloat(e.target.value) || 0 })}
+                    className="w-full px-3.5 py-2.5 rounded-xl text-xs bg-[#FAF9FF] border border-[#D6CFFF]/60 focus:border-[#7464B8] outline-hidden text-[#171522]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-[#171522] mb-1">Max Discount (₹)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    disabled={couponForm.discountType !== 'percentage'}
+                    value={couponForm.maxDiscountAmount}
+                    onChange={(e) => setCouponForm({ ...couponForm, maxDiscountAmount: parseFloat(e.target.value) || 0 })}
+                    className={`w-full px-3.5 py-2.5 rounded-xl text-xs bg-[#FAF9FF] border border-[#D6CFFF]/60 focus:border-[#7464B8] outline-hidden text-[#171522] ${
+                      couponForm.discountType !== 'percentage' ? 'opacity-50 cursor-not-allowed' : ''
+                    }`}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-[#171522] mb-1">Expiry Date</label>
+                  <input
+                    type="date"
+                    value={couponForm.expiryDate}
+                    onChange={(e) => setCouponForm({ ...couponForm, expiryDate: e.target.value })}
+                    className="w-full px-3.5 py-2.5 rounded-xl text-xs bg-[#FAF9FF] border border-[#D6CFFF]/60 focus:border-[#7464B8] outline-hidden text-[#171522]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-[#171522] mb-1">Usage Limit</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={couponForm.usageLimit}
+                    onChange={(e) => setCouponForm({ ...couponForm, usageLimit: parseInt(e.target.value) || 1000 })}
+                    className="w-full px-3.5 py-2.5 rounded-xl text-xs bg-[#FAF9FF] border border-[#D6CFFF]/60 focus:border-[#7464B8] outline-hidden text-[#171522]"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-2 border-t border-[#D6CFFF]/30">
+                <label className="flex items-center gap-2 cursor-pointer text-xs text-[#171522]">
+                  <input
+                    type="checkbox"
+                    checked={couponForm.isActive}
+                    onChange={(e) => setCouponForm({ ...couponForm, isActive: e.target.checked })}
+                    className="rounded text-[#7464B8] focus:ring-[#7464B8]"
+                  />
+                  <span>Active & available for customer checkout</span>
+                </label>
               </div>
 
               <div className="pt-3 flex items-center justify-end gap-3 border-t border-[#D6CFFF]/30">
@@ -1229,7 +1504,7 @@ export default function AdminDashboardPage() {
                   type="submit"
                   className="px-6 py-2 rounded-xl text-xs font-semibold bg-[#7464B8] text-white hover:bg-[#5f509e] shadow-xs"
                 >
-                  Create Coupon
+                  {editingCoupon ? 'Update Coupon' : 'Create Coupon'}
                 </button>
               </div>
             </form>

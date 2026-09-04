@@ -2,6 +2,7 @@ import Order from '../models/Order.js';
 import Product from '../models/Product.js';
 import User from '../models/User.js';
 import Coupon from '../models/Coupon.js';
+import { getNextSku } from '../models/SkuCounter.js';
 import { isMongoConnected } from '../config/db.js';
 import { mockStore } from '../config/mockStore.js';
 import { uploadStreamToCloudinary } from '../config/cloudinary.js';
@@ -81,6 +82,16 @@ export const getAdminProducts = async (req, res) => {
   }
 };
 
+export const getNextSkuPreview = async (req, res) => {
+  try {
+    const { category } = req.query;
+    const sku = await getNextSku(category || 'Earrings', true);
+    return res.json({ success: true, sku });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 export const createProduct = async (req, res) => {
   try {
     const {
@@ -111,18 +122,28 @@ export const createProduct = async (req, res) => {
       .replace(/[\s_-]+/g, '-')
       .replace(/^-+|-+$/g, '');
 
+    // Auto-generate unique persistent SKU based on category
+    const generatedSku = await getNextSku(category || 'Earrings', false);
+
+    const priceNum = Number(price) || 0;
+    const origNum = originalPrice ? Number(originalPrice) : 0;
+    const calculatedDiscount = origNum > priceNum && origNum > 0
+      ? Math.round(((origNum - priceNum) / origNum) * 100)
+      : 0;
+
     if (isMongoConnected) {
       const product = new Product({
         name,
         slug: generatedSlug,
+        sku: generatedSku,
         description,
         shortDescription: shortDescription || '',
         category,
         subCategory: subCategory || category,
-        gender: gender || 'women',
-        price: Number(price),
-        originalPrice: originalPrice ? Number(originalPrice) : Math.round(Number(price) * 1.4),
-        discount: originalPrice ? Math.round(((Number(originalPrice) - Number(price)) / Number(originalPrice)) * 100) : 30,
+        gender: gender ? gender.toLowerCase() : 'women',
+        price: priceNum,
+        originalPrice: origNum,
+        discount: calculatedDiscount,
         stock: Number(stock) || 20,
         images: images && images.length > 0 ? images : ['https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?auto=format&fit=crop&w=800&q=80'],
         material: material || '316L Stainless Steel & 18K Gold PVD',
@@ -141,14 +162,15 @@ export const createProduct = async (req, res) => {
         _id: `prod_custom_${Date.now()}`,
         name,
         slug: generatedSlug,
+        sku: generatedSku,
         description,
         shortDescription: shortDescription || '',
         category,
         subCategory: subCategory || category,
-        gender: gender || 'women',
-        price: Number(price),
-        originalPrice: originalPrice ? Number(originalPrice) : Math.round(Number(price) * 1.4),
-        discount: originalPrice ? Math.round(((Number(originalPrice) - Number(price)) / Number(originalPrice)) * 100) : 30,
+        gender: gender ? gender.toLowerCase() : 'women',
+        price: priceNum,
+        originalPrice: origNum,
+        discount: calculatedDiscount,
         stock: Number(stock) || 20,
         images: images && images.length > 0 ? images : ['https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?auto=format&fit=crop&w=800&q=80'],
         material: material || '316L Stainless Steel & 18K Gold PVD',
@@ -178,12 +200,35 @@ export const updateProduct = async (req, res) => {
       const product = await Product.findById(req.params.id);
       if (!product) return res.status(404).json({ success: false, message: 'Product not found' });
       Object.assign(product, req.body);
+
+      // Recalculate discount if prices change
+      if (req.body.price !== undefined || req.body.originalPrice !== undefined) {
+        const currentPrice = req.body.price !== undefined ? Number(req.body.price) : product.price;
+        const currentOrig = req.body.originalPrice !== undefined ? Number(req.body.originalPrice) : (product.originalPrice || 0);
+        if (currentOrig > currentPrice && currentOrig > 0) {
+          product.discount = Math.round(((currentOrig - currentPrice) / currentOrig) * 100);
+        } else {
+          product.discount = 0;
+        }
+      }
+
       const updatedProduct = await product.save();
       return res.json({ success: true, data: updatedProduct, message: 'Product updated successfully' });
     } else {
       const product = mockStore.products.find((p) => p._id.toString() === req.params.id);
       if (!product) return res.status(404).json({ success: false, message: 'Product not found' });
       Object.assign(product, req.body);
+
+      if (req.body.price !== undefined || req.body.originalPrice !== undefined) {
+        const currentPrice = req.body.price !== undefined ? Number(req.body.price) : product.price;
+        const currentOrig = req.body.originalPrice !== undefined ? Number(req.body.originalPrice) : (product.originalPrice || 0);
+        if (currentOrig > currentPrice && currentOrig > 0) {
+          product.discount = Math.round(((currentOrig - currentPrice) / currentOrig) * 100);
+        } else {
+          product.discount = 0;
+        }
+      }
+
       return res.json({ success: true, data: product, message: 'Product updated successfully' });
     }
   } catch (error) {
@@ -305,19 +350,22 @@ export const getAdminCoupons = async (req, res) => {
 
 export const createCoupon = async (req, res) => {
   try {
-    const { code, description, discountType, discountAmount, minOrderAmount, maxDiscountAmount, expiryDate, usageLimit } = req.body;
+    const { code, description, discountType, discountAmount, minOrderAmount, maxDiscountAmount, expiryDate, usageLimit, isActive } = req.body;
+    if (!code) return res.status(400).json({ success: false, message: 'Coupon code is required' });
+
     if (isMongoConnected) {
       const exists = await Coupon.findOne({ code: code.toUpperCase() });
       if (exists) return res.status(400).json({ success: false, message: 'Coupon code already exists' });
       const coupon = await Coupon.create({
         code: code.toUpperCase(),
-        description,
+        description: description || '',
         discountType: discountType || 'percentage',
         discountAmount: Number(discountAmount),
         minOrderAmount: Number(minOrderAmount) || 0,
         maxDiscountAmount: Number(maxDiscountAmount) || 5000,
         expiryDate: expiryDate ? new Date(expiryDate) : new Date(Date.now() + 60 * 24 * 60 * 60 * 1000),
         usageLimit: Number(usageLimit) || 1000,
+        isActive: isActive !== undefined ? Boolean(isActive) : true,
       });
       return res.status(201).json({ success: true, data: coupon, message: 'Coupon created successfully' });
     } else {
@@ -326,7 +374,7 @@ export const createCoupon = async (req, res) => {
       const newCoupon = {
         _id: `coup_${Date.now()}`,
         code: code.toUpperCase(),
-        description,
+        description: description || '',
         discountType: discountType || 'percentage',
         discountAmount: Number(discountAmount),
         minOrderAmount: Number(minOrderAmount) || 0,
@@ -334,10 +382,87 @@ export const createCoupon = async (req, res) => {
         expiryDate: expiryDate ? new Date(expiryDate).toISOString() : new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString(),
         usageLimit: Number(usageLimit) || 1000,
         usedCount: 0,
-        isActive: true,
+        isActive: isActive !== undefined ? Boolean(isActive) : true,
       };
       mockStore.coupons.unshift(newCoupon);
       return res.status(201).json({ success: true, data: newCoupon, message: 'Coupon created successfully' });
+    }
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const updateCoupon = async (req, res) => {
+  try {
+    const { code, description, discountType, discountAmount, minOrderAmount, maxDiscountAmount, expiryDate, usageLimit, isActive } = req.body;
+    if (isMongoConnected) {
+      const coupon = await Coupon.findById(req.params.id);
+      if (!coupon) return res.status(404).json({ success: false, message: 'Coupon not found' });
+
+      if (code && code.toUpperCase() !== coupon.code) {
+        const duplicate = await Coupon.findOne({ code: code.toUpperCase(), _id: { $ne: coupon._id } });
+        if (duplicate) return res.status(400).json({ success: false, message: 'Coupon code already exists' });
+        coupon.code = code.toUpperCase();
+      }
+
+      if (description !== undefined) coupon.description = description;
+      if (discountType !== undefined) coupon.discountType = discountType;
+      if (discountAmount !== undefined) coupon.discountAmount = Number(discountAmount);
+      if (minOrderAmount !== undefined) coupon.minOrderAmount = Number(minOrderAmount);
+      if (maxDiscountAmount !== undefined) coupon.maxDiscountAmount = Number(maxDiscountAmount);
+      if (expiryDate !== undefined) coupon.expiryDate = new Date(expiryDate);
+      if (usageLimit !== undefined) coupon.usageLimit = Number(usageLimit);
+      if (isActive !== undefined) coupon.isActive = Boolean(isActive);
+
+      const updated = await coupon.save();
+      return res.json({ success: true, data: updated, message: 'Coupon updated successfully' });
+    } else {
+      const coupon = mockStore.coupons.find((c) => c._id === req.params.id);
+      if (!coupon) return res.status(404).json({ success: false, message: 'Coupon not found' });
+
+      if (code && code.toUpperCase() !== coupon.code) {
+        const duplicate = mockStore.coupons.find((c) => c.code === code.toUpperCase() && c._id !== req.params.id);
+        if (duplicate) return res.status(400).json({ success: false, message: 'Coupon code already exists' });
+        coupon.code = code.toUpperCase();
+      }
+
+      if (description !== undefined) coupon.description = description;
+      if (discountType !== undefined) coupon.discountType = discountType;
+      if (discountAmount !== undefined) coupon.discountAmount = Number(discountAmount);
+      if (minOrderAmount !== undefined) coupon.minOrderAmount = Number(minOrderAmount);
+      if (maxDiscountAmount !== undefined) coupon.maxDiscountAmount = Number(maxDiscountAmount);
+      if (expiryDate !== undefined) coupon.expiryDate = new Date(expiryDate).toISOString();
+      if (usageLimit !== undefined) coupon.usageLimit = Number(usageLimit);
+      if (isActive !== undefined) coupon.isActive = Boolean(isActive);
+
+      return res.json({ success: true, data: coupon, message: 'Coupon updated successfully' });
+    }
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const toggleCouponStatus = async (req, res) => {
+  try {
+    if (isMongoConnected) {
+      const coupon = await Coupon.findById(req.params.id);
+      if (!coupon) return res.status(404).json({ success: false, message: 'Coupon not found' });
+      coupon.isActive = !coupon.isActive;
+      await coupon.save();
+      return res.json({
+        success: true,
+        data: coupon,
+        message: `Coupon '${coupon.code}' is now ${coupon.isActive ? 'Active' : 'Deactivated'}`,
+      });
+    } else {
+      const coupon = mockStore.coupons.find((c) => c._id === req.params.id);
+      if (!coupon) return res.status(404).json({ success: false, message: 'Coupon not found' });
+      coupon.isActive = !coupon.isActive;
+      return res.json({
+        success: true,
+        data: coupon,
+        message: `Coupon '${coupon.code}' is now ${coupon.isActive ? 'Active' : 'Deactivated'}`,
+      });
     }
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

@@ -272,21 +272,31 @@ export default function ProductDetailPage() {
 
               {/* Luxury Pricing Card */}
               <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-white via-[#FCFBFF] to-[#F7F4FF] border border-[#E3DCFF] shadow-[0_4px_20px_rgba(116,100,184,0.06)] space-y-2.5">
-                <div className="flex items-baseline gap-2.5 flex-wrap">
-                  <span className="font-serif text-3xl sm:text-4xl font-semibold text-[#17151F] tracking-tight">
-                    ₹{product.price.toLocaleString('en-IN')}
-                  </span>
-                  {product.originalPrice > product.price && (
-                    <span className="text-sm sm:text-base text-gray-400 line-through font-light">
-                      ₹{product.originalPrice.toLocaleString('en-IN')}
-                    </span>
-                  )}
-                  {product.discount > 0 && (
-                    <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-rose-50 text-rose-600 border border-rose-200">
-                      Save ₹{(product.originalPrice - product.price).toLocaleString('en-IN')} ({product.discount}% OFF)
-                    </span>
-                  )}
-                </div>
+                {(() => {
+                  const effectiveDiscount = (product.discount && product.discount > 0)
+                    ? product.discount
+                    : (product.originalPrice && product.originalPrice > product.price)
+                    ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
+                    : 0;
+
+                  return (
+                    <div className="flex items-baseline gap-3 flex-wrap">
+                      <span className="font-serif text-3xl sm:text-4xl font-semibold text-[#17151F] tracking-tight">
+                        ₹{product.price.toLocaleString('en-IN')}
+                      </span>
+                      {product.originalPrice > product.price && (
+                        <span className="text-base sm:text-lg text-gray-400 line-through font-light">
+                          ₹{product.originalPrice.toLocaleString('en-IN')}
+                        </span>
+                      )}
+                      {effectiveDiscount > 0 && (
+                        <span className="px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-rose-50 text-rose-600 border border-rose-200 shadow-2xs">
+                          {effectiveDiscount}% OFF
+                        </span>
+                      )}
+                    </div>
+                  );
+                })()}
 
                 <div className="pt-2 border-t border-[#EDE7FA] flex items-center justify-between text-[11px] text-gray-500">
                   <span className="inline-flex items-center gap-1.5 text-emerald-700 font-medium">

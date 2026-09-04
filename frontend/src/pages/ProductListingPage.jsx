@@ -77,16 +77,16 @@ export default function ProductListingPage({ fixedGender, isNew, isBest }) {
     fetchProducts();
   }, [selectedGender, selectedCategory, priceRange, minRating, onlyAntiTarnish, sortBy, searchQuery, isNew, isBest]);
 
-  const menCategoriesList = ['Ear Studs', 'Chains', 'Bracelets', 'Belts', 'Rings'];
+  const primaryJewelleryCategories = ['Rings', 'Earrings', 'Necklaces', 'Bracelets', 'Anklets'];
+  const menCategoriesList = ['Rings', 'Chains', 'Bracelets', 'Ear Studs', 'Belts'];
   const womenCategoriesList = [
-    'Earrings',
-    'Saree Accessories',
-    'Anklets',
-    'Jeans Adjuster',
-    'Bracelets & Bangles',
-    'Upper Lobe Earrings',
     'Rings',
-    'Nose Rings',
+    'Earrings',
+    'Necklaces',
+    'Bracelets',
+    'Anklets',
+    'Saree Accessories',
+    'Bracelets & Bangles',
   ];
 
   const activeCategories =
@@ -94,7 +94,7 @@ export default function ProductListingPage({ fixedGender, isNew, isBest }) {
       ? menCategoriesList
       : selectedGender === 'women'
       ? womenCategoriesList
-      : [...new Set([...womenCategoriesList, ...menCategoriesList])];
+      : [...new Set([...primaryJewelleryCategories, ...womenCategoriesList, ...menCategoriesList])];
 
   const resetFilters = () => {
     setSelectedCategory('all');

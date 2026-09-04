@@ -13,8 +13,9 @@ export default function ProductCard({ product, onQuickView }) {
   if (!product) return null;
 
   const inWishlist = isInWishlist(product._id || product.id);
-  const mainImage = product.images && product.images.length > 0 ? product.images[0] : product.image;
+  const mainImage = product.images && product.images.length > 0 ? product.images[0] : (product.image || 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=800&q=80');
   const hoverImage = product.images && product.images.length > 1 ? product.images[1] : mainImage;
+  const imageSrc = isHovered ? hoverImage : mainImage;
 
   const handleAddToCart = (e) => {
     e.preventDefault();
@@ -35,6 +36,12 @@ export default function ProductCard({ product, onQuickView }) {
     if (onQuickView) onQuickView(product);
   };
 
+  const effectiveDiscount = (product.discount && product.discount > 0)
+    ? product.discount
+    : (product.originalPrice && product.originalPrice > product.price)
+    ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
+    : 0;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -49,7 +56,7 @@ export default function ProductCard({ product, onQuickView }) {
       <div className="relative aspect-[4/5] rounded-xl sm:rounded-2xl overflow-hidden bg-[#F3EFFF] mb-3">
         <Link to={`/products/${product.slug}`} className="block w-full h-full">
           <img
-            src={isHovered ? hoverImage : mainImage}
+            src={imageSrc}
             alt={product.name}
             className="w-full h-full object-cover object-center transform group-hover:scale-108 transition-all duration-700"
             loading="lazy"
@@ -62,6 +69,12 @@ export default function ProductCard({ product, onQuickView }) {
 
         {/* Top Badges */}
         <div className="absolute top-2.5 left-2.5 flex flex-col gap-1 z-10 pointer-events-none">
+          {product.isAntiTarnish && (
+            <span className="px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-bold tracking-wider uppercase bg-white/90 backdrop-blur-md text-[#7464B8] border border-[#D6CFFF]/60 shadow-sm flex items-center gap-1">
+              <Sparkles className="w-2.5 h-2.5 fill-current" />
+              <span>Anti-Tarnish</span>
+            </span>
+          )}
           {product.isBestseller && (
             <span className="px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-bold tracking-wider uppercase bg-[#17151F] text-[#E8E3FF] border border-[#D6CFFF]/40 shadow-sm">
               Bestseller
@@ -72,9 +85,9 @@ export default function ProductCard({ product, onQuickView }) {
               New
             </span>
           )}
-          {product.discount > 0 && (
+          {effectiveDiscount > 0 && (
             <span className="px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-bold tracking-wider uppercase bg-rose-600 text-white shadow-sm">
-              {product.discount}% Off
+              {effectiveDiscount}% Off
             </span>
           )}
         </div>
@@ -149,6 +162,11 @@ export default function ProductCard({ product, onQuickView }) {
             {product.originalPrice > product.price && (
               <span className="text-[11px] text-gray-400 line-through font-normal">
                 ₹{product.originalPrice.toLocaleString('en-IN')}
+              </span>
+            )}
+            {effectiveDiscount > 0 && (
+              <span className="text-[10px] font-bold text-rose-600 ml-1">
+                {effectiveDiscount}% OFF
               </span>
             )}
           </div>

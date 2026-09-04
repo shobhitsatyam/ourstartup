@@ -31,8 +31,24 @@ export const getProducts = async (req, res) => {
       }
 
       if (category && category !== 'all') {
-        const formattedCategory = category.replace(/-/g, ' ');
-        query.category = { $regex: new RegExp(`^${formattedCategory}$`, 'i') };
+        const cleaned = category.toLowerCase().replace(/[-_]/g, ' ').trim();
+        let catRegex;
+        if (cleaned.includes('ring') && !cleaned.includes('ear') && !cleaned.includes('nose')) {
+          catRegex = new RegExp('ring', 'i');
+        } else if (cleaned.includes('ear') || cleaned.includes('stud') || cleaned.includes('lobe')) {
+          catRegex = new RegExp('(earring|ear stud|lobe)', 'i');
+        } else if (cleaned.includes('neck') || cleaned.includes('chain') || cleaned.includes('choker') || cleaned.includes('mangal') || cleaned.includes('pendant')) {
+          catRegex = new RegExp('(necklace|chain|choker|pendant|mangal)', 'i');
+        } else if (cleaned.includes('brace') || cleaned.includes('bangle') || cleaned.includes('kada') || cleaned.includes('cuff')) {
+          catRegex = new RegExp('(bracelet|bangle|kada|cuff)', 'i');
+        } else if (cleaned.includes('anklet') || cleaned.includes('payal')) {
+          catRegex = new RegExp('(anklet|payal)', 'i');
+        } else if (cleaned.includes('saree')) {
+          catRegex = new RegExp('saree', 'i');
+        } else {
+          catRegex = new RegExp(`^${cleaned.replace(/&/g, '(&|and)')}$`, 'i');
+        }
+        query.category = { $regex: catRegex };
       }
 
       if (subCategory && subCategory !== 'all') {
@@ -96,8 +112,27 @@ export const getProducts = async (req, res) => {
       }
 
       if (category && category !== 'all') {
-        const target = category.toLowerCase().replace(/-/g, ' ');
-        list = list.filter((p) => p.category.toLowerCase() === target || p.subCategory.toLowerCase() === target);
+        const target = category.toLowerCase().replace(/[-_]/g, ' ').trim();
+        list = list.filter((p) => {
+          const pCat = (p.category || '').toLowerCase();
+          const pSub = (p.subCategory || '').toLowerCase();
+          if (target.includes('ring') && !target.includes('ear') && !target.includes('nose')) {
+            return (pCat.includes('ring') || pSub.includes('ring')) && !pCat.includes('ear') && !pCat.includes('nose');
+          }
+          if (target.includes('ear') || target.includes('stud') || target.includes('lobe')) {
+            return pCat.includes('ear') || pSub.includes('ear') || pCat.includes('stud') || pCat.includes('lobe');
+          }
+          if (target.includes('neck') || target.includes('chain') || target.includes('choker') || target.includes('pendant')) {
+            return pCat.includes('neck') || pSub.includes('neck') || pCat.includes('chain') || pSub.includes('chain') || pCat.includes('choker');
+          }
+          if (target.includes('brace') || target.includes('bangle') || target.includes('kada')) {
+            return pCat.includes('brace') || pSub.includes('brace') || pCat.includes('bangle') || pCat.includes('kada');
+          }
+          if (target.includes('anklet') || target.includes('payal')) {
+            return pCat.includes('anklet') || pSub.includes('anklet') || pCat.includes('payal');
+          }
+          return pCat.includes(target) || pSub.includes(target);
+        });
       }
 
       if (subCategory && subCategory !== 'all') {

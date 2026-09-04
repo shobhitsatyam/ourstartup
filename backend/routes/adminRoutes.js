@@ -2,6 +2,7 @@ import express from 'express';
 import {
   getDashboardMetrics,
   getAdminProducts,
+  getNextSkuPreview,
   createProduct,
   updateProduct,
   deleteProduct,
@@ -10,13 +11,14 @@ import {
   getAdminCustomers,
   getAdminCoupons,
   createCoupon,
+  updateCoupon,
+  toggleCouponStatus,
   deleteCoupon,
   uploadProductImages,
 } from '../controllers/adminController.js';
 import { protect } from '../middleware/authMiddleware.js';
 import { adminOnly } from '../middleware/adminMiddleware.js';
 import { handleUploadMiddleware } from '../middleware/uploadMiddleware.js';
-
 
 const router = express.Router();
 
@@ -28,8 +30,9 @@ router.get('/metrics', getDashboardMetrics);
 // Product image upload (supports up to 10 images, memoryStorage -> Cloudinary)
 router.post('/upload', handleUploadMiddleware, uploadProductImages);
 
-
 // Product management
+router.get('/products/next-sku', getNextSkuPreview);
+
 router.route('/products')
   .get(getAdminProducts)
   .post(createProduct);
@@ -50,6 +53,10 @@ router.route('/coupons')
   .get(getAdminCoupons)
   .post(createCoupon);
 
-router.delete('/coupons/:id', deleteCoupon);
+router.route('/coupons/:id')
+  .put(updateCoupon)
+  .delete(deleteCoupon);
+
+router.patch('/coupons/:id/status', toggleCouponStatus);
 
 export default router;
