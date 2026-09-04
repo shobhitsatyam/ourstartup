@@ -44,6 +44,7 @@ export default function ProductDetailPage() {
   const [reviewComment, setReviewComment] = useState('');
   const [reviewTitle, setReviewTitle] = useState('');
   const [submittingReview, setSubmittingReview] = useState(false);
+  const [addedSuccess, setAddedSuccess] = useState(false);
 
   const { addToCart } = useCart();
   const { isInWishlist, toggleWishlist } = useWishlist();
@@ -102,6 +103,10 @@ export default function ProductDetailPage() {
 
   const handleAddToCart = () => {
     addToCart(product, quantity, selectedSize);
+    setAddedSuccess(true);
+    setTimeout(() => {
+      setAddedSuccess(false);
+    }, 2500);
   };
 
   const handleBuyNow = () => {
@@ -281,11 +286,11 @@ export default function ProductDetailPage() {
 
                   return (
                     <div className="flex items-baseline gap-3 flex-wrap">
-                      <span className="font-serif text-3xl sm:text-4xl font-semibold text-[#17151F] tracking-tight">
+                      <span className="font-price text-3xl sm:text-4xl font-bold text-[#17151F] tracking-tight">
                         ₹{product.price.toLocaleString('en-IN')}
                       </span>
                       {product.originalPrice > product.price && (
-                        <span className="text-base sm:text-lg text-gray-400 line-through font-light">
+                        <span className="font-price text-base sm:text-lg text-gray-400 line-through font-normal">
                           ₹{product.originalPrice.toLocaleString('en-IN')}
                         </span>
                       )}
@@ -364,10 +369,21 @@ export default function ProductDetailPage() {
                 <div className="flex gap-2.5 sm:gap-3">
                   <button
                     onClick={handleAddToCart}
-                    className="flex-1 py-3.5 sm:py-4 bg-[#17151F] text-white rounded-xl sm:rounded-2xl text-xs font-bold uppercase tracking-widest hover:bg-[#2A2635] active:scale-[0.98] shadow-lg flex items-center justify-center gap-2 btn-shine transition-all"
+                    className={`flex-1 py-3.5 sm:py-4 text-white rounded-xl sm:rounded-2xl text-xs font-bold uppercase tracking-widest active:scale-[0.98] shadow-lg flex items-center justify-center gap-2 btn-shine transition-all ${
+                      addedSuccess ? 'bg-emerald-700' : 'bg-[#17151F] hover:bg-[#2A2635]'
+                    }`}
                   >
-                    <ShoppingBag className="w-4 h-4 text-[#D6CFFF]" />
-                    <span>Add to Bag</span>
+                    {addedSuccess ? (
+                      <>
+                        <CheckCircle2 className="w-4 h-4 text-emerald-200" />
+                        <span>Product Added to Bag ✓</span>
+                      </>
+                    ) : (
+                      <>
+                        <ShoppingBag className="w-4 h-4 text-[#D6CFFF]" />
+                        <span>Add to Bag</span>
+                      </>
+                    )}
                   </button>
 
                   <button
@@ -490,21 +506,31 @@ export default function ProductDetailPage() {
 
               {/* Pricing Section */}
               <div className="p-4 rounded-2xl bg-white border border-[#D6CFFF]/40 shadow-sm space-y-1">
-                <div className="flex items-baseline gap-3">
-                  <span className="font-serif text-3xl font-semibold text-[#17151F]">
-                    ₹{product.price.toLocaleString('en-IN')}
-                  </span>
-                  {product.originalPrice > product.price && (
-                    <span className="text-base text-gray-400 line-through">
-                      ₹{product.originalPrice.toLocaleString('en-IN')}
-                    </span>
-                  )}
-                  {product.discount > 0 && (
-                    <span className="px-2.5 py-0.5 rounded-full text-xs font-bold uppercase bg-rose-600 text-white">
-                      {product.discount}% OFF
-                    </span>
-                  )}
-                </div>
+                {(() => {
+                  const effectiveDiscount = (product.discount && product.discount > 0)
+                    ? product.discount
+                    : (product.originalPrice && product.originalPrice > product.price)
+                    ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
+                    : 0;
+
+                  return (
+                    <div className="flex items-baseline gap-3 flex-wrap">
+                      <span className="font-price text-3xl sm:text-4xl font-bold text-[#17151F] tracking-tight">
+                        ₹{product.price.toLocaleString('en-IN')}
+                      </span>
+                      {product.originalPrice > product.price && (
+                        <span className="font-price text-base sm:text-lg text-gray-400 line-through font-normal">
+                          ₹{product.originalPrice.toLocaleString('en-IN')}
+                        </span>
+                      )}
+                      {effectiveDiscount > 0 && (
+                        <span className="px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-rose-50 text-rose-600 border border-rose-200 shadow-2xs">
+                          {effectiveDiscount}% OFF
+                        </span>
+                      )}
+                    </div>
+                  );
+                })()}
                 <p className="text-[11px] text-gray-500 font-light">
                   Inclusive of all taxes. Free express Indian shipping on this piece.
                 </p>
@@ -561,10 +587,21 @@ export default function ProductDetailPage() {
                 <div className="flex gap-3">
                   <button
                     onClick={handleAddToCart}
-                    className="flex-1 py-4 bg-[#17151F] text-white rounded-2xl text-xs font-bold uppercase tracking-widest hover:bg-[#2A2635] shadow-xl flex items-center justify-center gap-2 btn-shine transition-all"
+                    className={`flex-1 py-4 text-white rounded-2xl text-xs font-bold uppercase tracking-widest shadow-xl flex items-center justify-center gap-2 btn-shine transition-all ${
+                      addedSuccess ? 'bg-emerald-700' : 'bg-[#17151F] hover:bg-[#2A2635]'
+                    }`}
                   >
-                    <ShoppingBag className="w-4 h-4 text-[#D6CFFF]" />
-                    <span>Add to Bag</span>
+                    {addedSuccess ? (
+                      <>
+                        <CheckCircle2 className="w-4 h-4 text-emerald-200" />
+                        <span>Product Added to Bag ✓</span>
+                      </>
+                    ) : (
+                      <>
+                        <ShoppingBag className="w-4 h-4 text-[#D6CFFF]" />
+                        <span>Add to Bag</span>
+                      </>
+                    )}
                   </button>
 
                   <button
@@ -637,13 +674,13 @@ export default function ProductDetailPage() {
           </div>
         </div>
 
-        {/* Verified Customer Reviews Section */}
+        {/* Customer Reviews & Testimonials Section */}
         <div id="reviews-section" className="mt-24 pt-12 border-t border-[#D6CFFF]/40">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
             <div>
               <span className="text-xs font-bold uppercase tracking-widest text-[#7464B8]">Patron Feedback</span>
               <h3 className="font-serif text-2xl sm:text-3xl font-light text-[#17151F] mt-1">
-                Verified Client Reviews ({reviews.length})
+                Client Reviews &amp; Highlights ({reviews.length + (product.testimonial?.reviewText ? 1 : 0)})
               </h3>
             </div>
 
@@ -657,6 +694,50 @@ export default function ProductDetailPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Admin Seeded / Featured Testimonial (if present) */}
+            {product.testimonial && product.testimonial.reviewText && (
+              <div className="p-6 rounded-3xl bg-gradient-to-br from-white via-[#FCFBFF] to-[#F7F4FF] border border-[#7464B8]/40 shadow-sm space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1 text-amber-500">
+                    {[1, 2, 3, 4, 5].map((s) => {
+                      const tRating = product.testimonial.rating || 5;
+                      return (
+                        <Star
+                          key={s}
+                          className={`w-3.5 h-3.5 ${
+                            s <= tRating ? 'fill-current' : 'text-gray-300'
+                          }`}
+                        />
+                      );
+                    })}
+                  </div>
+                  <span className="text-[10px] font-semibold text-[#7464B8] uppercase tracking-wider bg-[#F3EFFF] px-2.5 py-0.5 rounded-full border border-[#D6CFFF]/60">
+                    {product.testimonial.reviewBadge || 'Featured Review'}
+                  </span>
+                </div>
+
+                <h4 className="font-semibold text-xs text-gray-900">
+                  {product.testimonial.reviewBadge || 'Editorial Highlight'}
+                </h4>
+                <p className="text-xs text-gray-600 font-light leading-relaxed italic">
+                  "{product.testimonial.reviewText}"
+                </p>
+
+                <div className="pt-3 border-t border-[#EDE7FA] flex items-center justify-between text-[11px]">
+                  <span className="font-bold text-gray-800">
+                    {product.testimonial.reviewerName}
+                    {product.testimonial.reviewerLocation ? (
+                      <span className="font-normal text-gray-500"> &bull; {product.testimonial.reviewerLocation}</span>
+                    ) : null}
+                  </span>
+                  <span className="text-gray-400 text-[10px] font-medium">
+                    Patron Spotlight
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Client Reviews */}
             {reviews.length > 0 ? (
               reviews.map((rev) => (
                 <div key={rev._id} className="p-6 rounded-3xl bg-white border border-[#D6CFFF]/40 shadow-sm space-y-3">
@@ -689,11 +770,11 @@ export default function ProductDetailPage() {
                   </div>
                 </div>
               ))
-            ) : (
+            ) : !product.testimonial?.reviewText ? (
               <div className="col-span-2 text-center py-12 bg-white rounded-3xl border border-[#D6CFFF]/40 p-6">
                 <p className="text-xs text-gray-500">Be the first verified patron to review this masterpiece!</p>
               </div>
-            )}
+            ) : null}
           </div>
         </div>
 

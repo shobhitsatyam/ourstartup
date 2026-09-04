@@ -11,6 +11,7 @@ import {
   Edit2,
   Trash2,
   Sparkles,
+  Star,
   TrendingUp,
   AlertCircle,
   Truck,
@@ -71,6 +72,14 @@ export default function AdminDashboardPage() {
     originalPrice: '',
     sku: '',
     stock: 20,
+    rating: 4.8,
+    testimonial: {
+      reviewerName: '',
+      reviewerLocation: '',
+      reviewText: '',
+      rating: 5,
+      reviewBadge: '',
+    },
     description: '',
     images: ['https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?auto=format&fit=crop&w=800&q=80'],
     material: '316L Surgical Steel & 18K Gold PVD',
@@ -502,7 +511,7 @@ export default function AdminDashboardPage() {
                     </div>
                   </div>
                   <div>
-                    <h3 className="font-serif text-2xl font-light text-[#171522]">
+                    <h3 className="font-price text-2xl font-bold text-[#171522]">
                       ₹{displayMetrics.totalRevenue?.toLocaleString('en-IN')}
                     </h3>
                     <p className="text-[11px] text-emerald-600 font-semibold mt-0.5 flex items-center gap-1">
@@ -671,6 +680,14 @@ export default function AdminDashboardPage() {
                       originalPrice: '',
                       sku: '',
                       stock: 25,
+                      rating: 4.8,
+                      testimonial: {
+                        reviewerName: '',
+                        reviewerLocation: '',
+                        reviewText: '',
+                        rating: 5,
+                        reviewBadge: '',
+                      },
                       description: '',
                       images: ['https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?auto=format&fit=crop&w=800&q=80'],
                       material: '316L Surgical Steel & 18K Gold PVD',
@@ -800,6 +817,14 @@ export default function AdminDashboardPage() {
                                 setEditingProduct(p);
                                 setProductForm({
                                   ...p,
+                                  rating: p.rating !== undefined ? p.rating : 4.8,
+                                  testimonial: {
+                                    reviewerName: p.testimonial?.reviewerName || '',
+                                    reviewerLocation: p.testimonial?.reviewerLocation || '',
+                                    reviewText: p.testimonial?.reviewText || '',
+                                    rating: p.testimonial?.rating || 5,
+                                    reviewBadge: p.testimonial?.reviewBadge || '',
+                                  },
                                   images: p.images || [p.image || 'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?auto=format&fit=crop&w=800&q=80'],
                                 });
                                 setShowProductModal(true);
@@ -1314,6 +1339,196 @@ export default function AdminDashboardPage() {
                   placeholder="Detailed craftsmanship and styling advice"
                   className="w-full px-3.5 py-2.5 rounded-xl text-xs bg-[#FAF9FF] border border-[#D6CFFF]/60 focus:border-[#7464B8] outline-hidden text-[#171522]"
                 />
+              </div>
+
+              {/* Interactive Product Rating Selector (1.0 - 5.0 with 0.5 steps) */}
+              <div className="p-3.5 rounded-2xl bg-[#FAF9FF] border border-[#D6CFFF]/60 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-[#171522] flex items-center gap-1.5">
+                    <Star className="w-3.5 h-3.5 text-amber-500 fill-current" />
+                    <span>Product Rating (1.0 – 5.0 Stars, 0.5 increments)</span>
+                  </label>
+                  <span className="px-2 py-0.5 rounded-md text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                    ★ {productForm.rating || 4.8} / 5.0
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-3 flex-wrap">
+                  {/* Interactive Stars */}
+                  <div className="flex items-center gap-1">
+                    {[1, 2, 3, 4, 5].map((star) => {
+                      const cur = Number(productForm.rating) || 4.8;
+                      const isFull = cur >= star;
+                      const isHalf = !isFull && cur >= star - 0.5;
+
+                      return (
+                        <div key={star} className="relative cursor-pointer select-none">
+                          <Star
+                            className={`w-6 h-6 transition-colors ${
+                              isFull
+                                ? 'fill-amber-400 text-amber-400'
+                                : isHalf
+                                ? 'fill-amber-200 text-amber-400'
+                                : 'text-gray-300'
+                            }`}
+                          />
+                          {/* Left 50% for 0.5 step */}
+                          <div
+                            className="absolute inset-y-0 left-0 w-1/2 z-10"
+                            title={`${star - 0.5} Stars`}
+                            onClick={() => setProductForm({ ...productForm, rating: star - 0.5 })}
+                          />
+                          {/* Right 50% for 1.0 step */}
+                          <div
+                            className="absolute inset-y-0 right-0 w-1/2 z-10"
+                            title={`${star} Stars`}
+                            onClick={() => setProductForm({ ...productForm, rating: star })}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Preset Buttons */}
+                  <div className="flex items-center gap-1 text-[11px]">
+                    {[4.0, 4.5, 4.8, 5.0].map((val) => (
+                      <button
+                        key={val}
+                        type="button"
+                        onClick={() => setProductForm({ ...productForm, rating: val })}
+                        className={`px-2 py-1 rounded-lg border transition-all ${
+                          Number(productForm.rating) === val
+                            ? 'bg-[#171522] text-white border-[#171522] font-bold'
+                            : 'bg-white text-gray-700 border-gray-200 hover:border-[#7464B8]'
+                        }`}
+                      >
+                        {val} ★
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Direct Number Input */}
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="1.0"
+                    max="5.0"
+                    value={productForm.rating || 4.8}
+                    onChange={(e) => {
+                      const v = parseFloat(e.target.value);
+                      if (!isNaN(v)) {
+                        setProductForm({ ...productForm, rating: Math.min(5, Math.max(1, Math.round(v * 10) / 10)) });
+                      }
+                    }}
+                    className="w-16 px-2 py-1 rounded-lg text-xs bg-white border border-[#D6CFFF]/60 text-center font-bold text-[#171522] focus:border-[#7464B8] outline-hidden"
+                  />
+                </div>
+              </div>
+
+              {/* Product Testimonial / Seeded Editorial Section */}
+              <div className="p-4 rounded-2xl bg-gradient-to-br from-[#FAF9FF] to-white border border-[#D6CFFF]/60 space-y-3">
+                <div className="flex items-center justify-between pb-2 border-b border-[#D6CFFF]/40">
+                  <div>
+                    <h4 className="text-xs font-bold text-[#171522] flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-[#7464B8]" />
+                      <span>Product Testimonial / Editorial Review (Optional)</span>
+                    </h4>
+                    <p className="text-[10px] text-gray-500 mt-0.5">
+                      Seed a curated quote or patron highlight. These are treated as admin-seeded highlights and will not be falsely marked as verified customer purchases.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-[#171522] mb-1">Reviewer Name</label>
+                    <input
+                      type="text"
+                      value={productForm.testimonial?.reviewerName || ''}
+                      onChange={(e) =>
+                        setProductForm({
+                          ...productForm,
+                          testimonial: { ...productForm.testimonial, reviewerName: e.target.value },
+                        })
+                      }
+                      placeholder="e.g. Radhika Sharma"
+                      className="w-full px-3 py-2 rounded-xl text-xs bg-white border border-[#D6CFFF]/60 focus:border-[#7464B8] outline-hidden text-[#171522]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-[#171522] mb-1">
+                      Reviewer Location <span className="text-gray-400 font-normal">(Optional)</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={productForm.testimonial?.reviewerLocation || ''}
+                      onChange={(e) =>
+                        setProductForm({
+                          ...productForm,
+                          testimonial: { ...productForm.testimonial, reviewerLocation: e.target.value },
+                        })
+                      }
+                      placeholder="e.g. Jaipur, Rajasthan"
+                      className="w-full px-3 py-2 rounded-xl text-xs bg-white border border-[#D6CFFF]/60 focus:border-[#7464B8] outline-hidden text-[#171522]"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-[#171522] mb-1">Testimonial / Review Text</label>
+                  <textarea
+                    rows={2}
+                    value={productForm.testimonial?.reviewText || ''}
+                    onChange={(e) =>
+                      setProductForm({
+                        ...productForm,
+                        testimonial: { ...productForm.testimonial, reviewText: e.target.value },
+                      })
+                    }
+                    placeholder="e.g. The 18K gold luster looks identical to solid gold. Worn daily for 6 months without any fading."
+                    className="w-full px-3 py-2 rounded-xl text-xs bg-white border border-[#D6CFFF]/60 focus:border-[#7464B8] outline-hidden text-[#171522]"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-[#171522] mb-1">Testimonial Rating (1–5 Stars)</label>
+                    <select
+                      value={productForm.testimonial?.rating || 5}
+                      onChange={(e) =>
+                        setProductForm({
+                          ...productForm,
+                          testimonial: { ...productForm.testimonial, rating: parseFloat(e.target.value) || 5 },
+                        })
+                      }
+                      className="w-full px-3 py-2 rounded-xl text-xs bg-white border border-[#D6CFFF]/60 focus:border-[#7464B8] outline-hidden text-[#171522]"
+                    >
+                      <option value="5">★★★★★ (5 Stars)</option>
+                      <option value="4.5">★★★★½ (4.5 Stars)</option>
+                      <option value="4">★★★★☆ (4 Stars)</option>
+                      <option value="3.5">★★★½☆ (3.5 Stars)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-[#171522] mb-1">
+                      Review Badge / Type <span className="text-gray-400 font-normal">(Optional)</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={productForm.testimonial?.reviewBadge || ''}
+                      onChange={(e) =>
+                        setProductForm({
+                          ...productForm,
+                          testimonial: { ...productForm.testimonial, reviewBadge: e.target.value },
+                        })
+                      }
+                      placeholder="e.g. Curator Spotlight, Staff Favorite, Editorial Pick"
+                      className="w-full px-3 py-2 rounded-xl text-xs bg-white border border-[#D6CFFF]/60 focus:border-[#7464B8] outline-hidden text-[#171522]"
+                    />
+                  </div>
+                </div>
               </div>
 
               {/* Flags */}

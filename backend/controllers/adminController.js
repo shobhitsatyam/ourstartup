@@ -114,6 +114,8 @@ export const createProduct = async (req, res) => {
       isTrending,
       isAntiTarnish,
       tags,
+      rating,
+      testimonial,
     } = req.body;
 
     const generatedSlug = (slug || name)
@@ -130,6 +132,21 @@ export const createProduct = async (req, res) => {
     const calculatedDiscount = origNum > priceNum && origNum > 0
       ? Math.round(((origNum - priceNum) / origNum) * 100)
       : 0;
+
+    const parsedRating = rating !== undefined && !isNaN(Number(rating)) ? Number(rating) : 4.8;
+    const parsedTestimonial = testimonial && typeof testimonial === 'object' ? {
+      reviewerName: testimonial.reviewerName || '',
+      reviewerLocation: testimonial.reviewerLocation || '',
+      reviewText: testimonial.reviewText || '',
+      rating: testimonial.rating ? Number(testimonial.rating) : 5,
+      reviewBadge: testimonial.reviewBadge || '',
+    } : {
+      reviewerName: '',
+      reviewerLocation: '',
+      reviewText: '',
+      rating: 5,
+      reviewBadge: '',
+    };
 
     if (isMongoConnected) {
       const product = new Product({
@@ -149,10 +166,13 @@ export const createProduct = async (req, res) => {
         material: material || '316L Stainless Steel & 18K Gold PVD',
         finish: finish || 'High Polish Mirror Finish',
         sizes: sizes && sizes.length > 0 ? sizes : ['Free Size'],
+        rating: parsedRating,
+        testimonial: parsedTestimonial,
         isNewArrival: isNewArrival !== undefined ? isNewArrival : true,
         isBestseller: isBestseller !== undefined ? isBestseller : false,
         isTrending: isTrending !== undefined ? isTrending : false,
         isAntiTarnish: isAntiTarnish !== undefined ? isAntiTarnish : true,
+        isActive: true,
         tags: tags || ['Jewellery', category],
       });
       const savedProduct = await product.save();
@@ -176,7 +196,8 @@ export const createProduct = async (req, res) => {
         material: material || '316L Stainless Steel & 18K Gold PVD',
         finish: finish || 'High Polish Mirror Finish',
         sizes: sizes && sizes.length > 0 ? sizes : ['Free Size'],
-        rating: 5.0,
+        rating: parsedRating,
+        testimonial: parsedTestimonial,
         numReviews: 0,
         isNewArrival: isNewArrival !== undefined ? isNewArrival : true,
         isBestseller: isBestseller !== undefined ? isBestseller : false,
@@ -200,6 +221,19 @@ export const updateProduct = async (req, res) => {
       const product = await Product.findById(req.params.id);
       if (!product) return res.status(404).json({ success: false, message: 'Product not found' });
       Object.assign(product, req.body);
+
+      if (req.body.rating !== undefined && !isNaN(Number(req.body.rating))) {
+        product.rating = Number(req.body.rating);
+      }
+      if (req.body.testimonial !== undefined && typeof req.body.testimonial === 'object') {
+        product.testimonial = {
+          reviewerName: req.body.testimonial.reviewerName || '',
+          reviewerLocation: req.body.testimonial.reviewerLocation || '',
+          reviewText: req.body.testimonial.reviewText || '',
+          rating: req.body.testimonial.rating ? Number(req.body.testimonial.rating) : 5,
+          reviewBadge: req.body.testimonial.reviewBadge || '',
+        };
+      }
 
       // Recalculate discount if prices change
       if (req.body.price !== undefined || req.body.originalPrice !== undefined) {

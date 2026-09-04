@@ -58,8 +58,7 @@ export const CartProvider = ({ children }) => {
     }
 
     saveCart(updated);
-    setIsDrawerOpen(true);
-    addToast(`Added ${product.name} to your Cart ✨`, 'success');
+    addToast('Product added to bag ✓', 'success');
   };
 
   const updateQuantity = (productId, newQuantity, size = 'Free Size') => {

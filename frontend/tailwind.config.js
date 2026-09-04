@@ -22,6 +22,7 @@ export default {
         serif: ['"Playfair Display"', '"Cormorant Garamond"', 'Georgia', 'serif'],
         editorial: ['"Cormorant Garamond"', 'Georgia', 'serif'],
         sans: ['"Inter"', '"Manrope"', 'system-ui', 'sans-serif'],
+        price: ['"Inter"', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', 'sans-serif'],
       },
       boxShadow: {
         'glass-subtle': '0 8px 32px 0 rgba(214, 207, 255, 0.12)',

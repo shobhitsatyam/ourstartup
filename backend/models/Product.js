@@ -92,6 +92,13 @@ const productSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    testimonial: {
+      reviewerName: { type: String, trim: true, default: '' },
+      reviewerLocation: { type: String, trim: true, default: '' },
+      reviewText: { type: String, trim: true, default: '' },
+      rating: { type: Number, min: 1, max: 5, default: 5 },
+      reviewBadge: { type: String, trim: true, default: '' },
+    },
     isNewArrival: {
       type: Boolean,
       default: false,

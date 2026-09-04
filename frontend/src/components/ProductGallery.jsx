@@ -27,7 +27,7 @@ export default function ProductGallery({ images = [], name = 'Ocean Jewel Piece'
             <button
               key={idx}
               onClick={() => setCurrentIndex(idx)}
-              className={`w-16 h-16 sm:w-20 sm:h-20 lg:w-16 lg:h-20 lg:sm:w-20 lg:sm:h-24 rounded-2xl overflow-hidden border-2 transition-all shrink-0 bg-gray-100 ${
+              className={`w-16 h-16 sm:w-20 sm:h-20 lg:w-20 lg:h-20 rounded-2xl overflow-hidden border-2 transition-all shrink-0 bg-gray-100 ${
                 currentIndex === idx
                   ? 'border-[#7464B8] shadow-md scale-105'
                   : 'border-transparent opacity-60 hover:opacity-100'
@@ -39,8 +39,8 @@ export default function ProductGallery({ images = [], name = 'Ocean Jewel Piece'
         </div>
       )}
 
-      {/* Main Image Frame */}
-      <div className="relative flex-1 rounded-3xl overflow-hidden bg-[#F3EFFF] border border-[#D6CFFF]/50 shadow-xl aspect-square lg:aspect-[4/5]">
+      {/* Main Image Frame - Strict 1:1 Aspect Ratio on Desktop */}
+      <div className="relative flex-1 rounded-3xl overflow-hidden bg-[#F3EFFF] border border-[#D6CFFF]/50 shadow-xl aspect-square lg:aspect-square lg:[aspect-ratio:1/1]">
         <AnimatePresence mode="wait">
           <motion.img
             key={currentIndex}
