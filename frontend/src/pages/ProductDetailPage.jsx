@@ -232,37 +232,37 @@ export default function ProductDetailPage() {
             {/* ============================================================ */}
             {/* 1. MOBILE & TABLET VIEW: ULTRA-PREMIUM LUXURY PDP SECTION    */}
             {/* ============================================================ */}
-            <div className="block lg:hidden space-y-4 sm:space-y-5">
+            <div className="block lg:hidden space-y-2.5 sm:space-y-3">
               <div>
                 {/* Category & Bestseller Pill */}
-                <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#7464B8]/10 border border-[#7464B8]/20 text-[10px] font-bold uppercase tracking-widest text-[#7464B8]">
+                <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#7464B8]/10 border border-[#7464B8]/20 text-[9.5px] font-bold uppercase tracking-wider text-[#7464B8]">
                     <span>{product.category}</span>
                     <span className="text-[#7464B8]/40">&bull;</span>
                     <span>{product.gender}</span>
                   </span>
                   {product.isBestseller && (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-gradient-to-r from-amber-500/15 to-orange-500/15 border border-amber-500/30 text-amber-700 text-[10px] font-bold uppercase tracking-wider">
-                      <Flame className="w-3 h-3 text-amber-500 fill-current" />
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-500/15 to-orange-500/15 border border-amber-500/30 text-amber-700 text-[9.5px] font-bold uppercase tracking-wider">
+                      <Flame className="w-2.5 h-2.5 text-amber-500 fill-current" />
                       <span>Bestseller</span>
                     </span>
                   )}
                 </div>
 
                 {/* Title */}
-                <h1 className="font-serif text-2xl sm:text-3xl font-normal text-[#17151F] leading-snug tracking-tight">
+                <h1 className="font-serif text-xl sm:text-2xl font-normal text-[#17151F] leading-snug tracking-tight my-1">
                   {product.name}
                 </h1>
 
                 {/* Rating & Review Header */}
-                <div className="flex items-center gap-2.5 mt-2 text-xs">
-                  <div className="inline-flex items-center gap-1 text-amber-500 font-bold bg-amber-50/90 border border-amber-200/70 px-2 py-0.5 rounded-lg">
+                <div className="flex items-center gap-2 mt-1 text-xs">
+                  <div className="inline-flex items-center gap-1 text-amber-500 font-bold bg-amber-50/90 border border-amber-200/70 px-1.5 py-0.5 rounded-md text-[10.5px]">
                     <div className="flex">
                       {[...Array(5)].map((_, i) => (
-                        <Star key={i} className="w-3.5 h-3.5 fill-current" />
+                        <Star key={i} className="w-3 h-3 fill-current" />
                       ))}
                     </div>
-                    <span className="text-[11px] text-[#17151F] font-semibold">{product.rating || 4.9}</span>
+                    <span className="text-[#17151F] font-semibold">{product.rating || 4.9}</span>
                   </div>
                   <span className="text-gray-300">&bull;</span>
                   <button
@@ -276,7 +276,7 @@ export default function ProductDetailPage() {
               </div>
 
               {/* Luxury Pricing Card */}
-              <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-white via-[#FCFBFF] to-[#F7F4FF] border border-[#E3DCFF] shadow-[0_4px_20px_rgba(116,100,184,0.06)] space-y-2.5">
+              <div className="p-3 sm:p-3.5 rounded-xl sm:rounded-2xl bg-gradient-to-br from-white via-[#FCFBFF] to-[#F7F4FF] border border-[#E3DCFF] shadow-[0_2px_12px_rgba(116,100,184,0.05)] space-y-1.5">
                 {(() => {
                   const effectiveDiscount = (product.discount && product.discount > 0)
                     ? product.discount
@@ -285,17 +285,17 @@ export default function ProductDetailPage() {
                     : 0;
 
                   return (
-                    <div className="flex items-baseline gap-3 flex-wrap">
-                      <span className="font-price text-3xl sm:text-4xl font-bold text-[#17151F] tracking-tight">
+                    <div className="flex items-baseline gap-2.5 flex-wrap">
+                      <span className="font-price text-2xl sm:text-3xl font-bold text-[#17151F] tracking-tight">
                         ₹{product.price.toLocaleString('en-IN')}
                       </span>
                       {product.originalPrice > product.price && (
-                        <span className="font-price text-base sm:text-lg text-gray-400 line-through font-normal">
+                        <span className="font-price text-sm sm:text-base text-gray-400 line-through font-normal">
                           ₹{product.originalPrice.toLocaleString('en-IN')}
                         </span>
                       )}
                       {effectiveDiscount > 0 && (
-                        <span className="px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-rose-50 text-rose-600 border border-rose-200 shadow-2xs">
+                        <span className="px-2 py-0.5 rounded-full text-[10.5px] font-bold uppercase tracking-wider bg-rose-50 text-rose-600 border border-rose-200">
                           {effectiveDiscount}% OFF
                         </span>
                       )}
@@ -303,9 +303,9 @@ export default function ProductDetailPage() {
                   );
                 })()}
 
-                <div className="pt-2 border-t border-[#EDE7FA] flex items-center justify-between text-[11px] text-gray-500">
-                  <span className="inline-flex items-center gap-1.5 text-emerald-700 font-medium">
-                    <Truck className="w-3.5 h-3.5 text-emerald-600" />
+                <div className="pt-1.5 border-t border-[#EDE7FA] flex items-center justify-between text-[10.5px] text-gray-500">
+                  <span className="inline-flex items-center gap-1 text-emerald-700 font-medium">
+                    <Truck className="w-3 h-3 text-emerald-600" />
                     Free Express Indian Shipping
                   </span>
                   <span className="text-[10px] text-gray-400 font-light">Taxes Included</span>
@@ -314,24 +314,24 @@ export default function ProductDetailPage() {
 
               {/* Size Selector */}
               {product.sizes && product.sizes.length > 0 && (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-xs">
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between text-[11px]">
                     <span className="font-bold text-gray-900 uppercase tracking-wider">
                       Select Size / Dimension:
                     </span>
-                    <span className="text-[#7464B8] font-semibold text-[11px]">
+                    <span className="text-[#7464B8] font-semibold text-[10.5px]">
                       Standard Indian Sizing
                     </span>
                   </div>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-1.5">
                     {product.sizes.map((s) => (
                       <button
                         key={s}
                         type="button"
                         onClick={() => setSelectedSize(s)}
-                        className={`px-4 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                        className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                           selectedSize === s
-                            ? 'border-2 border-[#17151F] bg-[#17151F] text-white shadow-md'
+                            ? 'border-2 border-[#17151F] bg-[#17151F] text-white shadow-xs'
                             : 'border border-[#D6CFFF]/70 bg-white text-gray-800 hover:border-[#7464B8]'
                         }`}
                       >
@@ -343,40 +343,42 @@ export default function ProductDetailPage() {
               )}
 
               {/* Quantity Selector */}
-              <div className="flex items-center justify-between p-3 rounded-xl bg-white border border-[#E3DCFF] shadow-2xs">
-                <span className="text-xs font-bold uppercase tracking-wider text-gray-900">Quantity:</span>
-                <div className="flex items-center gap-3 bg-[#FAF8FF] border border-[#D6CFFF]/60 px-3 py-1 rounded-xl shadow-inner">
+              <div className="flex items-center justify-between p-2 sm:p-2.5 rounded-xl bg-white border border-[#E3DCFF] shadow-2xs">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-gray-900">Quantity:</span>
+                <div className="flex items-center gap-2.5 bg-[#FAF8FF] border border-[#D6CFFF]/60 px-2.5 py-0.5 rounded-lg shadow-inner">
                   <button
                     type="button"
                     onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                    className="text-gray-600 hover:text-black p-1 active:scale-90 transition-transform"
+                    className="text-gray-600 hover:text-black p-0.5 active:scale-90 transition-transform"
+                    aria-label="Decrease quantity"
                   >
-                    <Minus className="w-3.5 h-3.5" />
+                    <Minus className="w-3 h-3" />
                   </button>
-                  <span className="text-xs font-bold w-6 text-center text-[#17151F]">{quantity}</span>
+                  <span className="text-xs font-bold w-5 text-center text-[#17151F]">{quantity}</span>
                   <button
                     type="button"
                     onClick={() => setQuantity((q) => q + 1)}
-                    className="text-gray-600 hover:text-black p-1 active:scale-90 transition-transform"
+                    className="text-gray-600 hover:text-black p-0.5 active:scale-90 transition-transform"
+                    aria-label="Increase quantity"
                   >
-                    <Plus className="w-3.5 h-3.5" />
+                    <Plus className="w-3 h-3" />
                   </button>
                 </div>
               </div>
 
               {/* Action CTAs */}
-              <div className="space-y-2.5 pt-1">
-                <div className="flex gap-2.5 sm:gap-3">
+              <div className="space-y-2 pt-0.5">
+                <div className="flex gap-2 sm:gap-2.5">
                   <button
                     onClick={handleAddToCart}
-                    className={`flex-1 py-3.5 sm:py-4 text-white rounded-xl sm:rounded-2xl text-xs font-bold uppercase tracking-widest active:scale-[0.98] shadow-lg flex items-center justify-center gap-2 btn-shine transition-all ${
+                    className={`flex-1 py-3 sm:py-3.5 text-white rounded-xl text-xs font-bold uppercase tracking-wider active:scale-[0.98] shadow-md flex items-center justify-center gap-2 btn-shine transition-all ${
                       addedSuccess ? 'bg-emerald-700' : 'bg-[#17151F] hover:bg-[#2A2635]'
                     }`}
                   >
                     {addedSuccess ? (
                       <>
                         <CheckCircle2 className="w-4 h-4 text-emerald-200" />
-                        <span>Product Added to Bag ✓</span>
+                        <span>Added to Bag ✓</span>
                       </>
                     ) : (
                       <>
@@ -389,60 +391,60 @@ export default function ProductDetailPage() {
                   <button
                     onClick={() => toggleWishlist(product)}
                     aria-label="Wishlist"
-                    className={`w-12 sm:w-14 h-12 sm:h-14 rounded-xl sm:rounded-2xl border flex items-center justify-center shadow-sm transition-all active:scale-95 shrink-0 ${
+                    className={`w-11 sm:w-12 h-11 sm:h-12 rounded-xl border flex items-center justify-center shadow-xs transition-all active:scale-95 shrink-0 ${
                       inWishlist
                         ? 'bg-rose-50 border-rose-200 text-rose-500'
                         : 'bg-white border-[#D6CFFF]/60 text-gray-700 hover:border-black'
                     }`}
                   >
-                    <Heart className={`w-5 h-5 ${inWishlist ? 'fill-current' : ''}`} />
+                    <Heart className={`w-4 h-4 sm:w-5 sm:h-5 ${inWishlist ? 'fill-current' : ''}`} />
                   </button>
                 </div>
 
                 <button
                   onClick={handleBuyNow}
-                  className="w-full py-3.5 sm:py-4 bg-gradient-to-r from-[#7464B8] via-[#5946A3] to-[#17151F] text-white rounded-xl sm:rounded-2xl text-xs font-bold uppercase tracking-widest shadow-md hover:shadow-xl active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                  className="w-full py-3 sm:py-3.5 bg-gradient-to-r from-[#7464B8] via-[#5946A3] to-[#17151F] text-white rounded-xl text-xs font-bold uppercase tracking-wider shadow-sm hover:shadow-md active:scale-[0.98] transition-all flex items-center justify-center gap-2"
                 >
                   <Zap className="w-4 h-4 text-[#D6CFFF]" />
                   <span>Buy Now with Express Checkout</span>
                 </button>
 
-                <div className="flex items-center justify-center gap-2 text-[10.5px] text-gray-400 font-light pt-0.5">
+                <div className="flex items-center justify-center gap-1.5 text-[10px] text-gray-400 font-light pt-0.5">
                   <Lock className="w-3 h-3 text-emerald-600" />
                   <span>Instant UPI, Cards &amp; Cash on Delivery Available</span>
                 </div>
               </div>
 
               {/* Anti-Tarnish Guarantee Card */}
-              <div className="p-4 rounded-2xl bg-gradient-to-br from-white via-[#FCFBFF] to-[#F8F5FF] border border-[#E4DDFF] shadow-sm flex items-start gap-3.5">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#17151F] to-[#2E283F] text-[#D6CFFF] flex items-center justify-center shrink-0 shadow-xs border border-[#D6CFFF]/25">
-                  <ShieldCheck className="w-5 h-5 text-[#D6CFFF]" />
+              <div className="p-2.5 sm:p-3 rounded-xl bg-gradient-to-br from-white via-[#FCFBFF] to-[#F8F5FF] border border-[#E4DDFF] shadow-2xs flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#17151F] to-[#2E283F] text-[#D6CFFF] flex items-center justify-center shrink-0 shadow-xs border border-[#D6CFFF]/25">
+                  <ShieldCheck className="w-4 h-4 text-[#D6CFFF]" />
                 </div>
                 <div className="text-xs">
                   <div className="flex items-center gap-2">
-                    <h4 className="font-bold text-[#17151F]">Lifetime Anti-Tarnish Guarantee</h4>
-                    <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    <h4 className="font-bold text-[#17151F] text-[11px]">Lifetime Anti-Tarnish Guarantee</h4>
+                    <span className="text-[8.5px] font-bold uppercase tracking-wider px-1.5 py-0.2 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
                       Certified
                     </span>
                   </div>
-                  <p className="text-gray-500 text-[11px] mt-0.5 font-light leading-relaxed">
-                    18K PVD coated on hypoallergenic surgical steel. 100% waterproof, sweatproof, and guaranteed never to fade or green.
+                  <p className="text-gray-500 text-[10.5px] font-light leading-snug mt-0.5">
+                    18K PVD coated on surgical steel. 100% waterproof, sweatproof, and fade-resistant.
                   </p>
                 </div>
               </div>
 
               {/* Information Accordions */}
-              <div className="space-y-2 pt-2 border-t border-[#D6CFFF]/40">
+              <div className="space-y-1.5 pt-1.5 border-t border-[#D6CFFF]/40">
                 {accordions.map((acc) => {
                   const isOpen = activeAccordion === acc.id;
                   return (
-                    <div key={acc.id} className="rounded-xl sm:rounded-2xl bg-white border border-[#D6CFFF]/40 overflow-hidden shadow-2xs">
+                    <div key={acc.id} className="rounded-xl bg-white border border-[#D6CFFF]/40 overflow-hidden shadow-2xs">
                       <button
                         onClick={() => setActiveAccordion(isOpen ? '' : acc.id)}
-                        className="w-full p-3.5 sm:p-4 flex items-center justify-between text-left text-xs font-bold uppercase tracking-wider text-gray-900 hover:text-[#7464B8] transition-colors"
+                        className="w-full p-2.5 sm:p-3 flex items-center justify-between text-left text-xs font-bold uppercase tracking-wider text-gray-900 hover:text-[#7464B8] transition-colors"
                       >
                         <span>{acc.title}</span>
-                        <ChevronDown className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                        <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
                       </button>
                       <AnimatePresence>
                         {isOpen && (
@@ -451,7 +453,7 @@ export default function ProductDetailPage() {
                             animate={{ height: 'auto', opacity: 1 }}
                             exit={{ height: 0, opacity: 0 }}
                             transition={{ duration: 0.2 }}
-                            className="px-3.5 sm:px-4 pb-3.5 sm:pb-4 pt-1 border-t border-gray-100 text-xs text-gray-600 leading-relaxed font-light"
+                            className="px-3 pb-3 pt-1 border-t border-gray-100 text-xs text-gray-600 leading-relaxed font-light"
                           >
                             {acc.content}
                           </motion.div>

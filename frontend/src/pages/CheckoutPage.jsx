@@ -33,7 +33,7 @@ export default function CheckoutPage() {
     clearCart,
   } = useCart();
 
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, login } = useAuth();
   const { addToast } = useToast();
   const navigate = useNavigate();
 
@@ -55,12 +55,30 @@ export default function CheckoutPage() {
     landmark: '',
   });
 
-  // Shipping Method
-  const [deliverySpeed, setDeliverySpeed] = useState('express'); // 'express' or 'vip'
-
   // Payment Method
   const [paymentMethod, setPaymentMethod] = useState('razorpay'); // 'razorpay' (UPI, Cards, NetBanking) or 'cod'
   const [isProcessing, setIsProcessing] = useState(false);
+
+  // Restore temporary address filled before login or update with authenticated user
+  useEffect(() => {
+    const tempAddr = sessionStorage.getItem('checkout_temp_address');
+    if (tempAddr) {
+      try {
+        const parsed = JSON.parse(tempAddr);
+        setAddressForm((prev) => ({ ...prev, ...parsed }));
+      } catch (e) {}
+    }
+  }, []);
+
+  useEffect(() => {
+    if (user) {
+      setAddressForm((prev) => ({
+        ...prev,
+        fullName: prev.fullName || user.name || '',
+        phone: prev.phone || user.phone || '',
+      }));
+    }
+  }, [user]);
 
   useEffect(() => {
     if (cartItems.length === 0) {
@@ -101,6 +119,7 @@ export default function CheckoutPage() {
         return;
       }
       finalAddress = addressForm;
+      sessionStorage.setItem('checkout_temp_address', JSON.stringify(addressForm));
       if (isAuthenticated) {
         try {
           const res = await api.post('/auth/addresses', addressForm);
@@ -114,10 +133,24 @@ export default function CheckoutPage() {
       }
     }
 
+    // Customer must login / signup BEFORE accessing payment
+    if (!isAuthenticated) {
+      sessionStorage.setItem('checkout_temp_address', JSON.stringify(addressForm));
+      addToast('Please sign in or create an account before accessing payment', 'info');
+      navigate('/login?redirect=/checkout');
+      return;
+    }
+
     setCurrentStep(2);
   };
 
   const handlePlaceOrder = async () => {
+    if (!isAuthenticated) {
+      addToast('Authentication required. Please sign in to complete payment.', 'error');
+      navigate('/login?redirect=/checkout');
+      return;
+    }
+
     setIsProcessing(true);
     let finalAddress;
 
@@ -195,19 +228,18 @@ export default function CheckoutPage() {
           </h1>
         </div>
 
-        {/* Steps Progress Header */}
-        <div className="max-w-2xl mx-auto mb-12">
+        {/* Steps Progress Header (Streamlined: Address -> Payment) */}
+        <div className="max-w-md mx-auto mb-12">
           <div className="flex items-center justify-between relative">
             <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-gray-200 -translate-y-1/2 z-0" />
             <div
               className="absolute top-1/2 left-0 h-0.5 bg-[#7464B8] -translate-y-1/2 z-0 transition-all duration-500"
-              style={{ width: `${((currentStep - 1) / 2) * 100}%` }}
+              style={{ width: `${((currentStep - 1) / 1) * 100}%` }}
             />
 
             {[
               { num: 1, label: 'Address', icon: MapPin },
-              { num: 2, label: 'Delivery', icon: Truck },
-              { num: 3, label: 'Payment', icon: CreditCard },
+              { num: 2, label: 'Payment', icon: CreditCard },
             ].map((s) => {
               const Icon = s.icon;
               const isCompleted = currentStep > s.num;
@@ -239,6 +271,79 @@ export default function CheckoutPage() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           {/* Left Flow Steps */}
           <div className="lg:col-span-7 space-y-6">
+            {/* Contact / Patron Verification Card */}
+            {isAuthenticated ? (
+              <div className="p-4 rounded-2xl bg-white border border-[#D6CFFF]/60 flex items-center justify-between shadow-2xs">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-full bg-[#7464B8]/15 text-[#7464B8] font-bold text-xs flex items-center justify-center">
+                    {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-[#17151F] flex items-center gap-2">
+                      <span>{user?.name}</span>
+                      <span className="text-[10px] font-normal px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        Patron Verified
+                      </span>
+                    </p>
+                    <p className="text-[11px] text-gray-500">{user?.email}</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => navigate('/account')}
+                  className="text-[11px] font-semibold text-[#7464B8] hover:underline"
+                >
+                  Account Profile
+                </button>
+              </div>
+            ) : (
+              <div className="p-5 rounded-2xl bg-gradient-to-br from-[#FDFCFE] via-[#F8F6FF] to-[#F1EDFF] border-2 border-[#D6CFFF] shadow-sm space-y-3">
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-[#7464B8]">
+                    Patron Verification Required
+                  </span>
+                  <h3 className="font-serif text-lg font-medium text-[#17151F] mt-0.5">
+                    Sign in or Register Before Payment
+                  </h3>
+                  <p className="text-xs text-gray-600 mt-1 font-light leading-relaxed">
+                    Ocean Jewel protects your order and guarantees authenticity. Please sign in or register before accessing payment. Your cart items are preserved.
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2.5 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      sessionStorage.setItem('checkout_temp_address', JSON.stringify(addressForm));
+                      navigate('/login?redirect=/checkout');
+                    }}
+                    className="px-4 py-2.5 bg-[#17151F] text-white text-xs font-bold uppercase tracking-wider rounded-xl hover:bg-[#2A2635] shadow-xs"
+                  >
+                    Sign In
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      sessionStorage.setItem('checkout_temp_address', JSON.stringify(addressForm));
+                      navigate('/signup?redirect=/checkout');
+                    }}
+                    className="px-4 py-2.5 bg-white text-[#17151F] border border-gray-300 text-xs font-bold uppercase tracking-wider rounded-xl hover:border-black shadow-xs"
+                  >
+                    Create Account
+                  </button>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const res = await login('riya.sharma@example.com', 'Customer@123');
+                      if (res?.success) addToast('Signed in as demo client!', 'success');
+                    }}
+                    className="px-3.5 py-2.5 bg-white/80 text-[#7464B8] border border-[#D6CFFF] text-[11px] font-semibold rounded-xl hover:bg-[#F3EFFF]"
+                  >
+                    ⚡ Quick 1-Click Demo Login
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* STEP 1: ADDRESS */}
             {currentStep === 1 && (
               <motion.div
@@ -392,13 +497,13 @@ export default function CheckoutPage() {
                   onClick={handleAddressSubmit}
                   className="w-full py-3.5 bg-[#17151F] text-white rounded-2xl text-xs font-bold uppercase tracking-widest hover:bg-[#2A2635] shadow-lg flex items-center justify-center gap-2 btn-shine"
                 >
-                  <span>Continue to Delivery Options</span>
+                  <span>{isAuthenticated ? 'Continue to Payment' : 'Sign In to Access Payment'}</span>
                   <ArrowRight className="w-4 h-4 text-[#D6CFFF]" />
                 </button>
               </motion.div>
             )}
 
-            {/* STEP 2: DELIVERY OPTIONS */}
+            {/* STEP 2: PAYMENT METHOD (Delivery Option Removed) */}
             {currentStep === 2 && (
               <motion.div
                 initial={{ opacity: 0, x: -15 }}
@@ -406,60 +511,7 @@ export default function CheckoutPage() {
                 className="p-6 sm:p-8 rounded-3xl bg-white border border-[#D6CFFF]/60 shadow-sm space-y-6"
               >
                 <h3 className="font-serif text-xl font-medium text-gray-900 pb-4 border-b border-gray-100">
-                  2. Select Delivery Method
-                </h3>
-
-                <div className="space-y-3 text-xs">
-                  <label
-                    className={`flex items-start justify-between p-4 rounded-2xl border-2 cursor-pointer transition-all ${
-                      deliverySpeed === 'express'
-                        ? 'border-[#17151F] bg-[#F3EFFF]/50 shadow-sm'
-                        : 'border-gray-100 hover:border-gray-300'
-                    }`}
-                  >
-                    <div className="flex gap-3">
-                      <input
-                        type="radio"
-                        name="deliverySpeed"
-                        checked={deliverySpeed === 'express'}
-                        onChange={() => setDeliverySpeed('express')}
-                        className="mt-0.5 accent-[#17151F]"
-                      />
-                      <div>
-                        <p className="font-bold text-gray-900 text-sm">Complimentary Express Delivery</p>
-                        <p className="text-gray-500 mt-0.5">BlueDart Luxury Courier &bull; 2-4 Business Days</p>
-                      </div>
-                    </div>
-                    <span className="font-bold text-emerald-600">FREE</span>
-                  </label>
-                </div>
-
-                <div className="flex gap-3 pt-2">
-                  <button
-                    onClick={() => setCurrentStep(1)}
-                    className="flex-1 py-3.5 bg-gray-100 rounded-2xl text-xs font-bold uppercase tracking-wider text-gray-700"
-                  >
-                    &larr; Back to Address
-                  </button>
-                  <button
-                    onClick={() => setCurrentStep(3)}
-                    className="flex-1 py-3.5 bg-[#17151F] text-white rounded-2xl text-xs font-bold uppercase tracking-widest hover:bg-[#2A2635] btn-shine"
-                  >
-                    Continue to Payment &rarr;
-                  </button>
-                </div>
-              </motion.div>
-            )}
-
-            {/* STEP 3: PAYMENT METHOD */}
-            {currentStep === 3 && (
-              <motion.div
-                initial={{ opacity: 0, x: -15 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="p-6 sm:p-8 rounded-3xl bg-white border border-[#D6CFFF]/60 shadow-sm space-y-6"
-              >
-                <h3 className="font-serif text-xl font-medium text-gray-900 pb-4 border-b border-gray-100">
-                  3. Select Payment Mode
+                  2. Select Payment Mode
                 </h3>
 
                 <div className="space-y-3 text-xs">
@@ -522,10 +574,10 @@ export default function CheckoutPage() {
 
                 <div className="flex gap-3 pt-2">
                   <button
-                    onClick={() => setCurrentStep(2)}
-                    className="flex-1 py-3.5 bg-gray-100 rounded-2xl text-xs font-bold uppercase tracking-wider text-gray-700"
+                    onClick={() => setCurrentStep(1)}
+                    className="flex-1 py-3.5 bg-gray-100 rounded-2xl text-xs font-bold uppercase tracking-wider text-gray-700 hover:bg-gray-200 transition-colors"
                   >
-                    &larr; Back
+                    &larr; Back to Address
                   </button>
                   <button
                     onClick={handlePlaceOrder}

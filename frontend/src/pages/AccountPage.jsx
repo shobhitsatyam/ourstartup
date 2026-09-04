@@ -16,6 +16,12 @@ import {
   Edit2,
   CheckCircle2,
   ArrowRight,
+  Eye,
+  EyeOff,
+  Mail,
+  Phone,
+  AlertCircle,
+  Loader2,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
@@ -25,7 +31,14 @@ import RewardsCard from '../components/RewardsCard';
 import ProductCard from '../components/ProductCard';
 import api from '../services/api';
 
-export default function AccountPage() {
+import GoogleAuthButton from '../components/auth/GoogleAuthButton';
+import AuthTabs from '../components/auth/AuthTabs';
+import AuthDivider from '../components/auth/AuthDivider';
+import PasswordInput from '../components/auth/PasswordInput';
+import MobileOTPSection from '../components/auth/MobileOTPSection';
+import ForgotPasswordModal from '../components/auth/ForgotPasswordModal';
+
+export default function AccountPage({ initialAuthMode }) {
   const [searchParams, setSearchParams] = useSearchParams();
   const initialTab = searchParams.get('tab') || 'profile';
   const [activeTab, setActiveTab] = useState(initialTab);
@@ -36,19 +49,27 @@ export default function AccountPage() {
   const navigate = useNavigate();
 
   // Auth Form State (For unauthenticated visitors)
-  const [authMode, setAuthMode] = useState('login'); // 'login' or 'register'
-  const [loginEmail, setLoginEmail] = useState('riya.sharma@example.com');
-  const [loginPassword, setLoginPassword] = useState('Customer@123');
+  const defaultMode = initialAuthMode || searchParams.get('mode') || 'login';
+  const [authMode, setAuthMode] = useState(defaultMode); // 'login' or 'register'
+  const [authMethod, setAuthMethod] = useState('credentials'); // 'credentials' or 'otp'
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
   const [regName, setRegName] = useState('');
   const [regEmail, setRegEmail] = useState('');
   const [regPhone, setRegPhone] = useState('');
   const [regPassword, setRegPassword] = useState('');
+  const [regConfirmPassword, setRegConfirmPassword] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [authError, setAuthError] = useState('');
+  const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false);
+  const isDevDemoMode = searchParams.get('demo') === '1' || searchParams.get('dev') === 'true';
 
   // Profile Edit State
   const [profileName, setProfileName] = useState('');
   const [profilePhone, setProfilePhone] = useState('');
   const [newPassword, setNewPassword] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
 
   // Orders State
   const [orders, setOrders] = useState([]);
@@ -98,18 +119,70 @@ export default function AccountPage() {
     }
   }, [isAuthenticated, activeTab]);
 
+  useEffect(() => {
+    if (isAuthenticated) {
+      const redirect = searchParams.get('redirect');
+      if (redirect) {
+        navigate(redirect);
+      }
+    }
+  }, [isAuthenticated, searchParams, navigate]);
+
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
+    setAuthError('');
+    if (!loginEmail || !loginPassword) {
+      setAuthError('Please enter both your email address and password.');
+      return;
+    }
     setAuthLoading(true);
     const res = await login(loginEmail, loginPassword);
     setAuthLoading(false);
+    if (res?.success) {
+      const redirect = searchParams.get('redirect');
+      if (redirect) {
+        navigate(redirect);
+      }
+    } else {
+      setAuthError(res?.message || 'Invalid email or password. Please verify your credentials.');
+    }
   };
 
   const handleRegisterSubmit = async (e) => {
     e.preventDefault();
+    setAuthError('');
+    if (!regName.trim() || !regEmail.trim() || !regPassword) {
+      setAuthError('Please fill in all required fields marked with an asterisk (*).');
+      return;
+    }
+    if (regPassword.length < 6) {
+      setAuthError('Password must be at least 6 characters in length.');
+      return;
+    }
+    if (regPassword !== regConfirmPassword) {
+      setAuthError('The passwords you entered do not match. Please re-enter.');
+      return;
+    }
     setAuthLoading(true);
     const res = await register(regName, regEmail, regPhone, regPassword);
     setAuthLoading(false);
+    if (res?.success) {
+      const redirect = searchParams.get('redirect');
+      if (redirect) {
+        navigate(redirect);
+      }
+    } else {
+      setAuthError(res?.message || 'Registration could not be completed. Please try again.');
+    }
+  };
+
+  const handleGoogleAuth = () => {
+    setGoogleLoading(true);
+    setAuthError('');
+    setTimeout(() => {
+      setGoogleLoading(false);
+      addToast('Google OAuth structure ready for Supabase integration.', 'info');
+    }, 700);
   };
 
   const handleProfileSave = async (e) => {
@@ -144,65 +217,336 @@ export default function AccountPage() {
     }
   };
 
-  // UNAUTHENTICATED LOGIN / REGISTER PORTAL
+  // UNAUTHENTICATED LOGIN / REGISTER / OTP PORTAL
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-[#FAF9FF] py-16 flex items-center justify-center">
-        <div className="max-w-md mx-auto px-4 w-full">
+      <div className="min-h-[calc(100vh-80px)] bg-[#FAF9FF] py-8 sm:py-12 md:py-16 flex items-center justify-center px-4 sm:px-6">
+        <div className="w-full max-w-[460px] sm:max-w-[480px] lg:max-w-[500px] mx-auto">
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            className="rounded-3xl bg-white p-8 sm:p-10 border border-[#D6CFFF]/60 shadow-2xl space-y-6"
+            transition={{ duration: 0.35, ease: 'easeOut' }}
+            className="rounded-3xl sm:rounded-[32px] bg-white/95 backdrop-blur-xl p-6 sm:p-9 md:p-10 border border-[#D6CFFF]/60 shadow-[0_20px_50px_-15px_rgba(23,21,31,0.07)] space-y-5 sm:space-y-6"
           >
-            {/* Header */}
-            <div className="text-center">
-              <span className="text-xs font-bold uppercase tracking-[0.3em] text-[#7464B8]">
+            {/* Header / Branding */}
+            <div className="text-center space-y-1.5">
+              <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.3em] text-[#7464B8]">
                 Ocean Jewel Client Portal
               </span>
-              <h1 className="font-serif text-3xl font-light text-[#17151F] mt-1">
-                {authMode === 'login' ? 'WELCOME BACK' : 'BECOME A PATRON'}
+              <h1 className="font-serif text-2xl sm:text-3xl lg:text-[32px] font-light text-[#17151F] tracking-tight leading-snug">
+                {authMethod === 'otp'
+                  ? 'MOBILE LOGIN'
+                  : authMode === 'register'
+                  ? 'BECOME A PATRON'
+                  : 'WELCOME BACK'}
               </h1>
-              <p className="text-xs text-gray-500 mt-1 font-light">
-                {authMode === 'login'
-                  ? 'Access your orders, saved addresses, and Ocean Points'
-                  : 'Join today and receive 50 complimentary Ocean Points'}
+              <p className="text-xs sm:text-[13px] text-gray-500 font-light leading-relaxed max-w-sm mx-auto">
+                {authMethod === 'otp'
+                  ? 'Sign in instantly using a one-time SMS verification code.'
+                  : authMode === 'register'
+                  ? 'Join the Ocean Jewel inner circle & receive 50 welcome points.'
+                  : 'Access your orders, saved addresses, wishlist and Ocean Points.'}
               </p>
             </div>
 
-            {/* Switch Tabs */}
-            <div className="flex rounded-2xl bg-gray-100 p-1 text-xs font-bold">
-              <button
-                onClick={() => setAuthMode('login')}
-                className={`flex-1 py-2.5 rounded-xl transition-all ${
-                  authMode === 'login' ? 'bg-[#17151F] text-white shadow' : 'text-gray-600 hover:text-black'
-                }`}
-              >
-                Sign In
-              </button>
-              <button
-                onClick={() => setAuthMode('register')}
-                className={`flex-1 py-2.5 rounded-xl transition-all ${
-                  authMode === 'register' ? 'bg-[#17151F] text-white shadow' : 'text-gray-600 hover:text-black'
-                }`}
-              >
-                Create Account
-              </button>
+            {/* Segmented Switch (Sign In vs Create Account) */}
+            {authMethod !== 'otp' && (
+              <AuthTabs
+                activeTab={authMode}
+                onChange={(tab) => {
+                  setAuthMode(tab);
+                  setAuthError('');
+                }}
+              />
+            )}
+
+            {/* Inline Luxury Error State */}
+            <AnimatePresence>
+              {authError && (
+                <motion.div
+                  initial={{ opacity: 0, y: -6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -6 }}
+                  className="p-3 sm:p-3.5 rounded-2xl bg-rose-50/90 border border-rose-200/80 text-rose-800 text-xs flex items-start gap-2.5 shadow-2xs"
+                >
+                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                  <div className="flex-1 font-medium">{authError}</div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Form Section */}
+            {authMethod === 'otp' ? (
+              <MobileOTPSection
+                onBackToEmail={() => {
+                  setAuthMethod('credentials');
+                  setAuthError('');
+                }}
+                onComplete={(otpData) => {
+                  addToast('Mobile OTP verification structure ready for Supabase', 'info');
+                }}
+              />
+            ) : (
+              <div className="space-y-4 sm:space-y-5">
+                {/* Google Auth Button */}
+                <GoogleAuthButton
+                  onClick={handleGoogleAuth}
+                  loading={googleLoading}
+                  text={authMode === 'register' ? 'Sign up with Google' : 'Continue with Google'}
+                />
+
+                {/* Divider */}
+                <AuthDivider text="OR CONTINUE WITH EMAIL" />
+
+                {/* Email Sign In Form */}
+                {authMode === 'login' ? (
+                  <form onSubmit={handleLoginSubmit} className="space-y-4">
+                    <div className="space-y-1.5">
+                      <label
+                        htmlFor="login-email"
+                        className="font-bold uppercase tracking-wider text-gray-700 block text-[11px]"
+                      >
+                        Email Address <span className="text-rose-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <input
+                          id="login-email"
+                          type="email"
+                          value={loginEmail}
+                          onChange={(e) => {
+                            setLoginEmail(e.target.value);
+                            setAuthError('');
+                          }}
+                          placeholder="name@domain.com"
+                          required
+                          autoComplete="email"
+                          className="w-full h-12 pl-10 pr-3.5 bg-[#FBFBFF] border border-gray-200 hover:border-gray-300 focus:border-[#7464B8] focus:ring-2 focus:ring-[#7464B8]/15 rounded-2xl text-xs sm:text-sm text-[#17151F] placeholder-gray-400 focus:outline-none transition-all duration-150"
+                        />
+                        <Mail className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      </div>
+                    </div>
+
+                    <PasswordInput
+                      id="login-password"
+                      value={loginPassword}
+                      onChange={(e) => {
+                        setLoginPassword(e.target.value);
+                        setAuthError('');
+                      }}
+                      required
+                      rightAction={
+                        <button
+                          type="button"
+                          onClick={() => setForgotPasswordOpen(true)}
+                          className="text-[11px] text-[#7464B8] hover:text-[#17151F] font-medium underline underline-offset-2 transition-colors cursor-pointer"
+                        >
+                          Forgot Password?
+                        </button>
+                      }
+                    />
+
+                    <button
+                      type="submit"
+                      disabled={authLoading}
+                      className="w-full h-12 bg-[#17151F] text-white text-xs sm:text-sm font-bold uppercase tracking-widest rounded-2xl hover:bg-[#2A2635] active:scale-[0.99] transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer btn-shine disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      {authLoading ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin text-[#D6CFFF]" />
+                          <span>Signing In...</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>Sign In</span>
+                          <ArrowRight className="w-4 h-4 text-[#D6CFFF]" />
+                        </>
+                      )}
+                    </button>
+                  </form>
+                ) : (
+                  /* Create Account Form */
+                  <form onSubmit={handleRegisterSubmit} className="space-y-3.5 sm:space-y-4">
+                    <div className="space-y-1.5">
+                      <label
+                        htmlFor="reg-name"
+                        className="font-bold uppercase tracking-wider text-gray-700 block text-[11px]"
+                      >
+                        Full Name <span className="text-rose-500">*</span>
+                      </label>
+                      <input
+                        id="reg-name"
+                        type="text"
+                        value={regName}
+                        onChange={(e) => {
+                          setRegName(e.target.value);
+                          setAuthError('');
+                        }}
+                        placeholder="e.g. Kavita Patel"
+                        required
+                        className="w-full h-12 px-3.5 bg-[#FBFBFF] border border-gray-200 hover:border-gray-300 focus:border-[#7464B8] focus:ring-2 focus:ring-[#7464B8]/15 rounded-2xl text-xs sm:text-sm text-[#17151F] placeholder-gray-400 focus:outline-none transition-all duration-150"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label
+                        htmlFor="reg-email"
+                        className="font-bold uppercase tracking-wider text-gray-700 block text-[11px]"
+                      >
+                        Email Address <span className="text-rose-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <input
+                          id="reg-email"
+                          type="email"
+                          value={regEmail}
+                          onChange={(e) => {
+                            setRegEmail(e.target.value);
+                            setAuthError('');
+                          }}
+                          placeholder="name@domain.com"
+                          required
+                          autoComplete="email"
+                          className="w-full h-12 pl-10 pr-3.5 bg-[#FBFBFF] border border-gray-200 hover:border-gray-300 focus:border-[#7464B8] focus:ring-2 focus:ring-[#7464B8]/15 rounded-2xl text-xs sm:text-sm text-[#17151F] placeholder-gray-400 focus:outline-none transition-all duration-150"
+                        />
+                        <Mail className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label
+                        htmlFor="reg-phone"
+                        className="font-bold uppercase tracking-wider text-gray-700 block text-[11px]"
+                      >
+                        Mobile Number
+                      </label>
+                      <div className="relative">
+                        <input
+                          id="reg-phone"
+                          type="tel"
+                          value={regPhone}
+                          onChange={(e) => {
+                            setRegPhone(e.target.value);
+                            setAuthError('');
+                          }}
+                          placeholder="+91 98765 43210"
+                          className="w-full h-12 pl-10 pr-3.5 bg-[#FBFBFF] border border-gray-200 hover:border-gray-300 focus:border-[#7464B8] focus:ring-2 focus:ring-[#7464B8]/15 rounded-2xl text-xs sm:text-sm text-[#17151F] placeholder-gray-400 focus:outline-none transition-all duration-150"
+                        />
+                        <Phone className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      </div>
+                    </div>
+
+                    <PasswordInput
+                      id="reg-password"
+                      label="Password"
+                      value={regPassword}
+                      onChange={(e) => {
+                        setRegPassword(e.target.value);
+                        setAuthError('');
+                      }}
+                      placeholder="Min 6 characters"
+                      required
+                      autoComplete="new-password"
+                    />
+
+                    <PasswordInput
+                      id="reg-confirm-password"
+                      label="Confirm Password"
+                      value={regConfirmPassword}
+                      onChange={(e) => {
+                        setRegConfirmPassword(e.target.value);
+                        setAuthError('');
+                      }}
+                      placeholder="Re-enter password"
+                      required
+                      autoComplete="new-password"
+                    />
+
+                    <button
+                      type="submit"
+                      disabled={authLoading}
+                      className="w-full h-12 bg-[#17151F] text-white text-xs sm:text-sm font-bold uppercase tracking-widest rounded-2xl hover:bg-[#2A2635] active:scale-[0.99] transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer btn-shine disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      {authLoading ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin text-[#D6CFFF]" />
+                          <span>Creating Account...</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>Create Account &bull; Claim 50 Pts</span>
+                          <ArrowRight className="w-4 h-4 text-[#D6CFFF]" />
+                        </>
+                      )}
+                    </button>
+                  </form>
+                )}
+
+                {/* Mobile Phone OTP Secondary Option */}
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAuthMethod('otp');
+                      setAuthError('');
+                    }}
+                    className="w-full h-11 rounded-2xl border border-dashed border-gray-300 hover:border-[#7464B8] hover:bg-[#F8F6FF] text-gray-600 hover:text-[#7464B8] text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer"
+                  >
+                    <Phone className="w-3.5 h-3.5 text-[#7464B8]" />
+                    <span>Continue with Mobile OTP</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Switch Helper */}
+            <div className="pt-3 border-t border-gray-100 text-center text-xs text-gray-500">
+              {authMode === 'login' ? (
+                <p>
+                  New to Ocean Jewel?{' '}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAuthMode('register');
+                      setAuthMethod('credentials');
+                      setAuthError('');
+                    }}
+                    className="font-bold text-[#7464B8] hover:text-[#17151F] underline underline-offset-2 cursor-pointer ml-1"
+                  >
+                    Create an Account
+                  </button>
+                </p>
+              ) : (
+                <p>
+                  Already have an account?{' '}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAuthMode('login');
+                      setAuthMethod('credentials');
+                      setAuthError('');
+                    }}
+                    className="font-bold text-[#7464B8] hover:text-[#17151F] underline underline-offset-2 cursor-pointer ml-1"
+                  >
+                    Sign In here
+                  </button>
+                </p>
+              )}
             </div>
 
-            {/* Fast Demo Credentials Help */}
-            {authMode === 'login' && (
-              <div className="p-3 rounded-xl bg-[#F8F7FF] border border-[#D6CFFF]/40 text-[11px] text-gray-600 space-y-1">
-                <p className="font-bold text-[#17151F]">⚡ Quick One-Click Demo Logins:</p>
-                <div className="flex gap-2 pt-1">
+            {/* Developer Testing Bar (Only visible when ?demo=1 or ?dev=true is in URL) */}
+            {isDevDemoMode && (
+              <div className="p-3 rounded-xl bg-amber-50/80 border border-amber-200/80 text-[11px] text-amber-900 space-y-1.5">
+                <p className="font-bold text-amber-950">🔧 Dev Mode Active (?demo=1):</p>
+                <div className="flex gap-2">
                   <button
                     type="button"
                     onClick={() => {
                       setLoginEmail('riya.sharma@example.com');
                       setLoginPassword('Customer@123');
                     }}
-                    className="px-2 py-1 bg-white border border-gray-200 rounded-lg font-medium hover:border-black"
+                    className="px-2 py-1 bg-white border border-amber-300 rounded-md text-[10px] font-semibold"
                   >
-                    Client (550 Pts)
+                    Fill Client Demo
                   </button>
                   <button
                     type="button"
@@ -210,108 +554,21 @@ export default function AccountPage() {
                       setLoginEmail('admin@oceanjewel.com');
                       setLoginPassword('');
                     }}
-                    className="px-2 py-1 bg-[#17151F] text-[#D6CFFF] rounded-lg font-medium"
+                    className="px-2 py-1 bg-[#17151F] text-amber-200 rounded-md text-[10px] font-semibold"
                   >
-                    Admin Email
+                    Fill Admin
                   </button>
                 </div>
               </div>
             )}
-
-            {/* Login Form */}
-            {authMode === 'login' ? (
-              <form onSubmit={handleLoginSubmit} className="space-y-4 text-xs">
-                <div>
-                  <label className="font-bold uppercase tracking-wider text-gray-700 block mb-1">Email Address</label>
-                  <input
-                    type="email"
-                    value={loginEmail}
-                    onChange={(e) => setLoginEmail(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-[#7464B8]"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="font-bold uppercase tracking-wider text-gray-700 block mb-1">Password</label>
-                  <input
-                    type="password"
-                    value={loginPassword}
-                    onChange={(e) => setLoginPassword(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-[#7464B8]"
-                    required
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={authLoading}
-                  className="w-full py-3.5 bg-[#17151F] text-white font-bold uppercase tracking-widest rounded-2xl hover:bg-[#2A2635] shadow-lg btn-shine"
-                >
-                  {authLoading ? 'Signing In...' : 'Sign In'}
-                </button>
-              </form>
-            ) : (
-              /* Register Form */
-              <form onSubmit={handleRegisterSubmit} className="space-y-4 text-xs">
-                <div>
-                  <label className="font-bold uppercase tracking-wider text-gray-700 block mb-1">Full Name *</label>
-                  <input
-                    type="text"
-                    value={regName}
-                    onChange={(e) => setRegName(e.target.value)}
-                    placeholder="e.g. Kavita Patel"
-                    className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-[#7464B8]"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="font-bold uppercase tracking-wider text-gray-700 block mb-1">Email Address *</label>
-                  <input
-                    type="email"
-                    value={regEmail}
-                    onChange={(e) => setRegEmail(e.target.value)}
-                    placeholder="name@domain.com"
-                    className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-[#7464B8]"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="font-bold uppercase tracking-wider text-gray-700 block mb-1">Mobile Number</label>
-                  <input
-                    type="tel"
-                    value={regPhone}
-                    onChange={(e) => setRegPhone(e.target.value)}
-                    placeholder="+91 98765 43210"
-                    className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-[#7464B8]"
-                  />
-                </div>
-
-                <div>
-                  <label className="font-bold uppercase tracking-wider text-gray-700 block mb-1">Password *</label>
-                  <input
-                    type="password"
-                    value={regPassword}
-                    onChange={(e) => setRegPassword(e.target.value)}
-                    placeholder="Min 6 characters"
-                    className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-[#7464B8]"
-                    required
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={authLoading}
-                  className="w-full py-3.5 bg-[#17151F] text-white font-bold uppercase tracking-widest rounded-2xl hover:bg-[#2A2635] shadow-lg btn-shine"
-                >
-                  {authLoading ? 'Creating Account...' : 'Register & Claim 50 Points'}
-                </button>
-              </form>
-            )}
           </motion.div>
         </div>
+
+        {/* Forgot Password Dialog */}
+        <ForgotPasswordModal
+          isOpen={forgotPasswordOpen}
+          onClose={() => setForgotPasswordOpen(false)}
+        />
       </div>
     );
   }
@@ -437,13 +694,23 @@ export default function AccountPage() {
 
                 <div>
                   <label className="font-bold uppercase tracking-wider text-gray-700 block mb-1">Update Password (Leave blank to keep unchanged)</label>
-                  <input
-                    type="password"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="New password..."
-                    className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-[#7464B8]"
-                  />
+                  <div className="relative">
+                    <input
+                      type={showNewPassword ? 'text' : 'password'}
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="New password..."
+                      className="w-full px-3.5 py-2.5 pr-10 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-[#7464B8]"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPassword((prev) => !prev)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#17151F] focus:outline-none p-1 transition-colors"
+                      aria-label={showNewPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
                 </div>
 
                 <button

@@ -12,6 +12,28 @@ export default function MobileBottomNav() {
   const { totalItemsCount } = useCart();
   const { isAuthenticated } = useAuth();
 
+  // Mobile & Tablet: Hide bottom navigation on transactional and auth pages
+  const hiddenRoutes = [
+    '/cart',
+    '/checkout',
+    '/payment',
+    '/order-success',
+    '/login',
+    '/signup',
+    '/register',
+  ];
+
+  const isExplicitHiddenRoute = hiddenRoutes.some(
+    (route) => location.pathname === route || location.pathname.startsWith(`${route}/`)
+  );
+  // When not authenticated, /account renders the Login/Signup screen, so hide bottom nav
+  const isAuthPortal = location.pathname === '/account' && !isAuthenticated;
+  const isAdminRoute = location.pathname.startsWith('/admin');
+
+  if (isExplicitHiddenRoute || isAuthPortal || isAdminRoute) {
+    return null;
+  }
+
   const navTabs = [
     {
       id: 'home',

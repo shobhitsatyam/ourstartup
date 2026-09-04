@@ -15,6 +15,10 @@ const generateOrderId = () => {
 
 export const createOrder = async (req, res) => {
   try {
+    if (!req.user) {
+      return res.status(401).json({ success: false, message: 'Authentication required. Please login or create an account.' });
+    }
+
     const { orderItems, shippingAddress, paymentMethod, couponCode, redeemOceanPoints } = req.body;
 
     if (!orderItems || orderItems.length === 0) {

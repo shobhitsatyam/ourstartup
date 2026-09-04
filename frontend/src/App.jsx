@@ -73,6 +73,7 @@ export default function App() {
 
           {/* Checkout & Orders */}
           <Route path="/checkout" element={<CheckoutPage />} />
+          <Route path="/payment" element={<CheckoutPage />} />
           <Route path="/order-success" element={<OrderSuccessPage />} />
           <Route
             path="/orders/:id"
@@ -83,8 +84,11 @@ export default function App() {
             }
           />
 
-          {/* User Account Portal */}
+          {/* User Account & Authentication Portals */}
           <Route path="/account" element={<AccountPage />} />
+          <Route path="/login" element={<AccountPage initialAuthMode="login" />} />
+          <Route path="/signup" element={<AccountPage initialAuthMode="register" />} />
+          <Route path="/register" element={<AccountPage initialAuthMode="register" />} />
 
           {/* Brand & Editorial */}
           <Route path="/about" element={<AboutPage />} />
