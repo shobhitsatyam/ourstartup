@@ -282,12 +282,13 @@ export default function ProductListingPage({ fixedGender, isNew, isBest }) {
             </div>
           </aside>
 
-          {/* Product Grid Area */}
+          {/* Product Grid Area (4 Columns on Desktop) */}
           <div className="lg:col-span-9">
             <ProductGrid
               products={products}
               loading={loading}
               onQuickView={(p) => setQuickViewProduct(p)}
+              columns={4}
             />
           </div>
         </div>

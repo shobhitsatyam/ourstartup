@@ -11,7 +11,7 @@ export default function LuxuryLoader({ onComplete }) {
     }, 1800);
 
     return () => clearTimeout(timer);
-  }, [onComplete]);
+  }, []);
 
   return (
     <AnimatePresence>

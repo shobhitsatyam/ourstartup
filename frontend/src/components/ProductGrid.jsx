@@ -1,7 +1,7 @@
 import React from 'react';
 import ProductCard from './ProductCard';
 
-export default function ProductGrid({ products, loading, onQuickView, columns = 6 }) {
+export default function ProductGrid({ products, loading, onQuickView, columns = 4 }) {
   const isSixCol = columns === 6;
   const isEightCol = columns === 8;
 
@@ -9,10 +9,10 @@ export default function ProductGrid({ products, loading, onQuickView, columns = 
     ? 'lg:grid-cols-6 lg:gap-3 xl:gap-3.5'
     : isEightCol
     ? 'lg:grid-cols-8 lg:gap-2.5 xl:gap-3'
-    : 'lg:grid-cols-4 lg:gap-6';
+    : 'lg:grid-cols-4 lg:gap-5 xl:gap-6';
 
   if (loading) {
-    const skeletonCount = isSixCol ? 12 : isEightCol ? 16 : 4;
+    const skeletonCount = isSixCol ? 12 : isEightCol ? 16 : 8;
     return (
       <div
         className={`flex overflow-x-auto snap-x snap-mandatory gap-3 pb-4 -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-none lg:grid ${gridClass} lg:overflow-visible lg:pb-0`}

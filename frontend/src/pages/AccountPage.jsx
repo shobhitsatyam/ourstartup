@@ -92,7 +92,15 @@ export default function AccountPage({ initialAuthMode }) {
   });
 
   // Rewards State
-  const [rewardsData, setRewardsData] = useState(null);
+  // If the user was redirected back to /account directly with OAuth code, token, or error, route to /auth/callback
+  useEffect(() => {
+    const hasOAuthCode = searchParams.get('code');
+    const hasOAuthError = searchParams.get('error');
+    const hasHashAuth = window.location.hash.includes('access_token=') || window.location.hash.includes('error=');
+    if (hasOAuthCode || hasOAuthError || hasHashAuth) {
+      navigate(`/auth/callback${window.location.search}${window.location.hash}`, { replace: true });
+    }
+  }, [searchParams, navigate]);
 
   useEffect(() => {
     if (user) {
@@ -129,59 +137,6 @@ export default function AccountPage({ initialAuthMode }) {
     }
   }, [isAuthenticated, searchParams, navigate]);
 
-  // Handle direct OAuth returns on /account (if Supabase redirected to Site URL without /auth/callback)
-  useEffect(() => {
-    if (isAuthenticated || !isSupabaseConfigured) return;
-
-    const oauthError = searchParams.get('error');
-    if (oauthError) {
-      const desc = searchParams.get('error_description') || 'Google authentication was cancelled or failed.';
-      setAuthError(desc);
-      return;
-    }
-
-    const hasOAuthParams =
-      searchParams.has('code') ||
-      window.location.hash.includes('access_token=') ||
-      searchParams.has('access_token');
-
-    if (hasOAuthParams) {
-      setGoogleLoading(true);
-      supabase.auth.getSession().then(async ({ data: { session }, error }) => {
-        if (session?.user) {
-          const supaUser = session.user;
-          const email = supaUser.email;
-          const name =
-            supaUser.user_metadata?.full_name ||
-            supaUser.user_metadata?.name ||
-            email?.split('@')[0] ||
-            'Valued Patron';
-          const avatar =
-            supaUser.user_metadata?.avatar_url ||
-            supaUser.user_metadata?.picture ||
-            '';
-          const googleId = supaUser.id;
-
-          const res = await loginWithGoogle({ email, name, avatar, googleId });
-          setGoogleLoading(false);
-          if (res?.success) {
-            const redirect = searchParams.get('redirect');
-            if (redirect && redirect.startsWith('/')) {
-              navigate(redirect);
-            }
-          } else {
-            setAuthError(res?.message || 'Google account synchronization failed.');
-          }
-        } else {
-          setGoogleLoading(false);
-          if (error) setAuthError(error.message);
-        }
-      }).catch((e) => {
-        setGoogleLoading(false);
-        setAuthError(e.message || 'Error processing Google session.');
-      });
-    }
-  }, [searchParams, isAuthenticated, loginWithGoogle, navigate]);
 
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
@@ -248,12 +203,18 @@ export default function AccountPage({ initialAuthMode }) {
         ? `/auth/callback?redirect=${encodeURIComponent(redirectParam)}`
         : '/auth/callback';
 
-      const redirectTo = `${window.location.origin}${callbackPath}`;
+      // Dynamically use current origin (supports localhost and Vercel domain)
+      const origin =
+        typeof window !== 'undefined' && window.location.origin
+          ? window.location.origin
+          : 'https://ourstartup-woad.vercel.app';
+      const redirectTo = `${origin}${callbackPath}`;
 
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo,
+          scopes: 'email profile',
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',
