@@ -16,6 +16,7 @@ import CheckoutPage from './pages/CheckoutPage';
 import OrderSuccessPage from './pages/OrderSuccessPage';
 import OrderDetailsPage from './pages/OrderDetailsPage';
 import AccountPage from './pages/AccountPage';
+import AuthCallbackPage from './pages/AuthCallbackPage';
 import WishlistPage from './pages/WishlistPage';
 import AboutPage from './pages/AboutPage';
 import AdminDashboardPage from './pages/AdminDashboardPage';
@@ -89,6 +90,7 @@ export default function App() {
           <Route path="/login" element={<AccountPage initialAuthMode="login" />} />
           <Route path="/signup" element={<AccountPage initialAuthMode="register" />} />
           <Route path="/register" element={<AccountPage initialAuthMode="register" />} />
+          <Route path="/auth/callback" element={<AuthCallbackPage />} />
 
           {/* Brand & Editorial */}
           <Route path="/about" element={<AboutPage />} />

@@ -179,6 +179,165 @@ export const loginUser = async (req, res) => {
   }
 };
 
+export const googleAuth = async (req, res) => {
+  try {
+    const { email, name, avatar, googleId } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'Google email is required' });
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+    const adminEmail = (process.env.ADMIN_EMAIL || '').toLowerCase().trim();
+
+    if (isMongoConnected) {
+      let user = await User.findOne({ email: normalizedEmail });
+
+      if (user) {
+        // User exists -> Log into existing account
+        let updated = false;
+        if (!user.avatar && avatar) {
+          user.avatar = avatar;
+          updated = true;
+        }
+        if (!user.googleId && googleId) {
+          user.googleId = googleId;
+          updated = true;
+        }
+        if (adminEmail && normalizedEmail === adminEmail && user.role !== 'admin') {
+          user.role = 'admin';
+          updated = true;
+        }
+        if (updated) {
+          await user.save();
+        }
+
+        const token = generateToken(user._id);
+
+        return res.json({
+          success: true,
+          data: {
+            _id: user._id,
+            name: user.name,
+            email: user.email,
+            phone: user.phone || '',
+            role: user.role,
+            oceanPoints: user.oceanPoints,
+            avatar: user.avatar || '',
+            token,
+          },
+          message: `Welcome back, ${user.name}!`,
+        });
+      } else {
+        // Create new user via Google
+        const welcomeBonus = 50;
+        const role = adminEmail && normalizedEmail === adminEmail ? 'admin' : 'user';
+
+        user = await User.create({
+          name: name || normalizedEmail.split('@')[0],
+          email: normalizedEmail,
+          avatar: avatar || '',
+          googleId: googleId || '',
+          authProvider: 'google',
+          oceanPoints: welcomeBonus,
+          role,
+          isVerified: true,
+        });
+
+        await RewardTransaction.create({
+          user: user._id,
+          points: welcomeBonus,
+          type: 'BONUS',
+          description: 'Welcome to Ocean Jewel! New Member Bonus',
+          balanceAfter: welcomeBonus,
+        });
+
+        const token = generateToken(user._id);
+
+        return res.status(201).json({
+          success: true,
+          data: {
+            _id: user._id,
+            name: user.name,
+            email: user.email,
+            phone: user.phone || '',
+            role: user.role,
+            oceanPoints: user.oceanPoints,
+            avatar: user.avatar || '',
+            token,
+          },
+          message: 'Account created successfully! You received 50 Ocean Points as a welcome gift.',
+        });
+      }
+    } else {
+      // MockStore fallback
+      let user = mockStore.users.find((u) => u.email.toLowerCase() === normalizedEmail);
+
+      if (user) {
+        if (!user.avatar && avatar) user.avatar = avatar;
+        if (adminEmail && normalizedEmail === adminEmail) user.role = 'admin';
+        const token = generateToken(user._id);
+        return res.json({
+          success: true,
+          data: {
+            _id: user._id,
+            name: user.name,
+            email: user.email,
+            phone: user.phone || '',
+            role: user.role,
+            oceanPoints: user.oceanPoints,
+            avatar: user.avatar || '',
+            token,
+          },
+        });
+      } else {
+        const welcomeBonus = 50;
+        const role = adminEmail && normalizedEmail === adminEmail ? 'admin' : 'user';
+        const newUser = {
+          _id: `user_${Date.now()}`,
+          name: name || normalizedEmail.split('@')[0],
+          email: normalizedEmail,
+          phone: '',
+          avatar: avatar || '',
+          authProvider: 'google',
+          role,
+          oceanPoints: welcomeBonus,
+          createdAt: new Date().toISOString(),
+        };
+
+        mockStore.users.push(newUser);
+        mockStore.rewardTransactions.push({
+          _id: `rew_${Date.now()}`,
+          user: newUser._id,
+          points: welcomeBonus,
+          type: 'BONUS',
+          description: 'Welcome to Ocean Jewel! New Member Bonus',
+          balanceAfter: welcomeBonus,
+          createdAt: new Date().toISOString(),
+        });
+
+        const token = generateToken(newUser._id);
+        return res.status(201).json({
+          success: true,
+          data: {
+            _id: newUser._id,
+            name: newUser.name,
+            email: newUser.email,
+            phone: newUser.phone,
+            role: newUser.role,
+            oceanPoints: newUser.oceanPoints,
+            avatar: newUser.avatar || '',
+            token,
+          },
+        });
+      }
+    }
+  } catch (error) {
+    console.error('Google Auth Controller Error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 export const getMe = async (req, res) => {
   try {
     if (isMongoConnected) {

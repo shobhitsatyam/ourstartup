@@ -37,13 +37,14 @@ import AuthDivider from '../components/auth/AuthDivider';
 import PasswordInput from '../components/auth/PasswordInput';
 import MobileOTPSection from '../components/auth/MobileOTPSection';
 import ForgotPasswordModal from '../components/auth/ForgotPasswordModal';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
 export default function AccountPage({ initialAuthMode }) {
   const [searchParams, setSearchParams] = useSearchParams();
   const initialTab = searchParams.get('tab') || 'profile';
   const [activeTab, setActiveTab] = useState(initialTab);
 
-  const { user, isAuthenticated, isAdmin, login, register, logout, updateProfile, refreshUser } = useAuth();
+  const { user, isAuthenticated, isAdmin, login, register, loginWithGoogle, logout, updateProfile, refreshUser } = useAuth();
   const { wishlist } = useWishlist();
   const { addToast } = useToast();
   const navigate = useNavigate();
@@ -128,6 +129,60 @@ export default function AccountPage({ initialAuthMode }) {
     }
   }, [isAuthenticated, searchParams, navigate]);
 
+  // Handle direct OAuth returns on /account (if Supabase redirected to Site URL without /auth/callback)
+  useEffect(() => {
+    if (isAuthenticated || !isSupabaseConfigured) return;
+
+    const oauthError = searchParams.get('error');
+    if (oauthError) {
+      const desc = searchParams.get('error_description') || 'Google authentication was cancelled or failed.';
+      setAuthError(desc);
+      return;
+    }
+
+    const hasOAuthParams =
+      searchParams.has('code') ||
+      window.location.hash.includes('access_token=') ||
+      searchParams.has('access_token');
+
+    if (hasOAuthParams) {
+      setGoogleLoading(true);
+      supabase.auth.getSession().then(async ({ data: { session }, error }) => {
+        if (session?.user) {
+          const supaUser = session.user;
+          const email = supaUser.email;
+          const name =
+            supaUser.user_metadata?.full_name ||
+            supaUser.user_metadata?.name ||
+            email?.split('@')[0] ||
+            'Valued Patron';
+          const avatar =
+            supaUser.user_metadata?.avatar_url ||
+            supaUser.user_metadata?.picture ||
+            '';
+          const googleId = supaUser.id;
+
+          const res = await loginWithGoogle({ email, name, avatar, googleId });
+          setGoogleLoading(false);
+          if (res?.success) {
+            const redirect = searchParams.get('redirect');
+            if (redirect && redirect.startsWith('/')) {
+              navigate(redirect);
+            }
+          } else {
+            setAuthError(res?.message || 'Google account synchronization failed.');
+          }
+        } else {
+          setGoogleLoading(false);
+          if (error) setAuthError(error.message);
+        }
+      }).catch((e) => {
+        setGoogleLoading(false);
+        setAuthError(e.message || 'Error processing Google session.');
+      });
+    }
+  }, [searchParams, isAuthenticated, loginWithGoogle, navigate]);
+
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
     setAuthError('');
@@ -176,13 +231,46 @@ export default function AccountPage({ initialAuthMode }) {
     }
   };
 
-  const handleGoogleAuth = () => {
+  const handleGoogleAuth = async () => {
     setGoogleLoading(true);
     setAuthError('');
-    setTimeout(() => {
+
+    if (!isSupabaseConfigured) {
       setGoogleLoading(false);
-      addToast('Google OAuth structure ready for Supabase integration.', 'info');
-    }, 700);
+      setAuthError('Supabase is not configured yet. Please provide VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in frontend/.env.');
+      return;
+    }
+
+    try {
+      // Preserve redirect parameter if present (e.g. ?redirect=/checkout)
+      const redirectParam = searchParams.get('redirect');
+      const callbackPath = redirectParam
+        ? `/auth/callback?redirect=${encodeURIComponent(redirectParam)}`
+        : '/auth/callback';
+
+      const redirectTo = `${window.location.origin}${callbackPath}`;
+
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
+        },
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      // Browser will redirect to Google's sign-in screen
+    } catch (err) {
+      console.error('Supabase Google OAuth Error:', err);
+      setGoogleLoading(false);
+      setAuthError(err.message || 'Unable to continue with Google. Please try again.');
+    }
   };
 
   const handleProfileSave = async (e) => {

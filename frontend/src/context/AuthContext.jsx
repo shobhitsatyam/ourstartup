@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import api, { API_BASE_URL } from '../services/api';
 import { useToast } from './ToastContext';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
 const AuthContext = createContext();
 
@@ -71,9 +72,33 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const logout = () => {
+  const loginWithGoogle = async (googleData) => {
+    try {
+      const res = await api.post(`${API_BASE_URL}/api/auth/google`, googleData);
+      if (res.data?.success) {
+        const userData = res.data.data;
+        setUser(userData);
+        localStorage.setItem('ocean_user', JSON.stringify(userData));
+        addToast(`Welcome to Ocean Jewel, ${userData.name}!`, 'success');
+        return { success: true, user: userData };
+      }
+    } catch (error) {
+      const message = error.response?.data?.message || 'Google authentication sync failed.';
+      addToast(message, 'error');
+      return { success: false, message };
+    }
+  };
+
+  const logout = async () => {
     setUser(null);
     localStorage.removeItem('ocean_user');
+    try {
+      if (isSupabaseConfigured) {
+        await supabase.auth.signOut();
+      }
+    } catch (e) {
+      console.warn('Supabase signOut error:', e);
+    }
     addToast('You have been signed out.', 'info');
   };
 
@@ -116,6 +141,7 @@ export const AuthProvider = ({ children }) => {
         isAdmin: user?.role === 'admin',
         login,
         register,
+        loginWithGoogle,
         logout,
         refreshUser,
         updateProfile,

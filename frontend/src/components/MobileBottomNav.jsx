@@ -21,6 +21,7 @@ export default function MobileBottomNav() {
     '/login',
     '/signup',
     '/register',
+    '/auth/callback',
   ];
 
   const isExplicitHiddenRoute = hiddenRoutes.some(
