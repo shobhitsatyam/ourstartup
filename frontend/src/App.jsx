@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, useLocation } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import CartDrawer from './components/CartDrawer';
@@ -24,6 +24,8 @@ import AdminDashboardPage from './pages/AdminDashboardPage';
 import NotFoundPage from './pages/NotFoundPage';
 
 export default function App() {
+  const location = useLocation();
+  const isAdminRoute = location.pathname.startsWith('/admin');
   const [showIntroLoader, setShowIntroLoader] = useState(true);
   const [searchOverlayOpen, setSearchOverlayOpen] = useState(false);
 
@@ -117,8 +119,8 @@ export default function App() {
       {/* 7. Floating Social Button (Fixed Bottom-Left, Desktop Only) */}
       <FloatingSocialButton />
 
-      {/* 8. Luxury Footer */}
-      <Footer />
+      {/* 8. Luxury Footer (Public Customer Pages Only) */}
+      {!isAdminRoute && <Footer />}
     </div>
   );
 }

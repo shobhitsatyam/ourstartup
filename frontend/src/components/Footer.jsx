@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import {
   Sparkles,
   ShieldCheck,
@@ -13,6 +13,13 @@ import {
 import { useToast } from '../context/ToastContext';
 
 export default function Footer() {
+  const location = useLocation();
+
+  // Strictly do not render on admin panel routes
+  if (location.pathname.startsWith('/admin')) {
+    return null;
+  }
+
   const [email, setEmail] = useState('');
   const [subscribed, setSubscribed] = useState(false);
   const { addToast } = useToast();
