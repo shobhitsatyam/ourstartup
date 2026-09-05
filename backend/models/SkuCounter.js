@@ -39,6 +39,8 @@ const SkuCounter = mongoose.model('SkuCounter', skuCounterSchema);
  */
 export const getCategoryCode = (category = '') => {
   const norm = String(category).trim().toLowerCase();
+  if (norm.includes('nose')) return 'NR';
+  if (norm.includes('jean') || norm.includes('adjuster')) return 'JA';
   if (norm.includes('ring') && !norm.includes('ear') && !norm.includes('nose')) return 'RG';
   if (norm.includes('ear') || norm.includes('stud') || norm.includes('lobe')) return 'ER';
   if (norm.includes('neck') || norm.includes('chain') || norm.includes('choker') || norm.includes('mangal') || norm.includes('pendant')) return 'NK';

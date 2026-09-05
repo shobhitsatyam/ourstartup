@@ -41,6 +41,11 @@ import HomepagePermanentOfferManager from '../components/admin/HomepagePermanent
 import CategoryManager from '../components/admin/CategoryManager';
 import TestimonialManager from '../components/admin/TestimonialManager';
 import StoreSettingsManager from '../components/admin/StoreSettingsManager';
+import {
+  getCategoriesForGender,
+  GENDER_OPTIONS,
+  ALL_CATEGORIES,
+} from '../utils/categoryConstants';
 
 export default function AdminDashboardPage() {
   const [activeTab, setActiveTab] = useState('overview');
@@ -66,7 +71,7 @@ export default function AdminDashboardPage() {
   const [skuLoading, setSkuLoading] = useState(false);
   const [productForm, setProductForm] = useState({
     name: '',
-    category: 'Rings',
+    category: 'Earrings',
     gender: 'women',
     price: '',
     originalPrice: '',
@@ -487,7 +492,33 @@ export default function AdminDashboardPage() {
                   </button>
                   <button
                     onClick={() => {
+                      const defaultCat = 'Earrings';
                       setEditingProduct(null);
+                      setProductForm({
+                        name: '',
+                        category: defaultCat,
+                        gender: 'women',
+                        price: '',
+                        originalPrice: '',
+                        sku: '',
+                        stock: 25,
+                        rating: 4.8,
+                        testimonial: {
+                          reviewerName: '',
+                          reviewerLocation: '',
+                          reviewText: '',
+                          rating: 5,
+                          reviewBadge: '',
+                        },
+                        description: '',
+                        images: ['https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?auto=format&fit=crop&w=800&q=80'],
+                        material: '316L Surgical Steel & 18K Gold PVD',
+                        finish: 'Mirror Gold',
+                        isNewArrival: true,
+                        isBestseller: false,
+                        isAntiTarnish: true,
+                      });
+                      fetchNextSku(defaultCat);
                       setShowProductModal(true);
                     }}
                     className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold bg-[#7464B8] text-white hover:bg-[#5f509e] shadow-xs"
@@ -670,7 +701,7 @@ export default function AdminDashboardPage() {
                 </div>
                 <button
                   onClick={() => {
-                    const defaultCat = 'Rings';
+                    const defaultCat = 'Earrings';
                     setEditingProduct(null);
                     setProductForm({
                       name: '',
@@ -726,12 +757,11 @@ export default function AdminDashboardPage() {
                     className="px-3.5 py-2 rounded-xl text-xs bg-[#FAF9FF] border border-[#D6CFFF]/60 focus:border-[#7464B8] outline-hidden text-[#171522]"
                   >
                     <option value="all">All Categories</option>
-                    <option value="Rings">Rings</option>
-                    <option value="Earrings">Earrings</option>
-                    <option value="Necklaces">Necklaces</option>
-                    <option value="Bracelets">Bracelets</option>
-                    <option value="Anklets">Anklets</option>
-                    <option value="Saree Accessories">Saree Accessories</option>
+                    {ALL_CATEGORIES.map((cat) => (
+                      <option key={cat} value={cat}>
+                        {cat}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -817,6 +847,8 @@ export default function AdminDashboardPage() {
                                 setEditingProduct(p);
                                 setProductForm({
                                   ...p,
+                                  gender: p.gender || 'women',
+                                  category: p.category || 'Earrings',
                                   rating: p.rating !== undefined ? p.rating : 4.8,
                                   testimonial: {
                                     reviewerName: p.testimonial?.reviewerName || '',
@@ -1223,6 +1255,28 @@ export default function AdminDashboardPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
+                  <label className="block text-xs font-semibold text-[#171522] mb-1">Gender / Dept</label>
+                  <select
+                    value={productForm.gender || 'women'}
+                    onChange={(e) => {
+                      const newGender = e.target.value;
+                      const allowedCats = getCategoriesForGender(newGender);
+                      const updatedCat = allowedCats.includes(productForm.category) ? productForm.category : allowedCats[0];
+                      setProductForm({ ...productForm, gender: newGender, category: updatedCat });
+                      if (!editingProduct) {
+                        fetchNextSku(updatedCat);
+                      }
+                    }}
+                    className="w-full px-3.5 py-2.5 rounded-xl text-xs bg-[#FAF9FF] border border-[#D6CFFF]/60 focus:border-[#7464B8] outline-hidden text-[#171522]"
+                  >
+                    {GENDER_OPTIONS.map((g) => (
+                      <option key={g.value} value={g.value}>
+                        {g.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
                   <label className="block text-xs font-semibold text-[#171522] mb-1">Category</label>
                   <select
                     value={productForm.category}
@@ -1235,24 +1289,11 @@ export default function AdminDashboardPage() {
                     }}
                     className="w-full px-3.5 py-2.5 rounded-xl text-xs bg-[#FAF9FF] border border-[#D6CFFF]/60 focus:border-[#7464B8] outline-hidden text-[#171522]"
                   >
-                    <option value="Rings">Rings</option>
-                    <option value="Earrings">Earrings</option>
-                    <option value="Necklaces">Necklaces</option>
-                    <option value="Bracelets">Bracelets</option>
-                    <option value="Anklets">Anklets</option>
-                    <option value="Saree Accessories">Saree Accessories</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-[#171522] mb-1">Gender / Dept</label>
-                  <select
-                    value={productForm.gender}
-                    onChange={(e) => setProductForm({ ...productForm, gender: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl text-xs bg-[#FAF9FF] border border-[#D6CFFF]/60 focus:border-[#7464B8] outline-hidden text-[#171522]"
-                  >
-                    <option value="women">Women</option>
-                    <option value="men">Men</option>
-                    <option value="unisex">Unisex</option>
+                    {getCategoriesForGender(productForm.gender, editingProduct?.category).map((cat) => (
+                      <option key={cat} value={cat}>
+                        {cat}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 <div>
