@@ -316,10 +316,10 @@ export default function Navbar({ onOpenSearch }) {
             {/* Desktop Brand Logo */}
             <div className="flex items-center">
               <Link to="/" className="flex flex-col items-center group">
-                <span className="font-serif text-2xl sm:text-3xl font-light tracking-[0.25em] text-[#17151F] group-hover:text-[#7464B8] transition-colors">
+                <span className="font-serif text-[20px] xl:text-[22px] font-light tracking-[0.22em] text-[#17151F] group-hover:text-[#7464B8] transition-colors leading-tight">
                   OCEAN JEWEL
                 </span>
-                <span className="text-[8px] sm:text-[9px] tracking-[0.45em] uppercase font-semibold -mt-0.5 text-[#7464B8]">
+                <span className="text-[7.5px] xl:text-[8px] tracking-[0.42em] uppercase font-semibold text-[#7464B8]">
                   Indian Luxury
                 </span>
               </Link>

@@ -6,6 +6,7 @@ import CartDrawer from './components/CartDrawer';
 import SearchOverlay from './components/SearchOverlay';
 import LuxuryLoader from './components/LuxuryLoader';
 import MobileBottomNav from './components/MobileBottomNav';
+import FloatingSocialButton from './components/FloatingSocialButton';
 import { ProtectedRoute } from './components/ProtectedRoute';
 
 import HomePage from './pages/HomePage';
@@ -113,7 +114,10 @@ export default function App() {
       {/* 6. Fixed Luxury Mobile Bottom Navigation Bar (Hidden on Desktop) */}
       <MobileBottomNav />
 
-      {/* 7. Luxury Footer */}
+      {/* 7. Floating Social Button (Fixed Bottom-Left, Desktop Only) */}
+      <FloatingSocialButton />
+
+      {/* 8. Luxury Footer */}
       <Footer />
     </div>
   );

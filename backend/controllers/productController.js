@@ -287,17 +287,41 @@ export const getSearchSuggestions = async (req, res) => {
 export const getCuratedHighlights = async (req, res) => {
   try {
     if (isMongoConnected) {
-      const newArrivals = await Product.find({ isNewArrival: true, isActive: true }).limit(8);
-      const bestsellers = await Product.find({ isBestseller: true, isActive: true }).limit(8);
-      const trending = await Product.find({ isTrending: true, isActive: true }).limit(8);
+      let newArrivals = await Product.find({ isNewArrival: true, isActive: true }).limit(16);
+      let bestsellers = await Product.find({ isBestseller: true, isActive: true }).limit(16);
+      const trending = await Product.find({ isTrending: true, isActive: true }).limit(16);
+
+      // If less than 16 products, backfill from active products to ensure rich showcases
+      if (newArrivals.length < 16) {
+        const excludeIds = newArrivals.map((p) => p._id);
+        const moreNew = await Product.find({ _id: { $nin: excludeIds }, isActive: true }).limit(16 - newArrivals.length);
+        newArrivals = [...newArrivals, ...moreNew];
+      }
+      if (bestsellers.length < 16) {
+        const excludeIds = bestsellers.map((p) => p._id);
+        const moreBest = await Product.find({ _id: { $nin: excludeIds }, isActive: true }).limit(16 - bestsellers.length);
+        bestsellers = [...bestsellers, ...moreBest];
+      }
+
       return res.json({
         success: true,
         data: { newArrivals, bestsellers, trending },
       });
     } else {
-      const newArrivals = mockStore.products.filter((p) => p.isNewArrival && p.isActive !== false).slice(0, 8);
-      const bestsellers = mockStore.products.filter((p) => p.isBestseller && p.isActive !== false).slice(0, 8);
-      const trending = mockStore.products.filter((p) => p.isTrending && p.isActive !== false).slice(0, 8);
+      let newArrivals = mockStore.products.filter((p) => p.isNewArrival && p.isActive !== false).slice(0, 16);
+      let bestsellers = mockStore.products.filter((p) => p.isBestseller && p.isActive !== false).slice(0, 16);
+      const trending = mockStore.products.filter((p) => p.isTrending && p.isActive !== false).slice(0, 16);
+
+      const allActive = mockStore.products.filter((p) => p.isActive !== false);
+      if (newArrivals.length < 16) {
+        const rest = allActive.filter((p) => !newArrivals.some((n) => n._id.toString() === p._id.toString()));
+        newArrivals = [...newArrivals, ...rest].slice(0, 16);
+      }
+      if (bestsellers.length < 16) {
+        const rest = allActive.filter((p) => !bestsellers.some((b) => b._id.toString() === p._id.toString()));
+        bestsellers = [...bestsellers, ...rest].slice(0, 16);
+      }
+
       return res.json({
         success: true,
         data: { newArrivals, bestsellers, trending },

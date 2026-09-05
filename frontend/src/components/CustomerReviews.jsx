@@ -31,9 +31,65 @@ export default function CustomerReviews() {
       tag: 'Zero Snags on Silk Sarees',
       comment: 'The saree pleat pin solved my biggest headache during Diwali — zero snags on my Kanjeevaram silk saree! The payal is super comfortable and 100% water resistant.',
     },
+    {
+      name: 'Dr. Radhika Sen',
+      initials: 'RS',
+      city: 'Kolkata',
+      product: 'Padmavati Emerald Choker Set',
+      rating: 5,
+      tag: 'Heirloom Finish • Flawless Fit',
+      comment: 'Wore the Padmavati set for my reception. The deep green emerald stone against the champagne gold look was breathtaking. Received endless compliments from family.',
+    },
+    {
+      name: 'Siddharth Rao',
+      initials: 'SR',
+      city: 'Hyderabad',
+      product: 'Vanguard Obsidian Studs',
+      rating: 5,
+      tag: 'Daily Office & Travel',
+      comment: 'Minimalist, masculine, and exceptionally well engineered. The screw-back design ensures they stay secure. Have worn them non-stop for three weeks without any skin reaction.',
+    },
+    {
+      name: 'Meera Kapoor',
+      initials: 'MK',
+      city: 'Jaipur',
+      product: 'Solitaire Eternity Band',
+      rating: 5,
+      tag: 'Zero Discoloration',
+      comment: 'Replaced my everyday silver band with Ocean Jewel’s eternity band. I do daily pottery work and gardening, yet the luster remains completely unaffected.',
+    },
+    {
+      name: 'Vikramaditya Joshi',
+      initials: 'VJ',
+      city: 'Pune',
+      product: 'Imperial Byzantine Link Chain',
+      rating: 5,
+      tag: 'Substantial Weight & Craft',
+      comment: 'The craftsmanship on the Byzantine links is phenomenal. Solid weight, premium clasp, and skin-friendly medical grade steel with zero irritation.',
+    },
+    {
+      name: 'Tanya Singhania',
+      initials: 'TS',
+      city: 'Chandigarh',
+      product: 'Waterproof Layered Payal Stack',
+      rating: 5,
+      tag: 'Monsoon & Beach Proof',
+      comment: 'Wore these to Goa and through the monsoon season. Sand, saltwater, and humidity did nothing to the gold shine. Truly waterproof everyday luxury.',
+    },
+    {
+      name: 'Alankrita Verma',
+      initials: 'AV',
+      city: 'Lucknow',
+      product: 'Kundan Polki Saree Pin',
+      rating: 5,
+      tag: 'Silk-Safe Magnetic Clasp',
+      comment: 'Finally a brooch pin that doesn’t pierce or snag my Chanderi sarees. Beautifully weighted and exudes timeless regal elegance with effortless clasping.',
+    },
   ];
 
   const [activeIdx, setActiveIdx] = useState(0);
+  const [desktopIdx, setDesktopIdx] = useState(0);
+  const maxDesktopIdx = testimonials.length - 3;
   const carouselRef = useRef(null);
 
   const handleScroll = () => {
@@ -55,7 +111,7 @@ export default function CustomerReviews() {
   };
 
   return (
-    <section className="py-12 sm:py-16 lg:py-20 bg-[#FAF9FF] relative overflow-hidden">
+    <section className="py-8 sm:py-10 lg:py-12 bg-[#FAF9FF] relative overflow-hidden border-t border-[#D6CFFF]/25">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* ============================================================ */}
@@ -224,60 +280,126 @@ export default function CustomerReviews() {
         </div>
 
         {/* ============================================================ */}
-        {/* 2. DESKTOP (lg: / 1025px+): 100% UNTOUCHED ORIGINAL LAYOUT  */}
+        {/* 2. DESKTOP (lg: / 1025px+): COMPACT HORIZONTAL CAROUSEL      */}
         {/* ============================================================ */}
         <div className="hidden lg:block">
-          <div className="text-center max-w-2xl mx-auto mb-14">
-            <div className="flex items-center justify-center gap-1 text-amber-500 mb-2">
+          {/* Header */}
+          <div className="text-center max-w-xl mx-auto mb-7 relative">
+            <div className="flex items-center justify-center gap-1 text-amber-400 mb-1">
               {[...Array(5)].map((_, i) => (
-                <Star key={i} className="w-4 h-4 fill-current" />
+                <Star key={i} className="w-3.5 h-3.5 fill-amber-400" />
               ))}
             </div>
-            <span className="text-xs font-semibold uppercase tracking-[0.3em] text-[#7464B8]">
+            <span className="text-[9.5px] font-semibold uppercase tracking-[0.35em] text-[#7464B8]">
               Client Testimonials
             </span>
-            <h2 className="font-serif text-4xl lg:text-5xl font-light text-[#17151F] mt-1 tracking-tight">
+            <h2 className="font-serif text-2xl lg:text-[28px] font-light text-[#17151F] mt-0.5 tracking-tight">
               LOVED BY 50,000+ PATRONS
             </h2>
-            <p className="text-sm text-gray-500 mt-2 font-light">
+            <p className="text-xs text-gray-500 mt-1 font-light">
               Real stories from verified buyers across India.
             </p>
           </div>
 
-          <div className="grid grid-cols-3 gap-8">
-            {testimonials.map((t, idx) => (
-              <motion.div
-                key={t.name}
-                initial={{ opacity: 0, y: 15 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: idx * 0.1 }}
-                className="p-7 rounded-3xl bg-white border border-[#D6CFFF]/60 shadow-[0_4px_20px_rgba(23,21,31,0.04)] flex flex-col justify-between"
-              >
-                <div>
-                  <Quote className="w-7 h-7 text-[#D6CFFF] mb-3" />
-                  <div className="flex items-center gap-1 text-amber-500 mb-2.5">
-                    {[...Array(t.rating)].map((_, i) => (
-                      <Star key={i} className="w-3.5 h-3.5 fill-current" />
-                    ))}
-                  </div>
-                  <p className="text-sm text-gray-700 font-light leading-relaxed italic">
-                    "{t.comment}"
-                  </p>
-                </div>
+          {/* 3-Card Sliding Window Carousel */}
+          <div className="relative overflow-hidden w-full">
+            <div
+              className="flex transition-transform duration-500 ease-out"
+              style={{ transform: `translateX(-${desktopIdx * (100 / 3)}%)` }}
+            >
+              {testimonials.map((t) => (
+                <div
+                  key={t.name}
+                  className="w-1/3 shrink-0 px-2.5 xl:px-3"
+                >
+                  <div className="p-5 xl:p-5.5 rounded-2xl bg-white border border-[#D6CFFF]/50 shadow-[0_2px_15px_rgba(23,21,31,0.03)] hover:shadow-[0_8px_25px_rgba(214,207,255,0.25)] hover:border-[#7464B8]/40 transition-all duration-300 flex flex-col justify-between h-full min-h-[250px] relative overflow-hidden group">
+                    {/* Watermark Quote */}
+                    <Quote className="w-7 h-7 text-[#EFEAFE]/80 absolute top-3 right-3 pointer-events-none group-hover:text-[#D6CFFF]/60 transition-colors" />
 
-                <div className="pt-6 mt-6 border-t border-[#D6CFFF]/30 flex items-center justify-between">
-                  <div>
-                    <h4 className="text-xs font-bold text-[#17151F]">{t.name}</h4>
-                    <p className="text-[10px] text-gray-500">{t.city} &bull; {t.product}</p>
-                  </div>
-                  <div className="flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
-                    <CheckCircle2 className="w-3 h-3" />
-                    <span>Verified</span>
+                    <div>
+                      {/* Rating & Product Tag */}
+                      <div className="flex items-center justify-between gap-2 mb-2 relative z-10">
+                        <div className="flex items-center gap-0.5 text-amber-400">
+                          {[...Array(t.rating)].map((_, i) => (
+                            <Star key={i} className="w-3 h-3 fill-amber-400" />
+                          ))}
+                        </div>
+                        <span className="text-[9px] text-[#7464B8] font-medium bg-[#FAF8FF] border border-[#E7E0FA] px-2 py-0.5 rounded-md truncate max-w-[170px]">
+                          ✨ {t.product}
+                        </span>
+                      </div>
+
+                      {/* Review Comment */}
+                      <p className="text-xs xl:text-[12.5px] text-[#2D2838] font-light leading-relaxed italic line-clamp-4 relative z-10">
+                        "{t.comment}"
+                      </p>
+                    </div>
+
+                    {/* Patron Profile & Verified Badge */}
+                    <div className="pt-3 mt-3 border-t border-[#EDE7FA] flex items-center justify-between relative z-10">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#7464B8] to-[#9A89E2] text-white flex items-center justify-center font-serif text-[10px] font-semibold">
+                          {t.initials}
+                        </div>
+                        <div>
+                          <h4 className="text-[11.5px] font-bold text-[#17151F] leading-tight">{t.name}</h4>
+                          <p className="text-[9.5px] text-gray-500 font-light">{t.city} &bull; Verified Patron</p>
+                        </div>
+                      </div>
+                      <div className="inline-flex items-center gap-1 text-[9px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 shrink-0">
+                        <CheckCircle2 className="w-2.5 h-2.5 text-emerald-600" />
+                        <span>Verified</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </motion.div>
-            ))}
+              ))}
+            </div>
+          </div>
+
+          {/* Desktop Carousel Indicators and Navigation Buttons */}
+          <div className="mt-6 flex items-center justify-center gap-4">
+            <button
+              onClick={() => setDesktopIdx((prev) => Math.max(0, prev - 1))}
+              disabled={desktopIdx === 0}
+              className={`p-2 rounded-full border transition-all duration-200 flex items-center justify-center ${
+                desktopIdx > 0
+                  ? 'bg-white border-[#D6CFFF] text-[#17151F] hover:bg-[#17151F] hover:text-white shadow-sm'
+                  : 'bg-white/50 border-[#D6CFFF]/30 text-gray-300 cursor-not-allowed'
+              }`}
+              aria-label="Previous testimonials"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+
+            {/* Slide Dots */}
+            <div className="flex items-center gap-1.5">
+              {[...Array(maxDesktopIdx + 1)].map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setDesktopIdx(i)}
+                  aria-label={`Slide ${i + 1}`}
+                  className={`h-1.5 rounded-full transition-all duration-300 ${
+                    desktopIdx === i
+                      ? 'w-6 bg-[#7464B8]'
+                      : 'w-1.5 bg-[#D6CFFF] hover:bg-[#B5A7EB]'
+                  }`}
+                />
+              ))}
+            </div>
+
+            <button
+              onClick={() => setDesktopIdx((prev) => Math.min(maxDesktopIdx, prev + 1))}
+              disabled={desktopIdx >= maxDesktopIdx}
+              className={`p-2 rounded-full border transition-all duration-200 flex items-center justify-center ${
+                desktopIdx < maxDesktopIdx
+                  ? 'bg-white border-[#D6CFFF] text-[#17151F] hover:bg-[#17151F] hover:text-white shadow-sm'
+                  : 'bg-white/50 border-[#D6CFFF]/30 text-gray-300 cursor-not-allowed'
+              }`}
+              aria-label="Next testimonials"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
           </div>
         </div>
 

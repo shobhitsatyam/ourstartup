@@ -54,6 +54,20 @@ export default function HomePage({ onOpenSearch }) {
     fetchHighlights();
   }, []);
 
+  // Helper to ensure exactly 12 products for 6 columns x 2 rows desktop showcase
+  const get12Products = (items) => {
+    if (!items || items.length === 0) return [];
+    if (items.length >= 12) return items.slice(0, 12);
+    const result = [];
+    while (result.length < 12) {
+      for (const item of items) {
+        if (result.length >= 12) break;
+        result.push(item);
+      }
+    }
+    return result;
+  };
+
   const shopByCategories = [
     { name: 'RINGS', gender: 'women', img: 'https://images.unsplash.com/photo-1603561591411-07134e71a2a9?auto=format&fit=crop&w=600&q=80', link: '/women/rings' },
     { name: 'EARRINGS & CHANDBALIS', gender: 'women', img: 'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?auto=format&fit=crop&w=600&q=80', link: '/women/earrings' },
@@ -98,9 +112,40 @@ export default function HomePage({ onOpenSearch }) {
       {/* 2. ANTI-TARNISH QUALITY USPs (ENGINEERED TO NEVER FADE) */}
       <TrustBadgeSection />
 
-      {/* 3. CATEGORY REVEAL SHOWCASE (DESKTOP ONLY — 100% UNTOUCHED) */}
+      {/* 3. NEW ARRIVALS (DESKTOP ONLY — REPLACES CATEGORY SHOWCASE IN SAME POSITION) */}
       <div className="hidden min-[1025px]:block">
-        <CategoryShowcase />
+        <section className="py-10 lg:py-14 bg-white border-b border-[#D6CFFF]/25">
+          <div className="max-w-7xl xl:max-w-[1500px] mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center max-w-xl mx-auto mb-6 lg:mb-8 relative">
+              <span className="text-[9.5px] sm:text-[10.5px] font-semibold uppercase tracking-[0.35em] text-[#7464B8]">
+                Freshly Handcrafted
+              </span>
+              <h2 className="font-serif text-2xl sm:text-3xl lg:text-[30px] font-light text-[#17151F] mt-0.5 tracking-tight">
+                NEW ARRIVALS
+              </h2>
+              <p className="text-[11px] sm:text-xs text-gray-500 font-light mt-1">
+                Discover what's newly designed at Ocean Jewel.
+              </p>
+              <div className="w-10 h-0.5 bg-[#D6CFFF] mx-auto mt-2" />
+
+              <Link
+                to="/new-arrivals"
+                className="hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-[#17151F] hover:text-[#7464B8] transition-colors group absolute right-0 bottom-0"
+              >
+                <span>View All</span>
+                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+              </Link>
+            </div>
+
+            {/* 6 COLUMNS x 2 ROWS = 12 PRODUCTS */}
+            <ProductGrid
+              products={get12Products(newArrivals)}
+              loading={loading}
+              onQuickView={(p) => setQuickViewProduct(p)}
+              columns={6}
+            />
+          </div>
+        </section>
       </div>
 
       {/* MOBILE & TABLET: 2-COLUMN BESTSELLERS SECTION (REPLACES CATEGORY SHOWCASE ON MOBILE/TABLET) */}
@@ -263,66 +308,22 @@ export default function HomePage({ onOpenSearch }) {
         </section>
       </div>
 
-      {/* DESKTOP NEW ARRIVALS (1025px+) — 100% UNTOUCHED & IDENTICAL */}
+      {/* 5. BESTSELLERS (DESKTOP ONLY — 8 COLUMNS x 2 ROWS = 16 PRODUCTS) */}
       <div className="hidden min-[1025px]:block">
-        <section className="py-12 sm:py-16 lg:py-20 bg-white">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center max-w-xl mx-auto mb-8 sm:mb-12 relative">
-              <span className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-[0.35em] text-[#7464B8]">
-                Freshly Handcrafted
-              </span>
-              <h2 className="font-serif text-2xl sm:text-3xl lg:text-[32px] font-light text-[#17151F] mt-1 tracking-tight">
-                NEW ARRIVALS
-              </h2>
-              <p className="text-[11px] sm:text-xs text-gray-500 font-light mt-1">
-                Discover what's newly designed at Ocean Jewel.
-              </p>
-              <div className="w-10 h-0.5 bg-[#D6CFFF] mx-auto mt-2.5" />
-
-              <Link
-                to="/new-arrivals"
-                className="hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-[#17151F] hover:text-[#7464B8] transition-colors group absolute right-0 bottom-0"
-              >
-                <span>View All</span>
-                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-              </Link>
-            </div>
-
-            <ProductGrid
-              products={newArrivals.slice(0, 4)}
-              loading={loading}
-              onQuickView={(p) => setQuickViewProduct(p)}
-            />
-
-            <div className="mt-6 text-center sm:hidden">
-              <Link
-                to="/new-arrivals"
-                className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-[#17151F] hover:text-[#7464B8] transition-colors"
-              >
-                <span>View All New Pieces</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
-            </div>
-          </div>
-        </section>
-      </div>
-
-      {/* 6. BESTSELLERS (DESKTOP ONLY — COMPLETELY REMOVED FROM MOBILE & TABLET) */}
-      <div className="hidden min-[1025px]:block">
-        <section className="py-12 sm:py-16 lg:py-20 bg-[#FAF9FF] border-t border-[#D6CFFF]/30">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center max-w-xl mx-auto mb-8 sm:mb-12 relative">
-              <div className="flex items-center justify-center gap-1.5 text-[10px] sm:text-[11px] font-semibold uppercase tracking-[0.35em] text-amber-600">
+        <section className="py-10 lg:py-14 bg-[#FAF9FF] border-t border-[#D6CFFF]/30">
+          <div className="max-w-7xl xl:max-w-[1500px] mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center max-w-xl mx-auto mb-6 lg:mb-8 relative">
+              <div className="flex items-center justify-center gap-1.5 text-[9.5px] sm:text-[10.5px] font-semibold uppercase tracking-[0.35em] text-amber-600">
                 <Flame className="w-3.5 h-3.5 text-amber-500 fill-current" />
                 <span>Patron Favorites</span>
               </div>
-              <h2 className="font-serif text-2xl sm:text-3xl lg:text-[32px] font-light text-[#17151F] mt-1 tracking-tight">
+              <h2 className="font-serif text-2xl sm:text-3xl lg:text-[30px] font-light text-[#17151F] mt-0.5 tracking-tight">
                 MOST LOVED BESTSELLERS
               </h2>
               <p className="text-[11px] sm:text-xs text-gray-500 font-light mt-1">
                 The most coveted pieces backed by 5-star verified reviews.
               </p>
-              <div className="w-10 h-0.5 bg-[#D6CFFF] mx-auto mt-2.5" />
+              <div className="w-10 h-0.5 bg-[#D6CFFF] mx-auto mt-2" />
 
               <Link
                 to="/bestsellers"
@@ -333,76 +334,34 @@ export default function HomePage({ onOpenSearch }) {
               </Link>
             </div>
 
+            {/* 6 COLUMNS x 2 ROWS = 12 PRODUCTS */}
             <ProductGrid
-              products={bestsellers.slice(0, 4)}
+              products={get12Products(bestsellers.length > 0 ? bestsellers : newArrivals)}
               loading={loading}
               onQuickView={(p) => setQuickViewProduct(p)}
+              columns={6}
             />
-
-            <div className="mt-6 text-center sm:hidden">
-              <Link
-                to="/bestsellers"
-                className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-[#17151F] hover:text-[#7464B8] transition-colors"
-              >
-                <span>Explore All Bestsellers</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
-            </div>
           </div>
         </section>
       </div>
 
-      {/* 7. SHOP BY CATEGORY (DESKTOP ONLY — COMPLETELY REMOVED FROM MOBILE & TABLET) */}
+      {/* 6. SHOP BY CATEGORY (DESKTOP ONLY — ONE ROW, NO HORIZONTAL SCROLLBAR, ZERO OVERFLOW) */}
       <div className="hidden min-[1025px]:block">
-        <section className="py-12 sm:py-16 bg-white border-t border-[#D6CFFF]/30 relative overflow-hidden">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            {/* Header - Center Aligned with Refined Classy Typography */}
-            <div className="text-center max-w-xl mx-auto mb-8 sm:mb-10 relative">
-              <span className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-[0.35em] text-[#7464B8]">
+        <section className="py-10 lg:py-14 bg-white border-t border-[#D6CFFF]/30 relative">
+          <div className="max-w-7xl xl:max-w-[1500px] mx-auto px-4 sm:px-6 lg:px-8">
+            {/* Header - Center Aligned */}
+            <div className="text-center max-w-xl mx-auto mb-6 lg:mb-8">
+              <span className="text-[9.5px] sm:text-[10.5px] font-semibold uppercase tracking-[0.35em] text-[#7464B8]">
                 Signature Categories
               </span>
-              <h2 className="font-serif text-2xl sm:text-3xl lg:text-[32px] font-light text-[#17151F] mt-1 tracking-tight">
+              <h2 className="font-serif text-2xl sm:text-3xl lg:text-[30px] font-light text-[#17151F] mt-0.5 tracking-tight">
                 SHOP BY CATEGORY
               </h2>
-              <div className="w-10 h-0.5 bg-[#D6CFFF] mx-auto mt-2.5" />
-
-              {/* Desktop Navigation Floating Arrows */}
-              <div className="hidden sm:flex items-center gap-2 absolute right-0 bottom-0">
-                <button
-                  onClick={() => scrollCategories('left')}
-                  disabled={!canScrollCatLeft}
-                  className={`p-2 rounded-full border transition-all duration-200 flex items-center justify-center ${
-                    canScrollCatLeft
-                      ? 'bg-white border-[#D6CFFF] text-[#17151F] hover:bg-[#17151F] hover:text-white shadow-sm'
-                      : 'bg-white/50 border-[#D6CFFF]/30 text-gray-300 cursor-not-allowed'
-                  }`}
-                  aria-label="Previous categories"
-                >
-                  <ChevronLeft className="w-3.5 h-3.5" />
-                </button>
-
-                <button
-                  onClick={() => scrollCategories('right')}
-                  disabled={!canScrollCatRight}
-                  className={`p-2 rounded-full border transition-all duration-200 flex items-center justify-center ${
-                    canScrollCatRight
-                      ? 'bg-white border-[#D6CFFF] text-[#17151F] hover:bg-[#17151F] hover:text-white shadow-sm'
-                      : 'bg-white/50 border-[#D6CFFF]/30 text-gray-300 cursor-not-allowed'
-                  }`}
-                  aria-label="Next categories"
-                >
-                  <ChevronRight className="w-3.5 h-3.5" />
-                </button>
-              </div>
+              <div className="w-10 h-0.5 bg-[#D6CFFF] mx-auto mt-2" />
             </div>
 
-            {/* Horizontal Category Carousel Cards */}
-            <div
-              ref={categoryScrollRef}
-              onScroll={handleCategoryScroll}
-              className="flex gap-3.5 sm:gap-5 overflow-x-auto scroll-smooth pb-4 pt-1 snap-x snap-mandatory scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0"
-              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-            >
+            {/* All 6 Category Cards in ONE Horizontal Row — Fully Fitting inside Container */}
+            <div className="grid grid-cols-6 gap-3 lg:gap-3.5 xl:gap-4 w-full">
               {shopByCategories.map((cat, idx) => (
                 <motion.div
                   key={cat.name}
@@ -410,11 +369,11 @@ export default function HomePage({ onOpenSearch }) {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ duration: 0.4, delay: idx * 0.05 }}
-                  className="w-[180px] sm:w-[230px] lg:w-[245px] shrink-0 snap-start"
+                  className="w-full"
                 >
                   <Link
                     to={cat.link}
-                    className="group relative block rounded-2xl overflow-hidden aspect-[4/5] sm:h-[310px] bg-gray-900 border border-white/70 shadow-sm hover:shadow-xl transition-all duration-500 transform hover:-translate-y-1"
+                    className="group relative block rounded-xl xl:rounded-2xl overflow-hidden aspect-[4/5] bg-gray-900 border border-[#D6CFFF]/40 shadow-sm hover:shadow-xl transition-all duration-500 transform hover:-translate-y-1"
                   >
                     <img
                       src={cat.img}
@@ -425,11 +384,11 @@ export default function HomePage({ onOpenSearch }) {
                     <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent group-hover:from-black/90 transition-all" />
 
                     {/* Card Content - Center Aligned */}
-                    <div className="absolute inset-x-3 bottom-4 sm:bottom-5 text-center text-white flex flex-col items-center justify-center">
-                      <h3 className="font-serif text-xs sm:text-[13px] tracking-wider font-light uppercase text-white group-hover:text-[#D6CFFF] transition-colors leading-snug">
+                    <div className="absolute inset-x-2 bottom-3.5 text-center text-white flex flex-col items-center justify-center">
+                      <h3 className="font-serif text-[11px] xl:text-[12px] tracking-wider font-light uppercase text-white group-hover:text-[#D6CFFF] transition-colors leading-snug">
                         {cat.name}
                       </h3>
-                      <span className="inline-flex items-center justify-center gap-1 text-[9px] tracking-widest text-white/70 uppercase mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                      <span className="inline-flex items-center justify-center gap-1 text-[8.5px] tracking-widest text-white/70 uppercase mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                         <span>Explore</span>
                         <ArrowUpRight className="w-2.5 h-2.5 text-[#D6CFFF]" />
                       </span>
