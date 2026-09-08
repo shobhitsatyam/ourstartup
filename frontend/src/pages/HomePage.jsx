@@ -1,14 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowRight, ArrowUpRight, Flame, ChevronLeft, ChevronRight, Gift, Copy, Check } from 'lucide-react';
+import { ArrowRight, ArrowUpRight, Flame, ChevronLeft, ChevronRight } from 'lucide-react';
 import Hero from '../components/Hero';
 import MobileSearchBar from '../components/MobileSearchBar';
 import MobileCategoryStrip from '../components/MobileCategoryStrip';
 import TrustBadgeSection from '../components/TrustBadgeSection';
 import CategoryShowcase from '../components/CategoryShowcase';
 import FestiveOfferBanner from '../components/promotions/FestiveOfferBanner';
-import PermanentOffer from '../components/promotions/PermanentOffer';
 import ProductGrid from '../components/ProductGrid';
 import ProductCard from '../components/ProductCard';
 import QuickViewModal from '../components/QuickViewModal';
@@ -34,7 +33,6 @@ export default function HomePage({ onOpenSearch }) {
     return mBests.length > 0 ? mBests : cachedHighlights.bestsellers;
   });
   const [mobileGender, setMobileGender] = useState('women');
-  const [welcomeCopied, setWelcomeCopied] = useState(false);
   const [loading, setLoading] = useState(
     () => !cachedHighlights || (!cachedHighlights.newArrivals?.length && !cachedHighlights.bestsellers?.length)
   );
@@ -254,85 +252,6 @@ export default function HomePage({ onOpenSearch }) {
         </section>
       </div>
 
-      {/* 4. OFFER BANNER */}
-      {/* MOBILE & TABLET (0px - 1024px): 16:6 "10% OFF YOUR FIRST ORDER" BANNER */}
-      <div className="block min-[1025px]:hidden">
-        <section className="py-4 sm:py-6 bg-[#FAF9FF] relative overflow-hidden border-b border-[#D6CFFF]/30">
-          <div className="w-full px-3.5 sm:px-6 max-w-7xl mx-auto">
-            <div
-              className="relative w-full rounded-2xl sm:rounded-3xl overflow-hidden shadow-md border border-[#D6CFFF]/60 aspect-[16/6] bg-gradient-to-br from-[#FFFFFF] via-[#F8F6FF] to-[#EDE8FF] flex items-center justify-center"
-              style={{ aspectRatio: '16 / 6' }}
-            >
-              {/* Subtle ambient luxury glows */}
-              <div className="absolute -top-10 -right-10 w-44 h-44 rounded-full bg-[#D6CFFF]/30 blur-[40px] pointer-events-none" />
-              <div className="absolute -bottom-10 -left-10 w-44 h-44 rounded-full bg-[#E8E3FF]/40 blur-[40px] pointer-events-none" />
-
-              {/* Centered, Responsive Content within 16:6 Banner */}
-              <div className="relative z-10 w-full h-full p-2 xs:p-2.5 sm:p-4 md:p-5 flex flex-col items-center justify-center text-center space-y-1 xs:space-y-1.5 sm:space-y-2.5">
-                {/* Eyebrow Pill */}
-                <div className="inline-flex items-center gap-1 px-2 xs:px-2.5 py-0.5 rounded-full bg-[#17151F]/5 border border-[#D6CFFF]/60 shadow-2xs">
-                  <Gift className="w-2 xs:w-2.5 sm:w-3 h-2 xs:h-2.5 sm:h-3 text-[#7464B8]" />
-                  <span className="text-[7px] xs:text-[8px] sm:text-[9.5px] font-semibold uppercase tracking-[0.22em] text-[#7464B8]">
-                    A Little Extra, Just For You
-                  </span>
-                </div>
-
-                {/* Main Heading */}
-                <h2 className="font-serif text-[12px] xs:text-[14px] sm:text-xl md:text-2xl font-light text-[#17151F] tracking-tight leading-tight">
-                  10% OFF YOUR FIRST ORDER
-                </h2>
-
-                {/* Subtitle */}
-                <p className="text-[7.5px] xs:text-[8.5px] sm:text-xs text-gray-600 font-light max-w-xs sm:max-w-md mx-auto line-clamp-1">
-                  Begin your Ocean Jewel journey with a little something extra.
-                </p>
-
-                {/* Action Row: Coupon Code Pill + SHOP NOW CTA */}
-                <div className="pt-0.5 flex items-center justify-center gap-1.5 xs:gap-2 sm:gap-3">
-                  {/* Copyable Coupon Box */}
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      navigator.clipboard.writeText('WELCOME10');
-                      setWelcomeCopied(true);
-                      setTimeout(() => setWelcomeCopied(false), 2200);
-                    }}
-                    className="px-2 xs:px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-lg bg-white border border-[#D6CFFF] shadow-2xs text-[7.5px] xs:text-[8.5px] sm:text-xs text-[#17151F] flex items-center gap-1 transition-all active:scale-95"
-                    title="Click to copy coupon code"
-                  >
-                    <span className="text-[6.5px] xs:text-[7.5px] sm:text-[9px] text-gray-400 font-semibold uppercase tracking-wider">
-                      USE CODE:
-                    </span>
-                    <span className="font-mono font-bold tracking-wider text-[#17151F]">
-                      WELCOME10
-                    </span>
-                    {welcomeCopied ? (
-                      <Check className="w-2.5 h-2.5 text-emerald-600" />
-                    ) : (
-                      <Copy className="w-2.5 h-2.5 text-gray-400 hover:text-[#7464B8]" />
-                    )}
-                    {welcomeCopied && (
-                      <span className="text-[7px] text-emerald-600 font-medium hidden xs:inline">Copied!</span>
-                    )}
-                  </button>
-
-                  {/* SHOP NOW Action Button */}
-                  <Link
-                    to="/shop"
-                    className="px-2.5 xs:px-3 sm:px-4 py-1 sm:py-1.5 bg-[#17151F] text-white rounded-lg text-[7.5px] xs:text-[8.5px] sm:text-xs font-semibold tracking-wider uppercase hover:bg-[#2A2635] shadow-xs flex items-center gap-1 transition-all active:scale-95 btn-shine"
-                  >
-                    <span>SHOP NOW</span>
-                    <ArrowRight className="w-2.5 xs:w-3 h-2.5 xs:h-3 text-[#D6CFFF]" />
-                  </Link>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-      </div>
-
       {/* DESKTOP (1025px+): FESTIVE OFFER BANNER — 100% UNTOUCHED */}
       <div className="hidden min-[1025px]:block">
         <FestiveOfferBanner />
@@ -439,11 +358,6 @@ export default function HomePage({ onOpenSearch }) {
             />
           </div>
         </section>
-      </div>
-
-      {/* 5B. PERMANENT 10% OFF OFFER BANNER (DESKTOP ONLY — SEAMLESS BRIDGE BETWEEN BESTSELLERS & CATEGORIES) */}
-      <div className="hidden min-[1025px]:block">
-        <PermanentOffer />
       </div>
 
       {/* 6. SHOP BY CATEGORY (DESKTOP ONLY — ONE ROW, NO HORIZONTAL SCROLLBAR, ZERO OVERFLOW) */}

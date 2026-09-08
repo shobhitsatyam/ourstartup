@@ -3,9 +3,36 @@ import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, ArrowUpRight, Tag, ShieldCheck, Star } from 'lucide-react';
 import { initialHeroBanners } from './promotions/heroBannersData';
+import { getHeroConfig, HERO_UPDATE_EVENT } from '../utils/heroBannerStorage';
 
 export default function MobileHeroCarousel() {
-  const banners = initialHeroBanners.filter((b) => b.active);
+  const [heroConfig, setHeroConfig] = useState(() => getHeroConfig());
+
+  useEffect(() => {
+    const handleUpdate = () => setHeroConfig(getHeroConfig());
+    window.addEventListener(HERO_UPDATE_EVENT, handleUpdate);
+    window.addEventListener('storage', handleUpdate);
+    return () => {
+      window.removeEventListener(HERO_UPDATE_EVENT, handleUpdate);
+      window.removeEventListener('storage', handleUpdate);
+    };
+  }, []);
+
+  const banners = initialHeroBanners
+    .filter((b) => b.active)
+    .map((b) => {
+      if (b.id === 'hero-banner-main' && heroConfig.mobileImage) {
+        return {
+          ...b,
+          image: heroConfig.mobileImage,
+          primaryCta: {
+            ...b.primaryCta,
+            link: heroConfig.mobileDestinationUrl || b.primaryCta.link,
+          },
+        };
+      }
+      return b;
+    });
   const [currentIndex, setCurrentIndex] = useState(0);
   const [direction, setDirection] = useState(1);
   const [isPaused, setIsPaused] = useState(false);

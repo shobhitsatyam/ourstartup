@@ -14,6 +14,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import ImageUploadField from './ImageUploadField';
+import DragDropImageUpload from './DragDropImageUpload';
 import { useToast } from '../../context/ToastContext';
 import {
   getCategoryCards,
@@ -333,31 +334,14 @@ export default function CategoryManager() {
               </button>
             </div>
 
-            {/* Current Image Preview & Custom URL */}
-            <div className="flex gap-4 items-center p-3 rounded-2xl bg-[#FAF9FF] border border-[#D6CFFF]/40">
-              <div className="w-20 h-24 rounded-xl overflow-hidden bg-gray-900 border border-[#D6CFFF]/60 shrink-0">
-                <img
-                  src={tempImageUrl || quickImageCat.img}
-                  alt="Preview"
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <div className="flex-1 space-y-1.5">
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-[#171522]">
-                  Image URL / CDN Path
-                </label>
-                <input
-                  type="url"
-                  value={tempImageUrl}
-                  onChange={(e) => setTempImageUrl(e.target.value)}
-                  placeholder="https://images.unsplash.com/..."
-                  className="w-full px-3 py-2 rounded-xl text-xs bg-white border border-[#D6CFFF]/60 focus:border-[#7464B8] outline-hidden text-[#171522]"
-                />
-                <p className="text-[10px] text-gray-500 font-light">
-                  Recommended aspect ratio: 4:5 (portrait jewellery display).
-                </p>
-              </div>
-            </div>
+            {/* Drag & Drop File Upload + URL Input */}
+            <DragDropImageUpload
+              label="Upload Category Photo"
+              value={tempImageUrl}
+              onChange={(url) => setTempImageUrl(url)}
+              aspectRatio="aspect-[4/5]"
+              helperText="Drag & drop JPG, PNG, or WebP (recommended 4:5 portrait ratio, up to 10MB)"
+            />
 
             {/* Curated Luxury Preset Image Pickers */}
             <div className="space-y-2">
@@ -495,16 +479,12 @@ export default function CategoryManager() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-[#171522] mb-1">
-                  Card Banner Image URL
-                </label>
-                <input
-                  type="url"
-                  required
+                <DragDropImageUpload
+                  label="Category Card Image"
                   value={form.img}
-                  onChange={(e) => setForm({ ...form, img: e.target.value })}
-                  placeholder="https://..."
-                  className="w-full px-3.5 py-2.5 rounded-xl text-xs bg-[#FAF9FF] border border-[#D6CFFF]/60 focus:border-[#7464B8] outline-hidden text-[#171522]"
+                  onChange={(url) => setForm({ ...form, img: url })}
+                  aspectRatio="aspect-[4/5]"
+                  helperText="Drag & drop JPG, PNG, or WebP (recommended 4:5 portrait ratio)"
                 />
               </div>
 
