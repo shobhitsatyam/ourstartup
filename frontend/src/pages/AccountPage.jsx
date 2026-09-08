@@ -197,28 +197,25 @@ export default function AccountPage({ initialAuthMode }) {
     }
 
     try {
-      // Preserve redirect parameter if present (e.g. ?redirect=/checkout)
+      // Preserve intended redirect in sessionStorage so redirectTo is always a clean whitelist URL
       const redirectParam = searchParams.get('redirect');
-      const callbackPath = redirectParam
-        ? `/auth/callback?redirect=${encodeURIComponent(redirectParam)}`
-        : '/auth/callback';
+      if (redirectParam && redirectParam.startsWith('/') && !redirectParam.startsWith('//')) {
+        sessionStorage.setItem('ocean_oauth_redirect', redirectParam);
+      } else {
+        sessionStorage.removeItem('ocean_oauth_redirect');
+      }
 
       // Dynamically use current origin (supports localhost and Vercel domain)
       const origin =
         typeof window !== 'undefined' && window.location.origin
-          ? window.location.origin
+          ? window.location.origin.replace(/\/+$/, '')
           : 'https://ourstartup-woad.vercel.app';
-      const redirectTo = `${origin}${callbackPath}`;
+      const redirectTo = `${origin}/auth/callback`;
 
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo,
-          scopes: 'email profile',
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          },
         },
       });
 
@@ -269,27 +266,27 @@ export default function AccountPage({ initialAuthMode }) {
   // UNAUTHENTICATED LOGIN / REGISTER / OTP PORTAL
   if (!isAuthenticated) {
     return (
-      <div className="min-h-[calc(100vh-80px)] bg-[#FAF9FF] py-8 sm:py-12 md:py-16 flex items-center justify-center px-4 sm:px-6">
-        <div className="w-full max-w-[460px] sm:max-w-[480px] lg:max-w-[500px] mx-auto">
+      <div className="min-h-[calc(100vh-120px)] lg:min-h-0 lg:h-[calc(100vh-80px)] bg-[#FAF9FF] py-3 xs:py-4 sm:py-6 lg:py-2 px-3 xs:px-4 sm:px-6 flex items-center justify-center lg:overflow-hidden">
+        <div className="w-full max-w-[420px] sm:max-w-[480px] lg:max-w-[500px] mx-auto">
           <motion.div
-            initial={{ opacity: 0, y: 16 }}
+            initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.35, ease: 'easeOut' }}
-            className="rounded-3xl sm:rounded-[32px] bg-white/95 backdrop-blur-xl p-6 sm:p-9 md:p-10 border border-[#D6CFFF]/60 shadow-[0_20px_50px_-15px_rgba(23,21,31,0.07)] space-y-5 sm:space-y-6"
+            transition={{ duration: 0.3, ease: 'easeOut' }}
+            className="rounded-2xl sm:rounded-3xl lg:rounded-[28px] bg-white/95 backdrop-blur-xl p-4 xs:p-5 sm:p-7 lg:p-6 border border-[#D6CFFF]/60 shadow-[0_15px_40px_-15px_rgba(23,21,31,0.06)] space-y-3 xs:space-y-3.5 sm:space-y-4"
           >
             {/* Header / Branding */}
-            <div className="text-center space-y-1.5">
-              <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.3em] text-[#7464B8]">
+            <div className="text-center space-y-1">
+              <span className="text-[9px] xs:text-[10px] sm:text-[10.5px] font-bold uppercase tracking-[0.25em] text-[#7464B8]">
                 Ocean Jewel Client Portal
               </span>
-              <h1 className="font-serif text-2xl sm:text-3xl lg:text-[32px] font-light text-[#17151F] tracking-tight leading-snug">
+              <h1 className="font-serif text-xl xs:text-2xl sm:text-[26px] lg:text-[28px] font-light text-[#17151F] tracking-tight leading-tight">
                 {authMethod === 'otp'
                   ? 'MOBILE LOGIN'
                   : authMode === 'register'
                   ? 'BECOME A PATRON'
                   : 'WELCOME BACK'}
               </h1>
-              <p className="text-xs sm:text-[13px] text-gray-500 font-light leading-relaxed max-w-sm mx-auto">
+              <p className="text-[11px] sm:text-xs text-gray-500 font-light leading-relaxed max-w-sm mx-auto line-clamp-1 sm:line-clamp-none">
                 {authMethod === 'otp'
                   ? 'Sign in instantly using a one-time SMS verification code.'
                   : authMode === 'register'
@@ -316,9 +313,9 @@ export default function AccountPage({ initialAuthMode }) {
                   initial={{ opacity: 0, y: -6 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -6 }}
-                  className="p-3 sm:p-3.5 rounded-2xl bg-rose-50/90 border border-rose-200/80 text-rose-800 text-xs flex items-start gap-2.5 shadow-2xs"
+                  className="p-2.5 sm:p-3 rounded-xl bg-rose-50/90 border border-rose-200/80 text-rose-800 text-xs flex items-start gap-2 shadow-2xs"
                 >
-                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                  <AlertCircle className="w-3.5 h-3.5 text-rose-600 shrink-0 mt-0.5" />
                   <div className="flex-1 font-medium">{authError}</div>
                 </motion.div>
               )}
@@ -336,7 +333,7 @@ export default function AccountPage({ initialAuthMode }) {
                 }}
               />
             ) : (
-              <div className="space-y-4 sm:space-y-5">
+              <div className="space-y-3 sm:space-y-3.5">
                 {/* Google Auth Button */}
                 <GoogleAuthButton
                   onClick={handleGoogleAuth}
@@ -349,11 +346,11 @@ export default function AccountPage({ initialAuthMode }) {
 
                 {/* Email Sign In Form */}
                 {authMode === 'login' ? (
-                  <form onSubmit={handleLoginSubmit} className="space-y-4">
-                    <div className="space-y-1.5">
+                  <form onSubmit={handleLoginSubmit} className="space-y-2.5 sm:space-y-3">
+                    <div className="space-y-1">
                       <label
                         htmlFor="login-email"
-                        className="font-bold uppercase tracking-wider text-gray-700 block text-[11px]"
+                        className="font-bold uppercase tracking-wider text-gray-700 block text-[10px] sm:text-[11px]"
                       >
                         Email Address <span className="text-rose-500">*</span>
                       </label>
@@ -369,9 +366,9 @@ export default function AccountPage({ initialAuthMode }) {
                           placeholder="name@domain.com"
                           required
                           autoComplete="email"
-                          className="w-full h-12 pl-10 pr-3.5 bg-[#FBFBFF] border border-gray-200 hover:border-gray-300 focus:border-[#7464B8] focus:ring-2 focus:ring-[#7464B8]/15 rounded-2xl text-xs sm:text-sm text-[#17151F] placeholder-gray-400 focus:outline-none transition-all duration-150"
+                          className="w-full h-10 sm:h-11 lg:h-10.5 pl-9 pr-3.5 bg-[#FBFBFF] border border-gray-200 hover:border-gray-300 focus:border-[#7464B8] focus:ring-2 focus:ring-[#7464B8]/15 rounded-xl text-xs sm:text-sm text-[#17151F] placeholder-gray-400 focus:outline-none transition-all duration-150"
                         />
-                        <Mail className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                        <Mail className="w-3.5 h-3.5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                       </div>
                     </div>
 
@@ -387,7 +384,7 @@ export default function AccountPage({ initialAuthMode }) {
                         <button
                           type="button"
                           onClick={() => setForgotPasswordOpen(true)}
-                          className="text-[11px] text-[#7464B8] hover:text-[#17151F] font-medium underline underline-offset-2 transition-colors cursor-pointer"
+                          className="text-[10.5px] sm:text-[11px] text-[#7464B8] hover:text-[#17151F] font-medium underline underline-offset-2 transition-colors cursor-pointer"
                         >
                           Forgot Password?
                         </button>
@@ -397,7 +394,7 @@ export default function AccountPage({ initialAuthMode }) {
                     <button
                       type="submit"
                       disabled={authLoading}
-                      className="w-full h-12 bg-[#17151F] text-white text-xs sm:text-sm font-bold uppercase tracking-widest rounded-2xl hover:bg-[#2A2635] active:scale-[0.99] transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer btn-shine disabled:opacity-60 disabled:cursor-not-allowed"
+                      className="w-full h-10 sm:h-11 lg:h-10.5 bg-[#17151F] text-white text-xs sm:text-[13px] font-bold uppercase tracking-widest rounded-xl hover:bg-[#2A2635] active:scale-[0.99] transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer btn-shine disabled:opacity-60 disabled:cursor-not-allowed"
                     >
                       {authLoading ? (
                         <>
@@ -414,32 +411,59 @@ export default function AccountPage({ initialAuthMode }) {
                   </form>
                 ) : (
                   /* Create Account Form */
-                  <form onSubmit={handleRegisterSubmit} className="space-y-3.5 sm:space-y-4">
-                    <div className="space-y-1.5">
-                      <label
-                        htmlFor="reg-name"
-                        className="font-bold uppercase tracking-wider text-gray-700 block text-[11px]"
-                      >
-                        Full Name <span className="text-rose-500">*</span>
-                      </label>
-                      <input
-                        id="reg-name"
-                        type="text"
-                        value={regName}
-                        onChange={(e) => {
-                          setRegName(e.target.value);
-                          setAuthError('');
-                        }}
-                        placeholder="e.g. Kavita Patel"
-                        required
-                        className="w-full h-12 px-3.5 bg-[#FBFBFF] border border-gray-200 hover:border-gray-300 focus:border-[#7464B8] focus:ring-2 focus:ring-[#7464B8]/15 rounded-2xl text-xs sm:text-sm text-[#17151F] placeholder-gray-400 focus:outline-none transition-all duration-150"
-                      />
+                  <form onSubmit={handleRegisterSubmit} className="space-y-2.5 sm:space-y-3">
+                    {/* Full Name & Phone in 2 columns on sm+ */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      <div className="space-y-1">
+                        <label
+                          htmlFor="reg-name"
+                          className="font-bold uppercase tracking-wider text-gray-700 block text-[10px] sm:text-[11px]"
+                        >
+                          Full Name <span className="text-rose-500">*</span>
+                        </label>
+                        <input
+                          id="reg-name"
+                          type="text"
+                          value={regName}
+                          onChange={(e) => {
+                            setRegName(e.target.value);
+                            setAuthError('');
+                          }}
+                          placeholder="e.g. Kavita Patel"
+                          required
+                          className="w-full h-10 sm:h-11 lg:h-10.5 px-3.5 bg-[#FBFBFF] border border-gray-200 hover:border-gray-300 focus:border-[#7464B8] focus:ring-2 focus:ring-[#7464B8]/15 rounded-xl text-xs sm:text-sm text-[#17151F] placeholder-gray-400 focus:outline-none transition-all duration-150"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label
+                          htmlFor="reg-phone"
+                          className="font-bold uppercase tracking-wider text-gray-700 block text-[10px] sm:text-[11px]"
+                        >
+                          Mobile Number
+                        </label>
+                        <div className="relative">
+                          <input
+                            id="reg-phone"
+                            type="tel"
+                            value={regPhone}
+                            onChange={(e) => {
+                              setRegPhone(e.target.value);
+                              setAuthError('');
+                            }}
+                            placeholder="+91 98765 43210"
+                            className="w-full h-10 sm:h-11 lg:h-10.5 pl-9 pr-3 bg-[#FBFBFF] border border-gray-200 hover:border-gray-300 focus:border-[#7464B8] focus:ring-2 focus:ring-[#7464B8]/15 rounded-xl text-xs sm:text-sm text-[#17151F] placeholder-gray-400 focus:outline-none transition-all duration-150"
+                          />
+                          <Phone className="w-3.5 h-3.5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                        </div>
+                      </div>
                     </div>
 
-                    <div className="space-y-1.5">
+                    {/* Email full width */}
+                    <div className="space-y-1">
                       <label
                         htmlFor="reg-email"
-                        className="font-bold uppercase tracking-wider text-gray-700 block text-[11px]"
+                        className="font-bold uppercase tracking-wider text-gray-700 block text-[10px] sm:text-[11px]"
                       >
                         Email Address <span className="text-rose-500">*</span>
                       </label>
@@ -455,65 +479,45 @@ export default function AccountPage({ initialAuthMode }) {
                           placeholder="name@domain.com"
                           required
                           autoComplete="email"
-                          className="w-full h-12 pl-10 pr-3.5 bg-[#FBFBFF] border border-gray-200 hover:border-gray-300 focus:border-[#7464B8] focus:ring-2 focus:ring-[#7464B8]/15 rounded-2xl text-xs sm:text-sm text-[#17151F] placeholder-gray-400 focus:outline-none transition-all duration-150"
+                          className="w-full h-10 sm:h-11 lg:h-10.5 pl-9 pr-3.5 bg-[#FBFBFF] border border-gray-200 hover:border-gray-300 focus:border-[#7464B8] focus:ring-2 focus:ring-[#7464B8]/15 rounded-xl text-xs sm:text-sm text-[#17151F] placeholder-gray-400 focus:outline-none transition-all duration-150"
                         />
-                        <Mail className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                        <Mail className="w-3.5 h-3.5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                       </div>
                     </div>
 
-                    <div className="space-y-1.5">
-                      <label
-                        htmlFor="reg-phone"
-                        className="font-bold uppercase tracking-wider text-gray-700 block text-[11px]"
-                      >
-                        Mobile Number
-                      </label>
-                      <div className="relative">
-                        <input
-                          id="reg-phone"
-                          type="tel"
-                          value={regPhone}
-                          onChange={(e) => {
-                            setRegPhone(e.target.value);
-                            setAuthError('');
-                          }}
-                          placeholder="+91 98765 43210"
-                          className="w-full h-12 pl-10 pr-3.5 bg-[#FBFBFF] border border-gray-200 hover:border-gray-300 focus:border-[#7464B8] focus:ring-2 focus:ring-[#7464B8]/15 rounded-2xl text-xs sm:text-sm text-[#17151F] placeholder-gray-400 focus:outline-none transition-all duration-150"
-                        />
-                        <Phone className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                      </div>
+                    {/* Password & Confirm Password in 2 columns on sm+ */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      <PasswordInput
+                        id="reg-password"
+                        label="Password"
+                        value={regPassword}
+                        onChange={(e) => {
+                          setRegPassword(e.target.value);
+                          setAuthError('');
+                        }}
+                        placeholder="Min 6 characters"
+                        required
+                        autoComplete="new-password"
+                      />
+
+                      <PasswordInput
+                        id="reg-confirm-password"
+                        label="Confirm Password"
+                        value={regConfirmPassword}
+                        onChange={(e) => {
+                          setRegConfirmPassword(e.target.value);
+                          setAuthError('');
+                        }}
+                        placeholder="Re-enter password"
+                        required
+                        autoComplete="new-password"
+                      />
                     </div>
-
-                    <PasswordInput
-                      id="reg-password"
-                      label="Password"
-                      value={regPassword}
-                      onChange={(e) => {
-                        setRegPassword(e.target.value);
-                        setAuthError('');
-                      }}
-                      placeholder="Min 6 characters"
-                      required
-                      autoComplete="new-password"
-                    />
-
-                    <PasswordInput
-                      id="reg-confirm-password"
-                      label="Confirm Password"
-                      value={regConfirmPassword}
-                      onChange={(e) => {
-                        setRegConfirmPassword(e.target.value);
-                        setAuthError('');
-                      }}
-                      placeholder="Re-enter password"
-                      required
-                      autoComplete="new-password"
-                    />
 
                     <button
                       type="submit"
                       disabled={authLoading}
-                      className="w-full h-12 bg-[#17151F] text-white text-xs sm:text-sm font-bold uppercase tracking-widest rounded-2xl hover:bg-[#2A2635] active:scale-[0.99] transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer btn-shine disabled:opacity-60 disabled:cursor-not-allowed"
+                      className="w-full h-10 sm:h-11 lg:h-10.5 bg-[#17151F] text-white text-xs sm:text-[13px] font-bold uppercase tracking-widest rounded-xl hover:bg-[#2A2635] active:scale-[0.99] transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer btn-shine disabled:opacity-60 disabled:cursor-not-allowed"
                     >
                       {authLoading ? (
                         <>
@@ -531,16 +535,16 @@ export default function AccountPage({ initialAuthMode }) {
                 )}
 
                 {/* Mobile Phone OTP Secondary Option */}
-                <div className="pt-2">
+                <div className="pt-0.5">
                   <button
                     type="button"
                     onClick={() => {
                       setAuthMethod('otp');
                       setAuthError('');
                     }}
-                    className="w-full h-11 rounded-2xl border border-dashed border-gray-300 hover:border-[#7464B8] hover:bg-[#F8F6FF] text-gray-600 hover:text-[#7464B8] text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer"
+                    className="w-full h-9 sm:h-10 rounded-xl border border-dashed border-gray-300 hover:border-[#7464B8] hover:bg-[#F8F6FF] text-gray-600 hover:text-[#7464B8] text-[11px] sm:text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
                   >
-                    <Phone className="w-3.5 h-3.5 text-[#7464B8]" />
+                    <Phone className="w-3 h-3 text-[#7464B8]" />
                     <span>Continue with Mobile OTP</span>
                   </button>
                 </div>
@@ -548,7 +552,7 @@ export default function AccountPage({ initialAuthMode }) {
             )}
 
             {/* Switch Helper */}
-            <div className="pt-3 border-t border-gray-100 text-center text-xs text-gray-500">
+            <div className="pt-2 border-t border-gray-100 text-center text-[11px] sm:text-xs text-gray-500">
               {authMode === 'login' ? (
                 <p>
                   New to Ocean Jewel?{' '}
@@ -561,7 +565,7 @@ export default function AccountPage({ initialAuthMode }) {
                     }}
                     className="font-bold text-[#7464B8] hover:text-[#17151F] underline underline-offset-2 cursor-pointer ml-1"
                   >
-                    Create an Account
+                    Create an account
                   </button>
                 </p>
               ) : (
@@ -576,7 +580,7 @@ export default function AccountPage({ initialAuthMode }) {
                     }}
                     className="font-bold text-[#7464B8] hover:text-[#17151F] underline underline-offset-2 cursor-pointer ml-1"
                   >
-                    Sign In here
+                    Sign in here
                   </button>
                 </p>
               )}

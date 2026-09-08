@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -190,16 +190,40 @@ export default function AdminDashboardPage() {
   };
 
   const handleUpdateOrderStatus = async (orderId, newStatus) => {
+    const STATUS_MAP = {
+      pending: 'Pending',
+      confirmed: 'Confirmed',
+      processing: 'Processing',
+      shipped: 'Shipped',
+      'out for delivery': 'Out for Delivery',
+      delivered: 'Delivered',
+      cancelled: 'Cancelled',
+      canceled: 'Cancelled',
+      returned: 'Returned',
+      refunded: 'Refunded',
+    };
+    const normalized = STATUS_MAP[newStatus.toLowerCase()] || newStatus;
+
+    // Optimistically update local orders so derived revenue updates immediately
+    setOrders((prevOrders) =>
+      prevOrders.map((o) =>
+        (o._id || o.id) === orderId
+          ? { ...o, orderStatus: normalized, status: normalized }
+          : o
+      )
+    );
+
     try {
       await api.put(`/admin/orders/${orderId}/status`, {
-        status: newStatus,
-        note: `Status modified to ${newStatus} in Admin Control.`,
+        status: normalized,
+        note: `Status modified to ${normalized} in Admin Control.`,
       });
-      addToast(`Order updated to ${newStatus}`, 'success');
-      fetchAllAdminData();
+      addToast(`Order updated to ${normalized}`, 'success');
+      await fetchAllAdminData();
     } catch (e) {
-      setOrders(orders.map((o) => ((o._id || o.id) === orderId ? { ...o, status: newStatus } : o)));
-      addToast(`Order status marked as ${newStatus}`, 'success');
+      console.error('Failed to update order status on server:', e);
+      addToast(e.response?.data?.message || `Order status marked as ${normalized}`, 'info');
+      fetchAllAdminData();
     }
   };
 
@@ -298,20 +322,59 @@ export default function AdminDashboardPage() {
     return matchesSearch && matchesCat;
   });
 
+  // Helper to reliably check if an order is valid & active for revenue
+  const isOrderActive = (o) => {
+    if (!o) return false;
+    const s = String(o.orderStatus || o.status || '').trim().toLowerCase();
+    if (s === 'cancelled' || s === 'canceled' || s === 'refunded' || s === 'returned') {
+      return false;
+    }
+    const payStatus = String(o.paymentResult?.status || o.paymentStatus || '').trim().toLowerCase();
+    if (payStatus === 'refunded' || payStatus === 'failed') {
+      return false;
+    }
+    return true;
+  };
+
   // Filtered Orders
   const filteredOrders = orders.filter((o) => {
     if (orderStatusFilter === 'all') return true;
-    return o.status?.toLowerCase() === orderStatusFilter.toLowerCase();
+    const current = String(o.orderStatus || o.status || '').trim().toLowerCase();
+    const filter = orderStatusFilter.trim().toLowerCase();
+    if (filter === 'cancelled' && (current === 'cancelled' || current === 'canceled')) return true;
+    return current === filter;
   });
 
-  // Mock Fallback Metrics if DB is fresh
-  const displayMetrics = metrics || {
-    totalRevenue: 284500,
-    totalOrders: orders.length || 48,
-    totalCustomers: customers.length || 142,
-    totalProducts: products.length || 24,
-    revenueGrowth: '+18.4%',
-    ordersGrowth: '+12.1%',
+  // Derived Sales Revenue from actual non-cancelled orders
+  const derivedSalesRevenue = useMemo(() => {
+    if (orders && orders.length > 0) {
+      return orders.reduce((sum, o) => {
+        if (isOrderActive(o)) {
+          const amt = Number(o.totalPrice) || Number(o.totalAmount) || 0;
+          return sum + amt;
+        }
+        return sum;
+      }, 0);
+    }
+    return metrics?.totalRevenue !== undefined ? metrics.totalRevenue : 0;
+  }, [orders, metrics]);
+
+  // Derived Active Orders Count
+  const derivedActiveOrdersCount = useMemo(() => {
+    if (orders && orders.length > 0) {
+      return orders.filter(isOrderActive).length;
+    }
+    return metrics?.totalOrders !== undefined ? metrics.totalOrders : 0;
+  }, [orders, metrics]);
+
+  // Reactive Derived Metrics for Dashboard
+  const displayMetrics = {
+    totalRevenue: derivedSalesRevenue,
+    totalOrders: orders.length > 0 ? derivedActiveOrdersCount : (metrics?.totalOrders || 0),
+    totalCustomers: customers.length || metrics?.totalCustomers || 0,
+    totalProducts: products.length || metrics?.totalProducts || 0,
+    revenueGrowth: metrics?.revenueGrowth || '+18.4%',
+    ordersGrowth: metrics?.ordersGrowth || '+12.1%',
   };
 
   const navItems = [
@@ -655,20 +718,31 @@ export default function AdminDashboardPage() {
                             {order.items?.length || 1} piece(s)
                           </td>
                           <td className="py-3.5 px-4 font-semibold text-[#171522]">
-                            ₹{(order.totalAmount || order.totalPrice || 2499).toLocaleString('en-IN')}
+                            ₹{(Number(order.totalPrice) || Number(order.totalAmount) || 2499).toLocaleString('en-IN')}
                           </td>
                           <td className="py-3.5 px-4">
-                            <span
-                              className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider ${
-                                order.status === 'delivered'
-                                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                  : order.status === 'shipped'
-                                  ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                                  : 'bg-amber-50 text-amber-700 border border-amber-200'
-                              }`}
-                            >
-                              {order.status || 'Processing'}
-                            </span>
+                            {(() => {
+                              const rawStatus = order.orderStatus || order.status || 'Processing';
+                              const s = rawStatus.toLowerCase();
+                              const isCancelled = s === 'cancelled' || s === 'canceled' || s === 'refunded' || s === 'returned';
+                              const isDelivered = s === 'delivered';
+                              const isShipped = s === 'shipped' || s === 'out for delivery';
+                              return (
+                                <span
+                                  className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider ${
+                                    isCancelled
+                                      ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                                      : isDelivered
+                                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                      : isShipped
+                                      ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                                      : 'bg-amber-50 text-amber-700 border border-amber-200'
+                                  }`}
+                                >
+                                  {rawStatus}
+                                </span>
+                              );
+                            })()}
                           </td>
                           <td className="py-3.5 px-4 text-right">
                             <button
@@ -946,33 +1020,51 @@ export default function AdminDashboardPage() {
                             {order.items?.length || 1} item(s)
                           </td>
                           <td className="py-3.5 px-4 font-semibold text-[#171522]">
-                            ₹{(order.totalAmount || order.totalPrice || 2499).toLocaleString('en-IN')}
+                            ₹{(Number(order.totalPrice) || Number(order.totalAmount) || 2499).toLocaleString('en-IN')}
                           </td>
                           <td className="py-3.5 px-4">
-                            <span
-                              className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider ${
-                                order.status === 'delivered'
-                                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                  : order.status === 'shipped'
-                                  ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                                  : 'bg-amber-50 text-amber-700 border border-amber-200'
-                              }`}
-                            >
-                              {order.status || 'Processing'}
-                            </span>
+                            {(() => {
+                              const rawStatus = order.orderStatus || order.status || 'Processing';
+                              const s = rawStatus.toLowerCase();
+                              const isCancelled = s === 'cancelled' || s === 'canceled' || s === 'refunded' || s === 'returned';
+                              const isDelivered = s === 'delivered';
+                              const isShipped = s === 'shipped' || s === 'out for delivery';
+                              return (
+                                <span
+                                  className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider ${
+                                    isCancelled
+                                      ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                                      : isDelivered
+                                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                      : isShipped
+                                      ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                                      : 'bg-amber-50 text-amber-700 border border-amber-200'
+                                  }`}
+                                >
+                                  {rawStatus}
+                                </span>
+                              );
+                            })()}
                           </td>
                           <td className="py-3.5 px-4 text-right">
-                            <select
-                              value={order.status || 'processing'}
-                              onChange={(e) => handleUpdateOrderStatus(order._id || order.id, e.target.value)}
-                              className="px-2.5 py-1 rounded-lg text-[11px] bg-[#FAF9FF] border border-[#D6CFFF] text-[#171522] focus:border-[#7464B8] outline-hidden"
-                            >
-                              <option value="pending">Pending</option>
-                              <option value="confirmed">Confirmed</option>
-                              <option value="shipped">Shipped</option>
-                              <option value="delivered">Delivered</option>
-                              <option value="cancelled">Cancelled</option>
-                            </select>
+                            {(() => {
+                              const currentStatus = String(order.orderStatus || order.status || 'processing').toLowerCase();
+                              const val = currentStatus === 'canceled' ? 'cancelled' : currentStatus;
+                              return (
+                                <select
+                                  value={val}
+                                  onChange={(e) => handleUpdateOrderStatus(order._id || order.id, e.target.value)}
+                                  className="px-2.5 py-1 rounded-lg text-[11px] bg-[#FAF9FF] border border-[#D6CFFF] text-[#171522] focus:border-[#7464B8] outline-hidden"
+                                >
+                                  <option value="pending">Pending</option>
+                                  <option value="confirmed">Confirmed</option>
+                                  <option value="processing">Processing</option>
+                                  <option value="shipped">Shipped</option>
+                                  <option value="delivered">Delivered</option>
+                                  <option value="cancelled">Cancelled</option>
+                                </select>
+                              );
+                            })()}
                           </td>
                         </tr>
                       ))}
@@ -1195,11 +1287,22 @@ export default function AdminDashboardPage() {
                 >
                   Permanent First-Order Offer
                 </button>
+                <button
+                  onClick={() => setHomepageSubTab('categories')}
+                  className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
+                    homepageSubTab === 'categories'
+                      ? 'bg-[#7464B8] text-white shadow-xs'
+                      : 'text-[#171522] hover:bg-[#FAF9FF]'
+                  }`}
+                >
+                  Shop by Category
+                </button>
               </div>
 
               {homepageSubTab === 'hero' && <HomepageHeroManager />}
               {homepageSubTab === 'festive' && <HomepageFestiveManager />}
               {homepageSubTab === 'permanent' && <HomepagePermanentOfferManager />}
+              {homepageSubTab === 'categories' && <CategoryManager />}
             </div>
           )}
 

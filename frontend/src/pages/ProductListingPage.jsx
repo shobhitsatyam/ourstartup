@@ -289,6 +289,7 @@ export default function ProductListingPage({ fixedGender, isNew, isBest }) {
               loading={loading}
               onQuickView={(p) => setQuickViewProduct(p)}
               columns={4}
+              priorityCount={4}
             />
           </div>
         </div>

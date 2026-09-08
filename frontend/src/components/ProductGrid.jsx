@@ -1,7 +1,7 @@
 import React from 'react';
 import ProductCard from './ProductCard';
 
-export default function ProductGrid({ products, loading, onQuickView, columns = 4 }) {
+export default function ProductGrid({ products, loading, onQuickView, columns = 4, priorityCount = 0 }) {
   const isSixCol = columns === 6;
   const isEightCol = columns === 8;
 
@@ -56,7 +56,7 @@ export default function ProductGrid({ products, loading, onQuickView, columns = 
           key={product._id ? `${product._id}-${idx}` : idx}
           className="w-[185px] sm:w-[220px] md:w-[240px] lg:w-full shrink-0 snap-start lg:shrink lg:snap-none"
         >
-          <ProductCard product={product} onQuickView={onQuickView} />
+          <ProductCard product={product} onQuickView={onQuickView} priority={idx < priorityCount} />
         </div>
       ))}
     </div>

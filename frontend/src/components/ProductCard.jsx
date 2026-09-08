@@ -4,8 +4,9 @@ import { motion } from 'framer-motion';
 import { Heart, Eye, ShoppingBag, Star, Sparkles } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
+import { getOptimizedImageUrl } from '../utils/imageOptimizer';
 
-export default function ProductCard({ product, onQuickView }) {
+export default function ProductCard({ product, onQuickView, priority = false }) {
   const [isHovered, setIsHovered] = useState(false);
   const { addToCart } = useCart();
   const { isInWishlist, toggleWishlist } = useWishlist();
@@ -13,9 +14,11 @@ export default function ProductCard({ product, onQuickView }) {
   if (!product) return null;
 
   const inWishlist = isInWishlist(product._id || product.id);
-  const mainImage = product.images && product.images.length > 0 ? product.images[0] : (product.image || 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=800&q=80');
-  const hoverImage = product.images && product.images.length > 1 ? product.images[1] : mainImage;
-  const imageSrc = isHovered ? hoverImage : mainImage;
+  const rawMain = product.images && product.images.length > 0 ? product.images[0] : (product.image || 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=440&q=75');
+  const rawHover = product.images && product.images.length > 1 ? product.images[1] : rawMain;
+  const optimizedMain = getOptimizedImageUrl(rawMain, 440, 75);
+  const optimizedHover = getOptimizedImageUrl(rawHover, 440, 75);
+  const imageSrc = isHovered ? optimizedHover : optimizedMain;
 
   const handleAddToCart = (e) => {
     e.preventDefault();
@@ -59,10 +62,12 @@ export default function ProductCard({ product, onQuickView }) {
             src={imageSrc}
             alt={product.name}
             className="w-full h-full object-cover object-center transform group-hover:scale-108 transition-all duration-700"
-            loading="lazy"
+            loading={priority ? 'eager' : 'lazy'}
+            fetchPriority={priority ? 'high' : 'auto'}
+            decoding="async"
             onError={(e) => {
               e.currentTarget.onerror = null;
-              e.currentTarget.src = 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=800&q=80';
+              e.currentTarget.src = 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=440&q=75';
             }}
           />
         </Link>

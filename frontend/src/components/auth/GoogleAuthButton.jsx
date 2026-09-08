@@ -1,13 +1,13 @@
 import React from 'react';
 import { Loader2 } from 'lucide-react';
 
-export default function GoogleAuthButton({ onClick, loading = false, disabled = false, text = 'Continue with Google' }) {
+export default function GoogleAuthButton({ onClick, loading = false, disabled = false, text = 'Continue with Google', className = '' }) {
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={loading || disabled}
-      className="w-full h-12 px-4 rounded-2xl bg-white border border-gray-200/90 hover:border-[#17151F] hover:bg-gray-50/70 text-[#17151F] text-xs sm:text-sm font-semibold flex items-center justify-center gap-3 transition-all duration-200 shadow-2xs hover:shadow-xs active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed group cursor-pointer"
+      className={`w-full h-10 sm:h-11 lg:h-10.5 px-4 rounded-xl bg-white border border-gray-200/90 hover:border-[#17151F] hover:bg-gray-50/70 text-[#17151F] text-xs sm:text-[13px] font-semibold flex items-center justify-center gap-2.5 transition-all duration-200 shadow-2xs hover:shadow-xs active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed group cursor-pointer ${className}`}
     >
       {loading ? (
         <>

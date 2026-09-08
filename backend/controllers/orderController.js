@@ -276,6 +276,10 @@ export const cancelOrder = async (req, res) => {
         return res.status(404).json({ success: false, message: 'Order not found' });
       }
 
+      if (order.orderStatus === 'Cancelled') {
+        return res.json({ success: true, data: order, message: 'Order is already cancelled' });
+      }
+
       if (['Shipped', 'Out for Delivery', 'Delivered'].includes(order.orderStatus)) {
         return res.status(400).json({ success: false, message: 'Order has already been dispatched and cannot be cancelled.' });
       }
@@ -286,6 +290,13 @@ export const cancelOrder = async (req, res) => {
         note: 'Order cancelled by patron.',
         timestamp: new Date(),
       });
+
+      // Restore product catalog inventory
+      for (const item of order.orderItems || []) {
+        if (item.product) {
+          await Product.findByIdAndUpdate(item.product, { $inc: { stock: item.quantity || 1 } });
+        }
+      }
 
       if (order.oceanPointsUsed > 0 && order.user) {
         const user = await User.findById(order.user);
@@ -298,9 +309,13 @@ export const cancelOrder = async (req, res) => {
       await order.save();
       res.json({ success: true, data: order, message: 'Order has been cancelled' });
     } else {
-      const order = mockStore.orders.find((o) => o._id === id);
+      const order = mockStore.orders.find((o) => o._id === id || o.orderId === id);
       if (!order) {
         return res.status(404).json({ success: false, message: 'Order not found' });
+      }
+
+      if (order.orderStatus === 'Cancelled') {
+        return res.json({ success: true, data: order, message: 'Order is already cancelled' });
       }
 
       order.orderStatus = 'Cancelled';
@@ -309,6 +324,13 @@ export const cancelOrder = async (req, res) => {
         note: 'Order cancelled by patron.',
         timestamp: new Date().toISOString(),
       });
+
+      for (const item of order.orderItems || []) {
+        const prod = mockStore.products.find(
+          (p) => p._id && p._id.toString() === (item.product || '').toString()
+        );
+        if (prod) prod.stock += (item.quantity || 1);
+      }
 
       res.json({ success: true, data: order, message: 'Order has been cancelled' });
     }

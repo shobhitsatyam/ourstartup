@@ -33,20 +33,28 @@ export default function AuthCallbackPage() {
       // Check for OAuth error returned by provider / Supabase
       if (oauthError) {
         console.error('Google OAuth callback error received:', { oauthError, errorCode, errorDescription });
-        let friendlyMsg = 'Google authentication could not be completed.';
+        const decodedDesc = errorDescription
+          ? decodeURIComponent(errorDescription.replace(/\+/g, ' '))
+          : '';
 
-        if (errorCode === 'unexpected_failure' || oauthError === 'server_error') {
-          friendlyMsg =
-            'Google Sign-In encountered an unexpected provider exchange error. Please check that third-party cookies are enabled or sign in with your email & password.';
-        } else if (errorDescription) {
-          friendlyMsg = decodeURIComponent(errorDescription.replace(/\+/g, ' '));
+        let friendlyMsg = decodedDesc;
+        if (!friendlyMsg) {
+          if (errorCode === 'unexpected_failure' || oauthError === 'server_error') {
+            friendlyMsg =
+              'Google OAuth provider exchange encountered an issue with Supabase configuration. Please check that Google Cloud OAuth credentials and authorized domains are configured in your Supabase project.';
+          } else {
+            friendlyMsg = 'Google authentication could not be completed. Please sign in with your email & password.';
+          }
         }
+
+        const detailsList = [];
+        if (errorCode) detailsList.push(`Code: ${errorCode}`);
+        if (oauthError) detailsList.push(`Error: ${oauthError}`);
+        if (decodedDesc && decodedDesc !== friendlyMsg) detailsList.push(`Details: ${decodedDesc}`);
 
         if (isMounted) {
           setErrorMessage(friendlyMsg);
-          if (errorCode || oauthError) {
-            setErrorDetails(`Code: ${errorCode || oauthError}`);
-          }
+          setErrorDetails(detailsList.join(' | '));
         }
         addToast(friendlyMsg, 'error');
         return;
@@ -79,7 +87,9 @@ export default function AuthCallbackPage() {
         const result = await loginWithGoogle({ email, name, avatar, googleId });
 
         if (result?.success) {
-          const redirectParam = queryParams.get('redirect') || hashParams.get('redirect');
+          const savedRedirect = sessionStorage.getItem('ocean_oauth_redirect');
+          sessionStorage.removeItem('ocean_oauth_redirect');
+          const redirectParam = savedRedirect || queryParams.get('redirect') || hashParams.get('redirect');
           const destination =
             redirectParam && redirectParam.startsWith('/') && !redirectParam.startsWith('//')
               ? redirectParam
@@ -92,34 +102,40 @@ export default function AuthCallbackPage() {
       };
 
       try {
-        // 2. PKCE Authorization Code Exchange
-        const authCode = queryParams.get('code') || hashParams.get('code');
-        let currentSession = null;
+        // 1. Check if session was already detected or processed by Supabase client (detectSessionInUrl)
+        const { data: initialSessionData } = await supabase.auth.getSession();
+        if (initialSessionData?.session?.user) {
+          await processSessionUser(initialSessionData.session.user);
+          return;
+        }
 
+        // 2. PKCE Authorization Code Exchange (if authCode is present)
+        const authCode = queryParams.get('code') || hashParams.get('code');
         if (authCode) {
           try {
             const { data: exchangeData, error: exchangeError } =
               await supabase.auth.exchangeCodeForSession(authCode);
-            if (!exchangeError && exchangeData?.session) {
-              currentSession = exchangeData.session;
+            if (!exchangeError && exchangeData?.session?.user) {
+              await processSessionUser(exchangeData.session.user);
+              return;
             } else if (exchangeError) {
               console.warn('PKCE exchangeCodeForSession notice:', exchangeError.message);
+              // Re-check session in case detectSessionInUrl completed it concurrently
+              const { data: recheckSession } = await supabase.auth.getSession();
+              if (recheckSession?.session?.user) {
+                await processSessionUser(recheckSession.session.user);
+                return;
+              }
             }
           } catch (codeErr) {
             console.warn('Code exchange attempt caught:', codeErr);
           }
         }
 
-        // 3. Check existing or detected session from Supabase client
-        if (!currentSession) {
-          const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-          if (session) {
-            currentSession = session;
-          }
-        }
-
-        if (currentSession?.user) {
-          await processSessionUser(currentSession.user);
+        // 3. Fallback check for session
+        const { data: { session: fallbackSession } } = await supabase.auth.getSession();
+        if (fallbackSession?.user) {
+          await processSessionUser(fallbackSession.user);
           return;
         }
 

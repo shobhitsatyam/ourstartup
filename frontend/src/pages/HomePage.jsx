@@ -14,15 +14,30 @@ import ProductCard from '../components/ProductCard';
 import QuickViewModal from '../components/QuickViewModal';
 import CustomerReviews from '../components/CustomerReviews';
 import api from '../services/api';
+import { getCategoryCards } from '../utils/categoryCardStorage';
+import { getCachedCuratedHighlights, fetchCuratedHighlights } from '../services/productCache';
+import { preloadProductImage, getOptimizedImageUrl } from '../utils/imageOptimizer';
 
 export default function HomePage({ onOpenSearch }) {
-  const [newArrivals, setNewArrivals] = useState([]);
-  const [bestsellers, setBestsellers] = useState([]);
-  const [womenBestsellers, setWomenBestsellers] = useState([]);
-  const [menBestsellers, setMenBestsellers] = useState([]);
+  // Synchronous cache retrieval allows 0ms instant display without skeleton delay on return navigation
+  const cachedHighlights = getCachedCuratedHighlights();
+  const [newArrivals, setNewArrivals] = useState(() => cachedHighlights?.newArrivals || []);
+  const [bestsellers, setBestsellers] = useState(() => cachedHighlights?.bestsellers || []);
+  const [womenBestsellers, setWomenBestsellers] = useState(() => {
+    if (!cachedHighlights?.bestsellers) return [];
+    const wBests = cachedHighlights.bestsellers.filter((p) => p.gender === 'women' || p.gender === 'unisex');
+    return wBests.length > 0 ? wBests : cachedHighlights.bestsellers;
+  });
+  const [menBestsellers, setMenBestsellers] = useState(() => {
+    if (!cachedHighlights?.bestsellers) return [];
+    const mBests = cachedHighlights.bestsellers.filter((p) => p.gender === 'men');
+    return mBests.length > 0 ? mBests : cachedHighlights.bestsellers;
+  });
   const [mobileGender, setMobileGender] = useState('women');
   const [welcomeCopied, setWelcomeCopied] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(
+    () => !cachedHighlights || (!cachedHighlights.newArrivals?.length && !cachedHighlights.bestsellers?.length)
+  );
   const [quickViewProduct, setQuickViewProduct] = useState(null);
 
   const categoryScrollRef = useRef(null);
@@ -30,12 +45,14 @@ export default function HomePage({ onOpenSearch }) {
   const [canScrollCatRight, setCanScrollCatRight] = useState(true);
 
   useEffect(() => {
-    const fetchHighlights = async () => {
+    let isMounted = true;
+    const loadHighlights = async () => {
       try {
-        const res = await api.get('/products/curated/highlights');
-        if (res.data?.success) {
-          const allNew = res.data.data.newArrivals || [];
-          const allBest = res.data.data.bestsellers || [];
+        // fetchCuratedHighlights deduplicates requests and handles background revalidation
+        const data = await fetchCuratedHighlights();
+        if (isMounted && data) {
+          const allNew = data.newArrivals || [];
+          const allBest = data.bestsellers || [];
           setNewArrivals(allNew);
           setBestsellers(allBest);
 
@@ -43,15 +60,27 @@ export default function HomePage({ onOpenSearch }) {
           const mBests = allBest.filter((p) => p.gender === 'men');
           setWomenBestsellers(wBests.length > 0 ? wBests : allBest);
           setMenBestsellers(mBests.length > 0 ? mBests : allBest);
+
+          // Preload first 4 product thumbnails for the initial desktop viewport
+          const topProducts = allNew.slice(0, 4);
+          topProducts.forEach((p) => {
+            const img = p.images?.[0] || p.image;
+            if (img) preloadProductImage(getOptimizedImageUrl(img, 440, 75));
+          });
         }
       } catch (e) {
         console.error('Failed to load highlights:', e);
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
-    fetchHighlights();
+    loadHighlights();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // Helper to ensure exactly 12 products for 6 columns x 2 rows desktop showcase
@@ -68,14 +97,19 @@ export default function HomePage({ onOpenSearch }) {
     return result;
   };
 
-  const shopByCategories = [
-    { name: 'RINGS', gender: 'women', img: 'https://images.unsplash.com/photo-1603561591411-07134e71a2a9?auto=format&fit=crop&w=600&q=80', link: '/women/rings' },
-    { name: 'EARRINGS & CHANDBALIS', gender: 'women', img: 'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?auto=format&fit=crop&w=600&q=80', link: '/women/earrings' },
-    { name: 'CUBAN & BYZANTINE CHAINS', gender: 'men', img: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=600&q=80', link: '/men/chains' },
-    { name: 'BRACELETS & CUFFS', gender: 'unisex', img: 'https://images.unsplash.com/photo-1573408301185-9146fe634ad0?auto=format&fit=crop&w=600&q=80', link: '/women/bracelets-bangles' },
-    { name: 'WATERPROOF ANKLETS', gender: 'women', img: 'https://images.unsplash.com/photo-1602751584552-8ba73aad10e1?auto=format&fit=crop&w=600&q=80', link: '/women/anklets' },
-    { name: 'SAREE ACCESSORIES & PINS', gender: 'women', img: 'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?auto=format&fit=crop&w=600&q=80', link: '/women/saree-accessories' },
-  ];
+  const [categoryCards, setCategoryCards] = useState(() => getCategoryCards());
+
+  useEffect(() => {
+    const handleCategoryUpdate = () => {
+      setCategoryCards(getCategoryCards());
+    };
+    window.addEventListener('oceanjewel_category_updated', handleCategoryUpdate);
+    window.addEventListener('storage', handleCategoryUpdate);
+    return () => {
+      window.removeEventListener('oceanjewel_category_updated', handleCategoryUpdate);
+      window.removeEventListener('storage', handleCategoryUpdate);
+    };
+  }, []);
 
   const handleCategoryScroll = () => {
     if (categoryScrollRef.current) {
@@ -143,6 +177,7 @@ export default function HomePage({ onOpenSearch }) {
               loading={loading}
               onQuickView={(p) => setQuickViewProduct(p)}
               columns={6}
+              priorityCount={6}
             />
           </div>
         </section>
@@ -158,7 +193,7 @@ export default function HomePage({ onOpenSearch }) {
               </h2>
             </div>
 
-            {/* Vertical 2-Column Product Grid (Exactly 8 Products: 4 Rows x 2 Columns) */}
+            {/* Vertical 2-Column Product Grid (11 Products: 8 original + 3 additional) */}
             <div className="grid grid-cols-2 gap-2.5 xs:gap-3 sm:gap-4">
               {(() => {
                 const pool = mobileGender === 'men'
@@ -167,11 +202,40 @@ export default function HomePage({ onOpenSearch }) {
                 const uniquePool = pool.filter(
                   (v, i, a) => a.findIndex((t) => (t._id || t.id) === (v._id || v.id)) === i
                 );
-                return uniquePool.slice(0, 8).map((product) => (
+                // Guarantee at least 11 products (+3 additional product cards)
+                const targetCount = 11;
+                const itemsToShow = [];
+                if (uniquePool.length >= targetCount) {
+                  itemsToShow.push(...uniquePool.slice(0, targetCount));
+                } else if (uniquePool.length > 0) {
+                  itemsToShow.push(...uniquePool);
+                  let i = 0;
+                  while (itemsToShow.length < targetCount && uniquePool.length > 0) {
+                    itemsToShow.push(uniquePool[i % uniquePool.length]);
+                    i++;
+                  }
+                }
+
+                if (loading && itemsToShow.length === 0) {
+                  return [...Array(6)].map((_, i) => (
+                    <div
+                      key={i}
+                      className="rounded-2xl bg-white p-2.5 sm:p-3 shadow-sm border border-[#D6CFFF]/30 animate-pulse"
+                    >
+                      <div className="aspect-[4/5] bg-gray-200 rounded-xl mb-3" />
+                      <div className="h-3 bg-gray-200 rounded w-1/3 mb-2" />
+                      <div className="h-4 bg-gray-200 rounded w-3/4 mb-3" />
+                      <div className="h-5 bg-gray-200 rounded w-1/2" />
+                    </div>
+                  ));
+                }
+
+                return itemsToShow.map((product, idx) => (
                   <ProductCard
-                    key={product._id || product.id}
+                    key={`${product._id || product.id}-${idx}`}
                     product={product}
                     onQuickView={(p) => setQuickViewProduct(p)}
+                    priority={idx < 2}
                   />
                 ));
               })()}
@@ -285,15 +349,46 @@ export default function HomePage({ onOpenSearch }) {
               </h2>
             </div>
 
-            {/* Vertical 2-Column Product Grid (Continues Downward Vertically) */}
+            {/* Vertical 2-Column Product Grid (9 Products: 6 original + 3 additional) */}
             <div className="grid grid-cols-2 gap-2.5 xs:gap-3 sm:gap-4">
-              {newArrivals.slice(0, 6).map((product) => (
-                <ProductCard
-                  key={product._id || product.id}
-                  product={product}
-                  onQuickView={(p) => setQuickViewProduct(p)}
-                />
-              ))}
+              {(() => {
+                const targetCount = 9; // +3 additional product cards
+                const pool = newArrivals.length > 0 ? newArrivals : bestsellers;
+                const itemsToShow = [];
+                if (pool.length >= targetCount) {
+                  itemsToShow.push(...pool.slice(0, targetCount));
+                } else if (pool.length > 0) {
+                  itemsToShow.push(...pool);
+                  let i = 0;
+                  while (itemsToShow.length < targetCount && pool.length > 0) {
+                    itemsToShow.push(pool[i % pool.length]);
+                    i++;
+                  }
+                }
+
+                if (loading && itemsToShow.length === 0) {
+                  return [...Array(6)].map((_, i) => (
+                    <div
+                      key={i}
+                      className="rounded-2xl bg-white p-2.5 sm:p-3 shadow-sm border border-[#D6CFFF]/30 animate-pulse"
+                    >
+                      <div className="aspect-[4/5] bg-gray-200 rounded-xl mb-3" />
+                      <div className="h-3 bg-gray-200 rounded w-1/3 mb-2" />
+                      <div className="h-4 bg-gray-200 rounded w-3/4 mb-3" />
+                      <div className="h-5 bg-gray-200 rounded w-1/2" />
+                    </div>
+                  ));
+                }
+
+                return itemsToShow.map((product, idx) => (
+                  <ProductCard
+                    key={`${product._id || product.id}-${idx}`}
+                    product={product}
+                    onQuickView={(p) => setQuickViewProduct(p)}
+                    priority={idx < 2}
+                  />
+                ));
+              })()}
             </div>
 
             <div className="mt-6 text-center">
@@ -340,9 +435,15 @@ export default function HomePage({ onOpenSearch }) {
               loading={loading}
               onQuickView={(p) => setQuickViewProduct(p)}
               columns={6}
+              priorityCount={0}
             />
           </div>
         </section>
+      </div>
+
+      {/* 5B. PERMANENT 10% OFF OFFER BANNER (DESKTOP ONLY — SEAMLESS BRIDGE BETWEEN BESTSELLERS & CATEGORIES) */}
+      <div className="hidden min-[1025px]:block">
+        <PermanentOffer />
       </div>
 
       {/* 6. SHOP BY CATEGORY (DESKTOP ONLY — ONE ROW, NO HORIZONTAL SCROLLBAR, ZERO OVERFLOW) */}
@@ -362,9 +463,9 @@ export default function HomePage({ onOpenSearch }) {
 
             {/* All 6 Category Cards in ONE Horizontal Row — Fully Fitting inside Container */}
             <div className="grid grid-cols-6 gap-3 lg:gap-3.5 xl:gap-4 w-full">
-              {shopByCategories.map((cat, idx) => (
+              {categoryCards.map((cat, idx) => (
                 <motion.div
-                  key={cat.name}
+                  key={cat.id || cat.name}
                   initial={{ opacity: 0, y: 15 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
@@ -372,7 +473,7 @@ export default function HomePage({ onOpenSearch }) {
                   className="w-full"
                 >
                   <Link
-                    to={cat.link}
+                    to={cat.link || '/shop'}
                     className="group relative block rounded-xl xl:rounded-2xl overflow-hidden aspect-[4/5] bg-gray-900 border border-[#D6CFFF]/40 shadow-sm hover:shadow-xl transition-all duration-500 transform hover:-translate-y-1"
                   >
                     <img
@@ -403,11 +504,6 @@ export default function HomePage({ onOpenSearch }) {
 
       {/* 8. VERIFIED CUSTOMER REVIEWS */}
       <CustomerReviews />
-
-      {/* 9. PERMANENT OFFER / FIRST ORDER OFFER (DESKTOP ONLY) */}
-      <div className="hidden min-[1025px]:block">
-        <PermanentOffer />
-      </div>
 
       {/* Quick View Modal */}
       <QuickViewModal

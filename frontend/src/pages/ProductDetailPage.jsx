@@ -61,7 +61,31 @@ export default function ProductDetailPage() {
           const prod = res.data.data.product;
           setProduct(prod);
           setReviews(res.data.data.reviews || []);
-          setRelatedProducts(res.data.data.relatedProducts || []);
+          let related = res.data.data.relatedProducts || [];
+          if (related.length < 10) {
+            try {
+              const extraRes = await api.get(`/products?gender=${prod.gender || 'women'}&limit=16`);
+              const extraList = extraRes.data?.data?.products || extraRes.data?.data || [];
+              const combined = [...related, ...extraList].filter(
+                (p, idx, arr) =>
+                  (p._id || p.id) !== (prod._id || prod.id) &&
+                  arr.findIndex((x) => (x._id || x.id) === (p._id || p.id)) === idx
+              );
+              related = combined.slice(0, 12);
+            } catch (err) {
+              console.warn('Could not load additional recommendations:', err);
+            }
+          }
+          if (related.length < 10 && related.length > 0) {
+            const filled = [...related];
+            let i = 0;
+            while (filled.length < 10) {
+              filled.push({ ...related[i % related.length], _cloneId: `clone-${filled.length}` });
+              i++;
+            }
+            related = filled;
+          }
+          setRelatedProducts(related);
           if (prod.sizes && prod.sizes.length > 0) {
             setSelectedSize(prod.sizes[0]);
           }
@@ -780,22 +804,47 @@ export default function ProductDetailPage() {
           </div>
         </div>
 
-        {/* Related Products */}
+        {/* Related Products: You May Also Adore */}
         {relatedProducts.length > 0 && (
-          <div className="mt-10 sm:mt-12 lg:mt-10 pt-6 sm:pt-8 lg:pt-6 border-t border-[#D6CFFF]/40">
-            <div className="text-center max-w-xl mx-auto mb-6 lg:mb-5">
-              <span className="text-[11px] lg:text-xs font-bold uppercase tracking-widest text-[#7464B8]">
+          <div className="mt-10 sm:mt-12 lg:mt-12 pt-6 sm:pt-8 border-t border-[#D6CFFF]/40">
+            <div className="text-center max-w-xl mx-auto mb-5 sm:mb-7">
+              <span className="text-[10px] sm:text-[11px] lg:text-xs font-bold uppercase tracking-widest text-[#7464B8]">
                 Complementary Pieces
               </span>
-              <h3 className="font-serif text-xl sm:text-2xl font-light text-[#17151F] mt-0.5">
+              <h3 className="font-serif text-xl sm:text-2xl lg:text-[28px] font-light text-[#17151F] mt-0.5 tracking-tight">
                 YOU MAY ALSO ADORE
               </h3>
+              <p className="text-[11px] text-gray-500 font-light mt-1 block min-[1025px]:hidden">
+                Swipe to explore handcrafted pairings
+              </p>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 sm:gap-5 lg:gap-5">
-              {relatedProducts.map((p) => (
-                <ProductCard key={p._id} product={p} />
+            {/* 1. DESKTOP VIEWPORT ONLY (1025px+): 5-COLUMN GRID (10 CARDS) */}
+            <div className="hidden min-[1025px]:grid grid-cols-5 gap-4 xl:gap-5">
+              {relatedProducts.slice(0, 10).map((p, idx) => (
+                <ProductCard key={p._cloneId || p._id || idx} product={p} />
               ))}
+            </div>
+
+            {/* 2. MOBILE & TABLET ONLY (< 1025px): HORIZONTAL SCROLLABLE CAROUSEL WITH PEEK AFFORDANCE */}
+            <div className="block min-[1025px]:hidden w-full overflow-hidden">
+              <div
+                className="flex overflow-x-auto snap-x snap-mandatory scrollbar-none gap-3 sm:gap-4 py-2 px-3.5 sm:px-6 -mx-3.5 sm:-mx-6 overscroll-x-contain"
+                style={{
+                  WebkitOverflowScrolling: 'touch',
+                  scrollbarWidth: 'none',
+                  msOverflowStyle: 'none',
+                }}
+              >
+                {relatedProducts.map((p, idx) => (
+                  <div
+                    key={p._cloneId || p._id || idx}
+                    className="w-[66vw] xs:w-[58vw] sm:w-[38vw] md:w-[32vw] max-w-[240px] shrink-0 snap-start"
+                  >
+                    <ProductCard product={p} />
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         )}

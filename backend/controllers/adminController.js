@@ -6,9 +6,21 @@ import { getNextSku } from '../models/SkuCounter.js';
 import { isMongoConnected } from '../config/db.js';
 import { mockStore } from '../config/mockStore.js';
 import { uploadStreamToCloudinary } from '../config/cloudinary.js';
+import { invalidateCuratedHighlightsCache } from './productController.js';
 
 export const getDashboardMetrics = async (req, res) => {
   try {
+    const CANCELLED_STATUSES = [
+      'Cancelled',
+      'cancelled',
+      'Canceled',
+      'canceled',
+      'Refunded',
+      'refunded',
+      'Returned',
+      'returned',
+    ];
+
     if (isMongoConnected) {
       const totalOrders = await Order.countDocuments();
       const totalCustomers = await User.countDocuments({ role: 'user' });
@@ -16,7 +28,11 @@ export const getDashboardMetrics = async (req, res) => {
       const lowStockCount = await Product.countDocuments({ stock: { $lte: 5 } });
 
       const revenueAgg = await Order.aggregate([
-        { $match: { orderStatus: { $ne: 'Cancelled' } } },
+        {
+          $match: {
+            orderStatus: { $nin: CANCELLED_STATUSES },
+          },
+        },
         { $group: { _id: null, totalRevenue: { $sum: '$totalPrice' } } },
       ]);
       const totalRevenue = revenueAgg[0]?.totalRevenue || 0;
@@ -43,11 +59,19 @@ export const getDashboardMetrics = async (req, res) => {
         },
       });
     } else {
+      const isOrderActive = (o) => {
+        const s = String(o.orderStatus || o.status || '').trim().toLowerCase();
+        return !['cancelled', 'canceled', 'refunded', 'returned'].includes(s);
+      };
+
       const totalOrders = mockStore.orders.length;
       const totalCustomers = mockStore.users.filter((u) => u.role === 'user').length;
       const totalProducts = mockStore.products.length;
       const lowStockCount = mockStore.products.filter((p) => p.stock <= 5).length;
-      const totalRevenue = mockStore.orders.reduce((sum, o) => sum + (o.orderStatus !== 'Cancelled' ? o.totalPrice : 0), 0);
+      const totalRevenue = mockStore.orders.reduce(
+        (sum, o) => sum + (isOrderActive(o) ? (Number(o.totalPrice) || Number(o.totalAmount) || 0) : 0),
+        0
+      );
       const recentOrders = mockStore.orders.slice(0, 8);
       const topProducts = mockStore.products.slice(0, 5);
 
@@ -176,6 +200,7 @@ export const createProduct = async (req, res) => {
         tags: tags || ['Jewellery', category],
       });
       const savedProduct = await product.save();
+      invalidateCuratedHighlightsCache();
       return res.status(201).json({ success: true, data: savedProduct, message: 'Product created successfully' });
     } else {
       const newProd = {
@@ -208,6 +233,7 @@ export const createProduct = async (req, res) => {
         createdAt: new Date().toISOString(),
       };
       mockStore.products.unshift(newProd);
+      invalidateCuratedHighlightsCache();
       return res.status(201).json({ success: true, data: newProd, message: 'Product created successfully' });
     }
   } catch (error) {
@@ -247,6 +273,7 @@ export const updateProduct = async (req, res) => {
       }
 
       const updatedProduct = await product.save();
+      invalidateCuratedHighlightsCache();
       return res.json({ success: true, data: updatedProduct, message: 'Product updated successfully' });
     } else {
       const product = mockStore.products.find((p) => p._id.toString() === req.params.id);
@@ -263,6 +290,7 @@ export const updateProduct = async (req, res) => {
         }
       }
 
+      invalidateCuratedHighlightsCache();
       return res.json({ success: true, data: product, message: 'Product updated successfully' });
     }
   } catch (error) {
@@ -275,12 +303,14 @@ export const deleteProduct = async (req, res) => {
     if (isMongoConnected) {
       const product = await Product.findByIdAndDelete(req.params.id);
       if (!product) return res.status(404).json({ success: false, message: 'Product not found' });
-      return res.json({ success: true, message: 'Product removed from catalog' });
+      invalidateCuratedHighlightsCache();
+      return res.json({ success: true, message: 'Product deleted successfully' });
     } else {
       const idx = mockStore.products.findIndex((p) => p._id.toString() === req.params.id);
       if (idx === -1) return res.status(404).json({ success: false, message: 'Product not found' });
       mockStore.products.splice(idx, 1);
-      return res.json({ success: true, message: 'Product removed from catalog' });
+      invalidateCuratedHighlightsCache();
+      return res.json({ success: true, message: 'Product deleted successfully' });
     }
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -290,14 +320,36 @@ export const deleteProduct = async (req, res) => {
 export const getAdminOrders = async (req, res) => {
   try {
     const { status } = req.query;
+    const STATUS_MAP = {
+      pending: 'Pending',
+      confirmed: 'Confirmed',
+      processing: 'Processing',
+      shipped: 'Shipped',
+      'out for delivery': 'Out for Delivery',
+      delivered: 'Delivered',
+      cancelled: 'Cancelled',
+      canceled: 'Cancelled',
+      returned: 'Returned',
+      refunded: 'Refunded',
+    };
+
     if (isMongoConnected) {
       const query = {};
-      if (status && status !== 'all') query.orderStatus = status;
+      if (status && status !== 'all') {
+        const normalized = STATUS_MAP[status.trim().toLowerCase()] || status;
+        query.orderStatus = normalized;
+      }
       const orders = await Order.find(query).populate('user', 'name email phone').sort({ createdAt: -1 });
       return res.json({ success: true, data: orders });
     } else {
       let orders = mockStore.orders;
-      if (status && status !== 'all') orders = orders.filter((o) => o.orderStatus === status);
+      if (status && status !== 'all') {
+        const lower = status.trim().toLowerCase();
+        orders = orders.filter((o) => {
+          const s = String(o.orderStatus || o.status || '').trim().toLowerCase();
+          return s === lower || (lower === 'cancelled' && s === 'canceled');
+        });
+      }
       return res.json({ success: true, data: orders });
     }
   } catch (error) {
@@ -308,31 +360,72 @@ export const getAdminOrders = async (req, res) => {
 export const updateOrderStatus = async (req, res) => {
   try {
     const { status, note, trackingNumber, courier } = req.body;
+
+    const STATUS_MAP = {
+      pending: 'Pending',
+      confirmed: 'Confirmed',
+      processing: 'Processing',
+      shipped: 'Shipped',
+      'out for delivery': 'Out for Delivery',
+      delivered: 'Delivered',
+      cancelled: 'Cancelled',
+      canceled: 'Cancelled',
+      returned: 'Returned',
+      refunded: 'Refunded',
+    };
+
+    const normalizedStatus = status
+      ? (STATUS_MAP[status.trim().toLowerCase()] || status)
+      : undefined;
+
     if (isMongoConnected) {
       const order = await Order.findById(req.params.id);
       if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
-      if (status) {
-        order.orderStatus = status;
+      
+      if (normalizedStatus) {
+        const previousStatus = order.orderStatus;
+        order.orderStatus = normalizedStatus;
         order.statusTimeline.push({
-          status,
-          note: note || `Order status updated to ${status} by Admin.`,
+          status: normalizedStatus,
+          note: note || `Order status updated to ${normalizedStatus} by Admin.`,
           timestamp: new Date(),
         });
+
+        // Restore catalog inventory if order transitioned to Cancelled
+        if (normalizedStatus === 'Cancelled' && previousStatus !== 'Cancelled') {
+          for (const item of order.orderItems || []) {
+            if (item.product) {
+              await Product.findByIdAndUpdate(item.product, { $inc: { stock: item.quantity || 1 } });
+            }
+          }
+        }
       }
       if (trackingNumber) order.shipmentTracking.trackingNumber = trackingNumber;
       if (courier) order.shipmentTracking.courier = courier;
       const updatedOrder = await order.save();
       return res.json({ success: true, data: updatedOrder, message: 'Order updated successfully' });
     } else {
-      const order = mockStore.orders.find((o) => o._id === req.params.id);
+      const order = mockStore.orders.find((o) => o._id === req.params.id || o.orderId === req.params.id);
       if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
-      if (status) {
-        order.orderStatus = status;
+
+      if (normalizedStatus) {
+        const previousStatus = order.orderStatus;
+        order.orderStatus = normalizedStatus;
         order.statusTimeline.push({
-          status,
-          note: note || `Order status updated to ${status} by Admin.`,
+          status: normalizedStatus,
+          note: note || `Order status updated to ${normalizedStatus} by Admin.`,
           timestamp: new Date().toISOString(),
         });
+
+        // Restore mock inventory if order transitioned to Cancelled
+        if (normalizedStatus === 'Cancelled' && previousStatus !== 'Cancelled') {
+          for (const item of order.orderItems || []) {
+            const prod = mockStore.products.find(
+              (p) => p._id && p._id.toString() === (item.product || '').toString()
+            );
+            if (prod) prod.stock += (item.quantity || 1);
+          }
+        }
       }
       if (trackingNumber) order.shipmentTracking.trackingNumber = trackingNumber;
       if (courier) order.shipmentTracking.courier = courier;

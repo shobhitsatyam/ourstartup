@@ -12,16 +12,17 @@ export default function PasswordInput({
   rightAction = null,
   error = null,
   autoComplete = 'current-password',
+  inputClassName = '',
 }) {
   const [showPassword, setShowPassword] = useState(false);
 
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-1 sm:space-y-1.5">
       <div className="flex items-center justify-between text-xs">
         {label && (
           <label
             htmlFor={id}
-            className="font-bold uppercase tracking-wider text-gray-700 block text-[11px]"
+            className="font-bold uppercase tracking-wider text-gray-700 block text-[10px] sm:text-[11px]"
           >
             {label}
             {required && <span className="text-rose-500 ml-0.5">*</span>}
@@ -40,7 +41,7 @@ export default function PasswordInput({
           placeholder={placeholder}
           required={required}
           autoComplete={autoComplete}
-          className={`w-full h-12 px-3.5 pr-11 bg-[#FBFBFF] border rounded-2xl text-xs sm:text-sm text-[#17151F] placeholder-gray-400 focus:outline-none focus:bg-white transition-all duration-150 ${
+          className={`w-full h-10 sm:h-11 lg:h-10.5 px-3.5 pr-11 bg-[#FBFBFF] border rounded-xl text-xs sm:text-sm text-[#17151F] placeholder-gray-400 focus:outline-none focus:bg-white transition-all duration-150 ${inputClassName} ${
             error
               ? 'border-rose-400 focus:border-rose-500 focus:ring-2 focus:ring-rose-100'
               : 'border-gray-200 hover:border-gray-300 focus:border-[#7464B8] focus:ring-2 focus:ring-[#7464B8]/15'
