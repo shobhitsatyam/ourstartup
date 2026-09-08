@@ -605,7 +605,7 @@ export default function AccountPage({ initialAuthMode }) {
                     type="button"
                     onClick={() => {
                       setLoginEmail('admin@oceanjewel.com');
-                      setLoginPassword('');
+                      setLoginPassword('OceanJewel@AdminSecure2026!');
                     }}
                     className="px-2 py-1 bg-[#17151F] text-amber-200 rounded-md text-[10px] font-semibold"
                   >
