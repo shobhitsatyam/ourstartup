@@ -130,11 +130,39 @@ async function runTests() {
     mockRes()
   );
   assert(
-    resStatus === 400 && resJson.message === 'WELCOME10 is available only on your first order.',
-    'validateCoupon rejects existing customer with exact message: "WELCOME10 is available only on your first order."'
+    resStatus === 400 && resJson.message === 'This welcome offer is available only on your first order.',
+    'validateCoupon rejects existing customer with exact message: "This welcome offer is available only on your first order."'
   );
 
-  // Test 10: createOrder server-side guard for existing customer using WELCOME10
+  // Test 10: Existing customer with SAME PHONE but DIFFERENT EMAIL -> Must be rejected
+  resStatus = 200;
+  await validateCoupon(
+    {
+      body: { code: 'WELCOME10', cartTotal: 1500, email: 'totally_different_email@gmail.com', phone: '8888811111' },
+      user: { _id: 'new_temp_id_1', email: 'totally_different_email@gmail.com' },
+    },
+    mockRes()
+  );
+  assert(
+    resStatus === 400 && resJson.message === 'This welcome offer is available only on your first order.',
+    'validateCoupon rejects customer with same phone even if email is completely different'
+  );
+
+  // Test 11: Existing customer with DIFFERENT PHONE but SAME EMAIL -> Must be rejected
+  resStatus = 200;
+  await validateCoupon(
+    {
+      body: { code: 'WELCOME10', cartTotal: 1500, email: 'existing_user_unique@oceanjewel.com', phone: '9999900000' },
+      user: { _id: 'new_temp_id_2', email: 'existing_user_unique@oceanjewel.com' },
+    },
+    mockRes()
+  );
+  assert(
+    resStatus === 400 && resJson.message === 'This welcome offer is available only on your first order.',
+    'validateCoupon rejects customer with same email even if phone is completely different'
+  );
+
+  // Test 12: createOrder server-side guard for existing customer using WELCOME10
   const { createOrder } = await import('../controllers/orderController.js');
   resStatus = 200;
   await createOrder(
@@ -150,8 +178,17 @@ async function runTests() {
     mockRes()
   );
   assert(
-    resStatus === 400 && resJson.message === 'WELCOME10 is available only on your first order.',
+    resStatus === 400 && resJson.message === 'This welcome offer is available only on your first order.',
     'createOrder server-side guard blocks existing customer from applying WELCOME10 on order placement'
+  );
+
+  // Test 13: getCouponByCode endpoint returns active WELCOME10 configuration
+  const { getCouponByCode } = await import('../controllers/couponController.js');
+  resStatus = 200;
+  await getCouponByCode({ params: { code: 'WELCOME10' } }, mockRes());
+  assert(
+    resStatus === 200 && resJson.data?.code === 'WELCOME10' && resJson.data?.minOrderAmount === 999,
+    'getCouponByCode endpoint returns live WELCOME10 configuration'
   );
 
   console.log(`\nResults: ${passed} Passed, ${failed} Failed`);

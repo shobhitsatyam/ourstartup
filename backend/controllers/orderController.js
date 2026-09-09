@@ -118,7 +118,7 @@ export const createOrder = async (req, res) => {
           if (hasCompletedOrders) {
             return res.status(400).json({
               success: false,
-              message: 'WELCOME10 is available only on your first order.',
+              message: 'This welcome offer is available only on your first order.',
             });
           }
         }
@@ -245,7 +245,7 @@ export const createOrder = async (req, res) => {
           if (hasCompletedOrders) {
             return res.status(400).json({
               success: false,
-              message: 'WELCOME10 is available only on your first order.',
+              message: 'This welcome offer is available only on your first order.',
             });
           }
         }

@@ -208,7 +208,7 @@ export default function CartDrawer() {
             {cartItems.length > 0 && (
               <div className="p-5 border-t border-[#D6CFFF]/30 bg-white/90 backdrop-blur-md space-y-4">
                 {/* Zomato-Style Smart WELCOME10 Coupon Suggestion */}
-                <SmartCouponSuggestion />
+                <SmartCouponSuggestion variant="drawer" />
 
                 {/* Promo Code Box */}
                 <div>

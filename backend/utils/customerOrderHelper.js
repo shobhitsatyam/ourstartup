@@ -61,6 +61,10 @@ export const checkCustomerHasCompletedOrders = async ({ userId, email, phone }) 
       orConditions.push({ 'shippingAddress.phone': phoneRegex });
     }
 
+    if (normalizedEmail) {
+      orConditions.push({ 'shippingAddress.email': normalizedEmail });
+    }
+
     if (orConditions.length === 0) {
       return false;
     }

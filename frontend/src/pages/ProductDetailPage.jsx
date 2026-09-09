@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import ProductGallery from '../components/ProductGallery';
 import ProductCard from '../components/ProductCard';
-import { useCart } from '../context/CartContext';
+import { useCart, useWelcomeCoupon } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
@@ -50,6 +50,7 @@ export default function ProductDetailPage() {
   const [addedSuccess, setAddedSuccess] = useState(false);
 
   const { addToCart } = useCart();
+  const { isNewCustomer } = useWelcomeCoupon();
   const { isInWishlist, toggleWishlist } = useWishlist();
   const { isAuthenticated } = useAuth();
   const { addToast } = useToast();
@@ -346,6 +347,16 @@ export default function ProductDetailPage() {
                   <span className="text-[10px] text-gray-400 font-light">Taxes Included</span>
                 </div>
               </div>
+
+              {/* Subtle Informational Message for New Customers (Non-intrusive) */}
+              {isNewCustomer && (
+                <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-gradient-to-r from-[#F3EFFF] via-[#FAF9FF] to-[#F3EFFF] border border-[#D6CFFF]/60 text-xs text-[#17151F]">
+                  <span className="text-sm">🎁</span>
+                  <span className="font-medium text-[11.5px]">
+                    New customers get <strong>10% OFF</strong> with <strong className="font-mono text-[#7464B8]">WELCOME10</strong>
+                  </span>
+                </div>
+              )}
 
               {/* Size Selector */}
               {product.sizes && product.sizes.length > 0 && (

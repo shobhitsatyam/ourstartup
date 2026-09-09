@@ -46,7 +46,7 @@ export const validateCoupon = async (req, res) => {
       if (hasCompletedOrders) {
         return res.status(400).json({
           success: false,
-          message: 'WELCOME10 is available only on your first order.',
+          message: 'This welcome offer is available only on your first order.',
         });
       }
     }
@@ -94,12 +94,46 @@ export const getActiveCoupons = async (req, res) => {
     const now = new Date();
     if (isMongoConnected) {
       const coupons = await Coupon.find({ isActive: true, expiryDate: { $gt: now } })
-        .select('code description discountType discountAmount minOrderAmount maxDiscountAmount expiryDate');
+        .select('code description discountType discountAmount minOrderAmount maxDiscountAmount expiryDate isFirstOrderOnly');
       return res.json({ success: true, data: coupons });
     } else {
       const coupons = (mockStore.coupons || []).filter((c) => c.isActive && new Date(c.expiryDate) > now);
       return res.json({ success: true, data: coupons });
     }
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const getCouponByCode = async (req, res) => {
+  try {
+    const { code } = req.params;
+    if (!code) {
+      return res.status(400).json({ success: false, message: 'Coupon code is required' });
+    }
+    const cleanCode = code.trim().toUpperCase();
+    let coupon;
+    if (isMongoConnected) {
+      coupon = await Coupon.findOne({ code: cleanCode, isActive: true });
+    } else {
+      coupon = (mockStore.coupons || []).find((c) => c.code.toUpperCase() === cleanCode && c.isActive);
+    }
+    if (!coupon) {
+      return res.status(404).json({ success: false, message: 'Coupon not found or inactive' });
+    }
+    return res.json({
+      success: true,
+      data: {
+        code: coupon.code,
+        description: coupon.description,
+        discountType: coupon.discountType,
+        discountAmount: coupon.discountAmount,
+        minOrderAmount: coupon.minOrderAmount || 0,
+        maxDiscountAmount: coupon.maxDiscountAmount || 5000,
+        isFirstOrderOnly: !!coupon.isFirstOrderOnly,
+        isActive: coupon.isActive,
+      },
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

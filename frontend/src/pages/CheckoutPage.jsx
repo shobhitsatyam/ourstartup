@@ -18,6 +18,7 @@ import StateSelectDropdown from '../components/checkout/StateSelectDropdown';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
+import SmartCouponSuggestion from '../components/cart/SmartCouponSuggestion';
 import api from '../services/api';
 
 export default function CheckoutPage() {
@@ -679,6 +680,9 @@ export default function CheckoutPage() {
                 </div>
               ))}
             </div>
+
+            {/* Compact WELCOME10 Offer Suggestion for New Customers */}
+            <SmartCouponSuggestion variant="checkout" />
 
             {/* Price Calculations */}
             <div className="space-y-2 text-xs text-gray-600 border-t border-gray-100 pt-4">

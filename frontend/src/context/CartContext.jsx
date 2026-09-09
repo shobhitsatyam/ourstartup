@@ -192,6 +192,45 @@ export const CartProvider = ({ children }) => {
   const total = Math.max(0, subtotal + shippingPrice - couponDiscount - pointsDiscount);
   const potentialPointsEarned = Math.floor(total / 100);
 
+  const [welcomeCouponConfig, setWelcomeCouponConfig] = useState({
+    code: 'WELCOME10',
+    minOrderAmount: 999,
+    discountAmount: 10,
+    discountType: 'percentage',
+    isFirstOrderOnly: true,
+  });
+
+  useEffect(() => {
+    api.get('/coupons/WELCOME10')
+      .then((res) => {
+        if (res.data?.success && res.data?.data) {
+          setWelcomeCouponConfig((prev) => ({
+            ...prev,
+            ...res.data.data,
+            minOrderAmount: Number(res.data.data.minOrderAmount) || prev.minOrderAmount,
+            discountAmount: Number(res.data.data.discountAmount) || prev.discountAmount,
+          }));
+        }
+      })
+      .catch(() => {
+        api.get('/coupons/active')
+          .then((res) => {
+            if (res.data?.success && Array.isArray(res.data?.data)) {
+              const found = res.data.data.find((c) => c.code?.toUpperCase() === 'WELCOME10');
+              if (found) {
+                setWelcomeCouponConfig((prev) => ({
+                  ...prev,
+                  ...found,
+                  minOrderAmount: Number(found.minOrderAmount) || prev.minOrderAmount,
+                  discountAmount: Number(found.discountAmount) || prev.discountAmount,
+                }));
+              }
+            }
+          })
+          .catch(() => {});
+      });
+  }, []);
+
   return (
     <CartContext.Provider
       value={{
@@ -218,6 +257,7 @@ export const CartProvider = ({ children }) => {
         pointsDiscount,
         total,
         potentialPointsEarned,
+        welcomeCouponConfig,
       }}
     >
       {children}
@@ -231,4 +271,46 @@ export const useCart = () => {
     throw new Error('useCart must be used within a CartProvider');
   }
   return context;
+};
+
+export const useWelcomeCoupon = () => {
+  const cart = useCart();
+  const { user, isAuthenticated } = useAuth();
+
+  const config = cart.welcomeCouponConfig || {
+    code: 'WELCOME10',
+    minOrderAmount: 999,
+    discountAmount: 10,
+    discountType: 'percentage',
+  };
+
+  const minimumOrderValue = Number(config.minOrderAmount) || 999;
+  const isNewCustomer = !isAuthenticated || (user?.isNewCustomer !== false && (user?.orderCount || 0) === 0);
+  const currentEligibleAmount = cart.subtotal;
+  const isUnlocked = currentEligibleAmount >= minimumOrderValue;
+  const remainingAmount = Math.max(0, minimumOrderValue - currentEligibleAmount);
+  const isApplied = cart.appliedCoupon?.code?.toUpperCase() === 'WELCOME10';
+  const discountPercent = config.discountAmount || 10;
+  const potentialDiscount = Math.round((currentEligibleAmount * discountPercent) / 100);
+  const discountAmount = isApplied ? cart.couponDiscount : potentialDiscount;
+  const isCouponEligible = isNewCustomer && isUnlocked;
+  const rejectionReason = !isNewCustomer
+    ? 'This welcome offer is available only on your first order.'
+    : (!isUnlocked ? `Add ₹${remainingAmount.toLocaleString('en-IN')} more to unlock this offer` : null);
+
+  return {
+    isNewCustomer,
+    isCouponEligible,
+    isUnlocked,
+    minimumOrderValue,
+    currentEligibleAmount,
+    remainingAmount,
+    discountPercent,
+    discountAmount,
+    couponApplied: isApplied,
+    rejectionReason,
+    welcomeCouponConfig: config,
+    applyWelcomeCoupon: () => cart.applyCoupon('WELCOME10'),
+    removeWelcomeCoupon: cart.removeCoupon,
+  };
 };

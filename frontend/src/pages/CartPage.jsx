@@ -138,7 +138,7 @@ export default function CartPage() {
             </h3>
 
             {/* Zomato-Style Smart WELCOME10 Coupon Suggestion */}
-            <SmartCouponSuggestion />
+            <SmartCouponSuggestion variant="cart" />
 
             {/* Promo Code */}
             <div>
