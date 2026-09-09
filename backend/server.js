@@ -16,6 +16,7 @@ import couponRoutes from './routes/couponRoutes.js';
 import rewardRoutes from './routes/rewardRoutes.js';
 import reviewRoutes from './routes/reviewRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
+import cmsRoutes from './routes/cmsRoutes.js';
 
 
 // Environment Validation
@@ -82,6 +83,7 @@ app.use('/api/coupons', couponRoutes);
 app.use('/api/rewards', rewardRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/cms', cmsRoutes);
 
 // Error Handling
 app.use(notFound);

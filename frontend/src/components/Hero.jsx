@@ -2,13 +2,26 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import MobileHeroCarousel from './MobileHeroCarousel';
-import { getHeroConfig, HERO_UPDATE_EVENT, DEFAULT_HERO_SLIDES } from '../utils/heroBannerStorage';
+import { getHeroConfig, fetchHeroConfig, HERO_UPDATE_EVENT, DEFAULT_HERO_SLIDES } from '../utils/heroBannerStorage';
 
 export default function Hero() {
   const [heroConfig, setHeroConfig] = useState(() => getHeroConfig());
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const touchStartXRef = useRef(null);
+
+  // Fetch live Hero Banner configuration from MongoDB Atlas on mount (handles incognito & clean sessions)
+  useEffect(() => {
+    let isMounted = true;
+    fetchHeroConfig().then((liveConfig) => {
+      if (isMounted && liveConfig) {
+        setHeroConfig(liveConfig);
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Listen for real-time hero banner updates from Admin Panel & cross-tab storage
   useEffect(() => {

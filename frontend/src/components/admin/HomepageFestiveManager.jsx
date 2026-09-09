@@ -1,19 +1,35 @@
 import React, { useState, useEffect } from 'react';
-import { Sparkles, Save, Eye, CheckCircle2, Calendar, RotateCcw, Info, ArrowUpRight } from 'lucide-react';
+import { Sparkles, Save, Eye, CheckCircle2, Calendar, RotateCcw, Info, ArrowUpRight, Loader2 } from 'lucide-react';
 import DragDropImageUpload from './DragDropImageUpload';
 import { useToast } from '../../context/ToastContext';
 import teejBannerAsset from '../../assets/teej_festive_offer_banner.png';
 import {
   getFestiveConfig,
-  saveFestiveConfig,
-  resetFestiveConfig,
+  fetchFestiveConfig,
+  saveFestiveConfigApi,
+  resetFestiveConfigApi,
   FESTIVE_UPDATE_EVENT,
+  DEFAULT_FESTIVE_CONFIG,
 } from '../../utils/festiveBannerStorage';
 
 export default function HomepageFestiveManager() {
   const { addToast } = useToast();
   const [saved, setSaved] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [festiveForm, setFestiveForm] = useState(() => getFestiveConfig());
+
+  // Fetch live Festive configuration from MongoDB Atlas on mount
+  useEffect(() => {
+    let isMounted = true;
+    fetchFestiveConfig().then((liveConfig) => {
+      if (isMounted && liveConfig) {
+        setFestiveForm(liveConfig);
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Listen for real-time external updates (e.g. across tabs)
   useEffect(() => {
@@ -52,28 +68,42 @@ export default function HomepageFestiveManager() {
     addToast(`Applied ${preset.name} preset!`, 'info');
   };
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     if (e) e.preventDefault();
+    if (isSaving) return;
+
     if (!festiveForm.image) {
       addToast('Please upload or provide a festive banner background image', 'error');
       return;
     }
 
-    const savedData = saveFestiveConfig(festiveForm);
-    if (savedData) {
+    try {
+      setIsSaving(true);
+      await saveFestiveConfigApi(festiveForm);
       setSaved(true);
-      addToast('Festive Campaign saved! Live desktop banner updated immediately.', 'success');
+      addToast('Festive Campaign saved to MongoDB Atlas! Live desktop banner updated globally.', 'success');
       setTimeout(() => setSaved(false), 3000);
-    } else {
-      addToast('Failed to save festive campaign configuration', 'error');
+    } catch (err) {
+      console.error('Save festive banner error:', err);
+      const msg = err.response?.data?.message || err.message || 'Failed to save to database';
+      addToast(`Error saving Festive Campaign: ${msg}`, 'error');
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  const handleReset = () => {
-    if (window.confirm('Reset festive banner to brand defaults?')) {
-      const resetData = resetFestiveConfig();
-      setFestiveForm(resetData);
-      addToast('Festive banner reset to defaults', 'info');
+  const handleReset = async () => {
+    if (window.confirm('Reset festive banner to brand defaults across the live store?')) {
+      try {
+        setIsSaving(true);
+        await resetFestiveConfigApi();
+        setFestiveForm(DEFAULT_FESTIVE_CONFIG);
+        addToast('Festive banner reset to brand defaults globally', 'info');
+      } catch (err) {
+        addToast('Failed to reset festive configuration', 'error');
+      } finally {
+        setIsSaving(false);
+      }
     }
   };
 
@@ -109,8 +139,9 @@ export default function HomepageFestiveManager() {
           <button
             type="button"
             onClick={handleReset}
+            disabled={isSaving}
             title="Reset to default Teej banner"
-            className="p-2 rounded-xl text-gray-400 hover:text-[#171522] hover:bg-white border border-transparent hover:border-[#D6CFFF]/60 transition-all"
+            className="p-2 rounded-xl text-gray-400 hover:text-[#171522] hover:bg-white border border-transparent hover:border-[#D6CFFF]/60 transition-all disabled:opacity-50"
           >
             <RotateCcw className="w-4 h-4" />
           </button>
@@ -118,10 +149,17 @@ export default function HomepageFestiveManager() {
           <button
             type="button"
             onClick={handleSave}
-            className="inline-flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-semibold bg-[#7464B8] text-white hover:bg-[#5f509e] transition-all shadow-xs"
+            disabled={isSaving}
+            className="inline-flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-semibold bg-[#7464B8] text-white hover:bg-[#5f509e] transition-all shadow-xs disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            {saved ? <CheckCircle2 className="w-4 h-4" /> : <Save className="w-4 h-4" />}
-            <span>{saved ? 'Saved' : 'Save Campaign'}</span>
+            {isSaving ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : saved ? (
+              <CheckCircle2 className="w-4 h-4 text-emerald-300" />
+            ) : (
+              <Save className="w-4 h-4" />
+            )}
+            <span>{isSaving ? 'Saving...' : saved ? 'Saved Live' : 'Save Campaign'}</span>
           </button>
         </div>
       </div>

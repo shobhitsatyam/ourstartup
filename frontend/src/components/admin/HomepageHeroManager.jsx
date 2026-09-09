@@ -1,21 +1,37 @@
 import React, { useState, useEffect } from 'react';
-import { Sparkles, Save, Eye, CheckCircle2, ArrowUpRight, Smartphone, Monitor, RotateCcw, Compass, ChevronLeft, ChevronRight, Layers, Layers2 } from 'lucide-react';
+import { Sparkles, Save, Eye, CheckCircle2, ArrowUpRight, Smartphone, Monitor, RotateCcw, Compass, ChevronLeft, ChevronRight, Layers, Layers2, Loader2 } from 'lucide-react';
 import DragDropImageUpload from './DragDropImageUpload';
 import { useToast } from '../../context/ToastContext';
 import {
   getHeroConfig,
-  saveHeroConfig,
-  resetHeroConfig,
+  fetchHeroConfig,
+  saveHeroConfigApi,
+  resetHeroConfigApi,
   HERO_UPDATE_EVENT,
   DEFAULT_HERO_SLIDES,
+  DEFAULT_HERO_CONFIG,
 } from '../../utils/heroBannerStorage';
 
 export default function HomepageHeroManager() {
   const { addToast } = useToast();
   const [saved, setSaved] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [heroForm, setHeroForm] = useState(() => getHeroConfig());
   const [activeSlideTab, setActiveSlideTab] = useState(0); // 0 = Slide 1, 1 = Slide 2, 2 = Slide 3
   const [previewSlideIndex, setPreviewSlideIndex] = useState(0);
+
+  // Fetch live CMS configuration from MongoDB Atlas on mount
+  useEffect(() => {
+    let isMounted = true;
+    fetchHeroConfig().then((liveConfig) => {
+      if (isMounted && liveConfig) {
+        setHeroForm(liveConfig);
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Listen for external updates (e.g. across tabs)
   useEffect(() => {
@@ -50,8 +66,10 @@ export default function HomepageHeroManager() {
     });
   };
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     if (e) e.preventDefault();
+    if (isSaving) return;
+
     // Validate each slide has an image
     for (let i = 0; i < slides.length; i++) {
       if (!slides[i]?.image) {
@@ -61,26 +79,38 @@ export default function HomepageHeroManager() {
       }
     }
 
-    const savedData = saveHeroConfig({
-      ...heroForm,
-      slides,
-    });
-    if (savedData) {
+    try {
+      setIsSaving(true);
+      await saveHeroConfigApi({
+        ...heroForm,
+        slides,
+      });
       setSaved(true);
-      addToast('Hero Banner saved! All 3 slides updated live on desktop storefront.', 'success');
+      addToast('Hero Banner saved to MongoDB Atlas! All 3 slides updated live globally.', 'success');
       setTimeout(() => setSaved(false), 3000);
-    } else {
-      addToast('Failed to save hero banner configuration', 'error');
+    } catch (err) {
+      console.error('Save hero banner error:', err);
+      const msg = err.response?.data?.message || err.message || 'Failed to save to database';
+      addToast(`Error saving Hero Banner: ${msg}`, 'error');
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  const handleReset = () => {
-    if (window.confirm('Reset all 3 hero slides to initial brand defaults?')) {
-      const resetData = resetHeroConfig();
-      setHeroForm(resetData);
-      setPreviewSlideIndex(0);
-      setActiveSlideTab(0);
-      addToast('Hero banner reset to 3 default slides', 'info');
+  const handleReset = async () => {
+    if (window.confirm('Reset all 3 hero slides to initial brand defaults across the live store?')) {
+      try {
+        setIsSaving(true);
+        await resetHeroConfigApi();
+        setHeroForm(DEFAULT_HERO_CONFIG);
+        setPreviewSlideIndex(0);
+        setActiveSlideTab(0);
+        addToast('Hero banner reset to 3 default brand slides globally', 'info');
+      } catch (err) {
+        addToast('Failed to reset hero configuration', 'error');
+      } finally {
+        setIsSaving(false);
+      }
     }
   };
 
@@ -129,8 +159,9 @@ export default function HomepageHeroManager() {
           <button
             type="button"
             onClick={handleReset}
+            disabled={isSaving}
             title="Reset to default brand images"
-            className="p-2 rounded-xl text-gray-400 hover:text-[#171522] hover:bg-white border border-transparent hover:border-[#D6CFFF]/60 transition-all"
+            className="p-2 rounded-xl text-gray-400 hover:text-[#171522] hover:bg-white border border-transparent hover:border-[#D6CFFF]/60 transition-all disabled:opacity-50"
           >
             <RotateCcw className="w-4 h-4" />
           </button>
@@ -139,10 +170,17 @@ export default function HomepageHeroManager() {
           <button
             type="button"
             onClick={handleSave}
-            className="inline-flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-semibold bg-[#7464B8] text-white hover:bg-[#5f509e] transition-all shadow-xs active:scale-98"
+            disabled={isSaving}
+            className="inline-flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-semibold bg-[#7464B8] text-white hover:bg-[#5f509e] transition-all shadow-xs active:scale-98 disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            {saved ? <CheckCircle2 className="w-4 h-4" /> : <Save className="w-4 h-4" />}
-            <span>{saved ? 'Saved Live' : 'Save Changes'}</span>
+            {isSaving ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : saved ? (
+              <CheckCircle2 className="w-4 h-4 text-emerald-300" />
+            ) : (
+              <Save className="w-4 h-4" />
+            )}
+            <span>{isSaving ? 'Saving to Database...' : saved ? 'Saved Live' : 'Save Changes'}</span>
           </button>
         </div>
       </div>

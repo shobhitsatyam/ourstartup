@@ -1,8 +1,8 @@
 /**
  * Ocean Jewel Category Card Storage & Management Layer
- * Provides persistent storage (localStorage + custom event broadcast for active tabs)
- * for the homepage Shop by Category cards.
+ * Provides persistent database sync via MongoDB Atlas & Cloudinary for the homepage Shop by Category cards.
  */
+import api from '../services/api';
 
 export const DEFAULT_CATEGORY_CARDS = [
   {
@@ -106,31 +106,120 @@ export const LUXURY_PRESET_IMAGES = [
 const STORAGE_KEY = 'oceanjewel_category_cards';
 const UPDATE_EVENT = 'oceanjewel_category_updated';
 
+function mergeCardsWithDefaults(parsed) {
+  if (!Array.isArray(parsed) || parsed.length === 0) return DEFAULT_CATEGORY_CARDS;
+  return DEFAULT_CATEGORY_CARDS.map((def) => {
+    const match = parsed.find((p) => p.name === def.name || p.id === def.id);
+    return match ? { ...def, ...match } : def;
+  });
+}
+
 /**
- * Retrieve current category cards from localStorage, fallback to defaults
+ * Retrieve current category cards from localStorage cache, fallback to defaults
  */
 export function getCategoryCards() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return DEFAULT_CATEGORY_CARDS;
     const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed) || parsed.length === 0) return DEFAULT_CATEGORY_CARDS;
-
-    // Merge with defaults to ensure links and IDs remain robust
-    return DEFAULT_CATEGORY_CARDS.map((def) => {
-      const match = parsed.find((p) => p.name === def.name || p.id === def.id);
-      return match ? { ...def, ...match } : def;
-    });
+    return mergeCardsWithDefaults(parsed);
   } catch (e) {
-    console.warn('Failed to parse category cards from localStorage:', e);
+    console.warn('Failed to parse category cards from cache:', e);
     return DEFAULT_CATEGORY_CARDS;
   }
 }
 
 /**
- * Save category cards to localStorage and broadcast change event
+ * Asynchronously fetches live category cards from MongoDB database.
+ */
+export async function fetchCategoryCards() {
+  try {
+    const res = await api.get(`/cms/category_cards?t=${Date.now()}`, {
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+      },
+    });
+
+    if (res.data?.success && res.data?.data && Array.isArray(res.data.data)) {
+      const merged = mergeCardsWithDefaults(res.data.data);
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+        } catch (_) {}
+        window.dispatchEvent(new CustomEvent(UPDATE_EVENT, { detail: merged }));
+      }
+      return merged;
+    } else {
+      return DEFAULT_CATEGORY_CARDS;
+    }
+  } catch (err) {
+    console.warn('Failed fetching category cards from database:', err.message);
+    return getCategoryCards();
+  }
+}
+
+/**
+ * Asynchronously persists category cards to MongoDB database.
+ */
+export async function saveCategoryCardsApi(cards) {
+  try {
+    const res = await api.put('/cms/category_cards', { data: cards });
+    if (res.data?.success) {
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(cards));
+        } catch (_) {}
+        window.dispatchEvent(new CustomEvent(UPDATE_EVENT, { detail: cards }));
+      }
+      return { success: true, data: cards };
+    }
+    throw new Error(res.data?.message || 'Server did not acknowledge category cards save');
+  } catch (err) {
+    console.error('Failed saving category cards to database:', err);
+    throw err;
+  }
+}
+
+/**
+ * Resets category cards in database back to brand defaults.
+ */
+export async function resetCategoryCardsApi() {
+  try {
+    await api.delete('/cms/category_cards');
+  } catch (err) {
+    console.warn('Failed deleting category cards CMS config:', err.message);
+  }
+
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch (_) {}
+    window.dispatchEvent(new CustomEvent(UPDATE_EVENT, { detail: DEFAULT_CATEGORY_CARDS }));
+  }
+  return DEFAULT_CATEGORY_CARDS;
+}
+
+/**
+ * Update the image of a specific category card and persist to database
+ */
+export async function updateCategoryCardImageApi(identifier, newImageUrl) {
+  const cards = getCategoryCards();
+  const updated = cards.map((cat) => {
+    if (cat.id === identifier || cat.name === identifier) {
+      return { ...cat, img: newImageUrl };
+    }
+    return cat;
+  });
+  await saveCategoryCardsApi(updated);
+  return updated;
+}
+
+/**
+ * Backwards compatibility wrappers
  */
 export function saveCategoryCards(cards) {
+  saveCategoryCardsApi(cards).catch((e) => console.error('saveCategoryCards async error:', e));
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(cards));
     if (typeof window !== 'undefined') {
@@ -138,14 +227,10 @@ export function saveCategoryCards(cards) {
     }
     return true;
   } catch (e) {
-    console.error('Failed to save category cards to localStorage:', e);
     return false;
   }
 }
 
-/**
- * Update the image of a specific category card
- */
 export function updateCategoryCardImage(identifier, newImageUrl) {
   const cards = getCategoryCards();
   const updated = cards.map((cat) => {

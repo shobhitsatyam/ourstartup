@@ -13,6 +13,7 @@ class MockStore {
     this.reviews = [];
     this.rewardTransactions = [];
     this.addresses = [];
+    this.cmsContent = {};
     // Do not auto-initialize embedded memory store. The application uses MongoDB Atlas.
   }
 

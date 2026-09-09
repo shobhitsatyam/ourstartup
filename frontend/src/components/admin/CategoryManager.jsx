@@ -12,20 +12,39 @@ import {
   ExternalLink,
   Check,
   RefreshCw,
+  RotateCcw,
+  Loader2,
 } from 'lucide-react';
 import ImageUploadField from './ImageUploadField';
 import DragDropImageUpload from './DragDropImageUpload';
 import { useToast } from '../../context/ToastContext';
 import {
   getCategoryCards,
-  saveCategoryCards,
-  updateCategoryCardImage,
+  fetchCategoryCards,
+  saveCategoryCardsApi,
+  updateCategoryCardImageApi,
+  resetCategoryCardsApi,
+  DEFAULT_CATEGORY_CARDS,
   LUXURY_PRESET_IMAGES,
 } from '../../utils/categoryCardStorage';
 
 export default function CategoryManager() {
   const { addToast } = useToast();
   const [categories, setCategories] = useState(() => getCategoryCards());
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Fetch live category cards from MongoDB Atlas on mount
+  useEffect(() => {
+    let isMounted = true;
+    fetchCategoryCards().then((liveCards) => {
+      if (isMounted && liveCards) {
+        setCategories(liveCards);
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Listen for storage events (multi-tab sync)
   useEffect(() => {
@@ -76,7 +95,7 @@ export default function CategoryManager() {
     setShowModal(true);
   };
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
     if (!form.name.trim()) {
       addToast('Please enter category name', 'error');
@@ -90,31 +109,59 @@ export default function CategoryManager() {
           ? { ...form, id: c.id }
           : c
       );
-      addToast(`Category '${form.name}' updated!`, 'success');
     } else {
       const newCat = { ...form, id: Date.now().toString() };
       updated = [...categories, newCat];
-      addToast(`Category '${form.name}' added!`, 'success');
     }
-    setCategories(updated);
-    saveCategoryCards(updated);
-    setShowModal(false);
+
+    try {
+      setIsSaving(true);
+      await saveCategoryCardsApi(updated);
+      setCategories(updated);
+      setShowModal(false);
+      addToast(
+        editingCategory
+          ? `Category '${form.name}' updated & saved live!`
+          : `Category '${form.name}' added & saved live!`,
+        'success'
+      );
+    } catch (err) {
+      console.error('Save category error:', err);
+      const msg = err.response?.data?.message || err.message || 'Failed saving category cards';
+      addToast(`Error saving: ${msg}`, 'error');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const handleDelete = (id) => {
-    if (!window.confirm('Delete this category card?')) return;
+  const handleDelete = async (id) => {
+    if (!window.confirm('Delete this category card from the live store?')) return;
     const updated = categories.filter((c) => c.id !== id);
-    setCategories(updated);
-    saveCategoryCards(updated);
-    addToast('Category removed', 'info');
+    try {
+      setIsSaving(true);
+      await saveCategoryCardsApi(updated);
+      setCategories(updated);
+      addToast('Category removed from live store', 'info');
+    } catch (err) {
+      addToast('Failed to delete category card', 'error');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const handleToggleActive = (id) => {
+  const handleToggleActive = async (id) => {
     const updated = categories.map((c) =>
       c.id === id ? { ...c, active: !c.active } : c
     );
-    setCategories(updated);
-    saveCategoryCards(updated);
+    try {
+      setIsSaving(true);
+      await saveCategoryCardsApi(updated);
+      setCategories(updated);
+    } catch (err) {
+      addToast('Failed to toggle category status', 'error');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleOpenQuickImageModal = (cat) => {
@@ -122,16 +169,39 @@ export default function CategoryManager() {
     setTempImageUrl(cat.img || '');
   };
 
-  const handleSaveQuickImage = () => {
+  const handleSaveQuickImage = async () => {
     if (!quickImageCat) return;
     if (!tempImageUrl.trim()) {
       addToast('Please provide a valid image URL or choose a preset', 'error');
       return;
     }
-    const updated = updateCategoryCardImage(quickImageCat.id, tempImageUrl.trim());
-    setCategories(updated);
-    addToast(`Updated image for '${quickImageCat.name}'! Reflected on Homepage.`, 'success');
-    setQuickImageCat(null);
+    try {
+      setIsSaving(true);
+      const updated = await updateCategoryCardImageApi(quickImageCat.id, tempImageUrl.trim());
+      setCategories(updated);
+      addToast(`Updated image for '${quickImageCat.name}'! Saved globally to MongoDB Atlas.`, 'success');
+      setQuickImageCat(null);
+    } catch (err) {
+      console.error('Update image error:', err);
+      addToast('Failed to save category image', 'error');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleReset = async () => {
+    if (window.confirm('Reset all category cards to default brand photography across the live store?')) {
+      try {
+        setIsSaving(true);
+        await resetCategoryCardsApi();
+        setCategories(DEFAULT_CATEGORY_CARDS);
+        addToast('Category cards reset to brand defaults globally', 'info');
+      } catch (err) {
+        addToast('Failed to reset category cards', 'error');
+      } finally {
+        setIsSaving(false);
+      }
+    }
   };
 
   return (
@@ -152,10 +222,20 @@ export default function CategoryManager() {
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => handleOpenModal()}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold bg-[#7464B8] text-white hover:bg-[#5f509e] transition-all shadow-xs"
+            type="button"
+            onClick={handleReset}
+            disabled={isSaving}
+            title="Reset category cards to defaults"
+            className="p-2 rounded-xl text-gray-400 hover:text-[#171522] hover:bg-white border border-[#D6CFFF]/60 transition-all disabled:opacity-50"
           >
-            <Plus className="w-4 h-4" />
+            <RotateCcw className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => handleOpenModal()}
+            disabled={isSaving}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold bg-[#7464B8] text-white hover:bg-[#5f509e] transition-all shadow-xs disabled:opacity-60"
+          >
+            {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
             <span>Add Card</span>
           </button>
         </div>

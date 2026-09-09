@@ -16,6 +16,7 @@ import {
   deleteCoupon,
   uploadProductImages,
 } from '../controllers/adminController.js';
+import { updateCmsByKey, resetCmsByKey } from '../controllers/cmsController.js';
 import { protect } from '../middleware/authMiddleware.js';
 import { adminOnly } from '../middleware/adminMiddleware.js';
 import { handleUploadMiddleware } from '../middleware/uploadMiddleware.js';
@@ -58,5 +59,10 @@ router.route('/coupons/:id')
   .delete(deleteCoupon);
 
 router.patch('/coupons/:id/status', toggleCouponStatus);
+
+// CMS Content Management (Global Site Content Persistence)
+router.route('/cms/:key')
+  .put(updateCmsByKey)
+  .delete(resetCmsByKey);
 
 export default router;

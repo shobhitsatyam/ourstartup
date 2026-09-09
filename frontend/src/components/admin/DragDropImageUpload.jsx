@@ -49,44 +49,36 @@ export default function DragDropImageUpload({
     try {
       setIsUploading(true);
 
-      // Instant local preview via FileReader
-      const readerPromise = new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onload = (e) => resolve(e.target.result);
-        reader.readAsDataURL(file);
-      });
-
-      // Compress client-side
-      let compressedFile = file;
+      // Compress client-side before upload
+      let fileToUpload = file;
       try {
         const compressedList = await compressImages([file]);
         if (compressedList && compressedList[0]) {
-          compressedFile = compressedList[0];
+          fileToUpload = compressedList[0];
         }
       } catch (compErr) {
         console.warn('Compression skipped, using original file:', compErr);
       }
 
-      // Try uploading to backend /api/admin/upload -> Cloudinary
-      let uploadedUrl = null;
-      try {
-        const formData = new FormData();
-        formData.append('images', compressedFile);
-        const res = await api.post('/admin/upload', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        });
-        if (res.data?.success && res.data?.urls?.[0]) {
-          uploadedUrl = res.data.urls[0];
-        }
-      } catch (uploadErr) {
-        console.warn('Server upload unavailable, falling back to local data URL:', uploadErr);
+      // Upload to backend /api/admin/upload -> Cloudinary
+      const formData = new FormData();
+      formData.append('images', fileToUpload);
+
+      const res = await api.post('/admin/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+
+      const uploadedUrl = res.data?.urls?.[0];
+      if (!uploadedUrl) {
+        throw new Error(res.data?.message || 'Server did not return an uploaded image URL.');
       }
 
-      // If server upload succeeded, use permanent CDN URL; otherwise use high-res data URL
-      const finalUrl = uploadedUrl || (await readerPromise);
-      onChange(finalUrl);
+      // Save the globally accessible Cloudinary CDN URL
+      onChange(uploadedUrl);
     } catch (err) {
-      setError(err.message || 'Image processing failed. Please try again.');
+      console.error('Image upload failed:', err);
+      const msg = err.response?.data?.message || err.message || 'Image upload failed. Please try again.';
+      setError(`Upload failed: ${msg}`);
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -117,8 +109,8 @@ export default function DragDropImageUpload({
   const handleUrlSubmit = (e) => {
     e.preventDefault();
     if (!urlInput.trim()) return;
-    if (!urlInput.startsWith('http://') && !urlInput.startsWith('https://') && !urlInput.startsWith('data:image')) {
-      setError('Please enter a valid HTTP or HTTPS image URL.');
+    if (!urlInput.startsWith('http://') && !urlInput.startsWith('https://')) {
+      setError('Please enter a valid HTTP or HTTPS image URL (e.g. https://...).');
       return;
     }
     setError(null);

@@ -13,7 +13,7 @@ import ProductCard from '../components/ProductCard';
 import QuickViewModal from '../components/QuickViewModal';
 import CustomerReviews from '../components/CustomerReviews';
 import api from '../services/api';
-import { getCategoryCards } from '../utils/categoryCardStorage';
+import { getCategoryCards, fetchCategoryCards } from '../utils/categoryCardStorage';
 import { getCachedCuratedHighlights, fetchCuratedHighlights } from '../services/productCache';
 import { preloadProductImage, getOptimizedImageUrl } from '../utils/imageOptimizer';
 
@@ -96,6 +96,19 @@ export default function HomePage({ onOpenSearch }) {
   };
 
   const [categoryCards, setCategoryCards] = useState(() => getCategoryCards());
+
+  // Fetch live category cards from MongoDB Atlas on mount (handles incognito & clean sessions)
+  useEffect(() => {
+    let isMounted = true;
+    fetchCategoryCards().then((liveCards) => {
+      if (isMounted && liveCards) {
+        setCategoryCards(liveCards);
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     const handleCategoryUpdate = () => {

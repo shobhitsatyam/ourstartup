@@ -3,13 +3,25 @@ import { Link } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import { Sparkles, ArrowRight, Copy, Check } from 'lucide-react';
 import { festivePromotionData, isPromotionActive } from './promotionsData';
-import teejBannerImage from '../../assets/teej_festive_offer_banner.png';
-import { getFestiveConfig, FESTIVE_UPDATE_EVENT } from '../../utils/festiveBannerStorage';
+import { getFestiveConfig, fetchFestiveConfig, FESTIVE_UPDATE_EVENT } from '../../utils/festiveBannerStorage';
 
 export default function FestiveOfferBanner({ data = festivePromotionData }) {
   const shouldReduceMotion = useReducedMotion();
   const [copied, setCopied] = useState(false);
   const [storedConfig, setStoredConfig] = useState(() => getFestiveConfig());
+
+  // Fetch live Festive configuration from MongoDB Atlas on mount (handles incognito & clean sessions)
+  useEffect(() => {
+    let isMounted = true;
+    fetchFestiveConfig().then((liveConfig) => {
+      if (isMounted && liveConfig) {
+        setStoredConfig(liveConfig);
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Real-time reactive synchronization with Admin Panel & across tabs
   useEffect(() => {
