@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
+import ScrollToTop from './components/ScrollToTop';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import CartDrawer from './components/CartDrawer';
@@ -31,6 +32,9 @@ export default function App() {
 
   return (
     <div className="flex flex-col min-h-screen bg-[#FAF9FF] selection:bg-[#D6CFFF] selection:text-[#17151F]">
+      {/* Global Route Navigation Scroll Reset */}
+      <ScrollToTop />
+
       {/* 1. Frosted Floating Navbar */}
       <Navbar onOpenSearch={() => setSearchOverlayOpen(true)} />
 
