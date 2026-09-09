@@ -111,16 +111,6 @@ export const CartProvider = ({ children }) => {
     }
   };
 
-  // Auto-remove applied coupon if cart subtotal drops below minimum required amount
-  useEffect(() => {
-    if (appliedCoupon && appliedCoupon.minOrderAmount > 0 && subtotal > 0 && subtotal < appliedCoupon.minOrderAmount) {
-      const couponName = appliedCoupon.code;
-      const minReq = appliedCoupon.minOrderAmount;
-      setAppliedCoupon(null);
-      addToast(`Coupon '${couponName}' removed (requires minimum order of ₹${minReq})`, 'info');
-    }
-  }, [subtotal, appliedCoupon]);
-
   const removeCoupon = () => {
     setAppliedCoupon(null);
     addToast('Coupon removed', 'info');
@@ -155,6 +145,16 @@ export const CartProvider = ({ children }) => {
   // Calculations
   const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
   const totalItemsCount = cartItems.reduce((acc, item) => acc + item.quantity, 0);
+
+  // Auto-remove applied coupon if cart subtotal drops below minimum required amount
+  useEffect(() => {
+    if (appliedCoupon && appliedCoupon.minOrderAmount > 0 && subtotal > 0 && subtotal < appliedCoupon.minOrderAmount) {
+      const couponName = appliedCoupon.code;
+      const minReq = appliedCoupon.minOrderAmount;
+      setAppliedCoupon(null);
+      addToast(`Coupon '${couponName}' removed (requires minimum order of ₹${minReq})`, 'info');
+    }
+  }, [subtotal, appliedCoupon]);
 
   // Free shipping threshold: ₹799 (Configurable via Admin Store Settings)
   const freeShippingThreshold = storeSettings.freeShippingThreshold || 799;
