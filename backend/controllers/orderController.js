@@ -7,6 +7,7 @@ import RewardTransaction from '../models/RewardTransaction.js';
 import CmsContent from '../models/CmsContent.js';
 import { isMongoConnected } from '../config/db.js';
 import { mockStore } from '../config/mockStore.js';
+import { checkCustomerHasCompletedOrders } from '../utils/customerOrderHelper.js';
 
 const getStoreSettings = async () => {
   let threshold = 799;
@@ -91,18 +92,46 @@ export const createOrder = async (req, res) => {
       let validCouponCode = '';
 
       if (couponCode && couponCode.trim() !== '') {
-        const coupon = await Coupon.findOne({ code: couponCode.trim().toUpperCase(), isActive: true });
-        if (coupon && new Date(coupon.expiryDate) > new Date() && itemsPrice >= coupon.minOrderAmount) {
-          if (coupon.discountType === 'percentage') {
-            const rawDiscount = (itemsPrice * coupon.discountAmount) / 100;
-            discountAmount = Math.min(rawDiscount, coupon.maxDiscountAmount);
-          } else {
-            discountAmount = Math.min(coupon.discountAmount, itemsPrice);
-          }
-          validCouponCode = coupon.code;
-          coupon.usedCount += 1;
-          await coupon.save();
+        const cleanCouponCode = couponCode.trim().toUpperCase();
+        const coupon = await Coupon.findOne({ code: cleanCouponCode, isActive: true });
+        if (!coupon) {
+          return res.status(400).json({ success: false, message: 'Invalid coupon code applied.' });
         }
+        if (new Date(coupon.expiryDate) < new Date()) {
+          return res.status(400).json({ success: false, message: 'Applied coupon has expired.' });
+        }
+        if (itemsPrice < (coupon.minOrderAmount || 0)) {
+          return res.status(400).json({
+            success: false,
+            message: `Minimum order value of ₹${coupon.minOrderAmount} required for coupon ${coupon.code}`,
+          });
+        }
+
+        // Server-side first-order coupon validation (e.g. WELCOME10)
+        const isFirstOrderCoupon = coupon.isFirstOrderOnly || cleanCouponCode === 'WELCOME10';
+        if (isFirstOrderCoupon) {
+          const hasCompletedOrders = await checkCustomerHasCompletedOrders({
+            userId: req.user._id,
+            email: req.user.email,
+            phone: shippingAddress?.phone || req.user.phone,
+          });
+          if (hasCompletedOrders) {
+            return res.status(400).json({
+              success: false,
+              message: 'WELCOME10 is available only on your first order.',
+            });
+          }
+        }
+
+        if (coupon.discountType === 'percentage') {
+          const rawDiscount = (itemsPrice * coupon.discountAmount) / 100;
+          discountAmount = Math.min(rawDiscount, coupon.maxDiscountAmount || rawDiscount);
+        } else {
+          discountAmount = Math.min(coupon.discountAmount, itemsPrice);
+        }
+        validCouponCode = coupon.code;
+        coupon.usedCount += 1;
+        await coupon.save();
       }
 
       let oceanPointsUsed = 0;
@@ -188,19 +217,47 @@ export const createOrder = async (req, res) => {
       let validCouponCode = '';
 
       if (couponCode && couponCode.trim() !== '') {
+        const cleanCouponCode = couponCode.trim().toUpperCase();
         const coupon = mockStore.coupons.find(
-          (c) => c.code.toUpperCase() === couponCode.trim().toUpperCase() && c.isActive
+          (c) => c.code.toUpperCase() === cleanCouponCode && c.isActive
         );
-        if (coupon && itemsPrice >= coupon.minOrderAmount) {
-          if (coupon.discountType === 'percentage') {
-            const raw = (itemsPrice * coupon.discountAmount) / 100;
-            discountAmount = Math.min(raw, coupon.maxDiscountAmount);
-          } else {
-            discountAmount = Math.min(coupon.discountAmount, itemsPrice);
-          }
-          validCouponCode = coupon.code;
-          coupon.usedCount += 1;
+        if (!coupon) {
+          return res.status(400).json({ success: false, message: 'Invalid coupon code applied.' });
         }
+        if (new Date(coupon.expiryDate) < new Date()) {
+          return res.status(400).json({ success: false, message: 'Applied coupon has expired.' });
+        }
+        if (itemsPrice < (coupon.minOrderAmount || 0)) {
+          return res.status(400).json({
+            success: false,
+            message: `Minimum order value of ₹${coupon.minOrderAmount} required for coupon ${coupon.code}`,
+          });
+        }
+
+        // Server-side first-order coupon validation (e.g. WELCOME10)
+        const isFirstOrderCoupon = coupon.isFirstOrderOnly || cleanCouponCode === 'WELCOME10';
+        if (isFirstOrderCoupon) {
+          const hasCompletedOrders = await checkCustomerHasCompletedOrders({
+            userId: req.user._id,
+            email: req.user.email,
+            phone: shippingAddress?.phone || req.user.phone,
+          });
+          if (hasCompletedOrders) {
+            return res.status(400).json({
+              success: false,
+              message: 'WELCOME10 is available only on your first order.',
+            });
+          }
+        }
+
+        if (coupon.discountType === 'percentage') {
+          const raw = (itemsPrice * coupon.discountAmount) / 100;
+          discountAmount = Math.min(raw, coupon.maxDiscountAmount || raw);
+        } else {
+          discountAmount = Math.min(coupon.discountAmount, itemsPrice);
+        }
+        validCouponCode = coupon.code;
+        coupon.usedCount += 1;
       }
 
       let oceanPointsUsed = 0;

@@ -95,12 +95,14 @@ export const CartProvider = ({ children }) => {
       const res = await api.post('/coupons/validate', {
         code,
         cartTotal: subtotal,
+        email: user?.email,
+        phone: user?.phone,
       });
 
       if (res.data?.success) {
         setAppliedCoupon(res.data.data);
         addToast(res.data.message || `Coupon '${code}' applied!`, 'success');
-        return { success: true };
+        return { success: true, data: res.data.data };
       }
     } catch (error) {
       const message = error.response?.data?.message || 'Invalid or expired coupon code';
@@ -108,6 +110,16 @@ export const CartProvider = ({ children }) => {
       return { success: false, message };
     }
   };
+
+  // Auto-remove applied coupon if cart subtotal drops below minimum required amount
+  useEffect(() => {
+    if (appliedCoupon && appliedCoupon.minOrderAmount > 0 && subtotal > 0 && subtotal < appliedCoupon.minOrderAmount) {
+      const couponName = appliedCoupon.code;
+      const minReq = appliedCoupon.minOrderAmount;
+      setAppliedCoupon(null);
+      addToast(`Coupon '${couponName}' removed (requires minimum order of ₹${minReq})`, 'info');
+    }
+  }, [subtotal, appliedCoupon]);
 
   const removeCoupon = () => {
     setAppliedCoupon(null);

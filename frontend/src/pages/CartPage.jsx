@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { ShoppingBag, Trash2, Plus, Minus, ArrowRight, Tag, Sparkles, ShieldCheck, RotateCcw } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
+import SmartCouponSuggestion from '../components/cart/SmartCouponSuggestion';
 
 export default function CartPage() {
   const {
@@ -135,6 +136,9 @@ export default function CartPage() {
             <h3 className="font-serif text-xl font-medium text-gray-900 pb-3 border-b border-gray-100">
               Order Summary
             </h3>
+
+            {/* Zomato-Style Smart WELCOME10 Coupon Suggestion */}
+            <SmartCouponSuggestion />
 
             {/* Promo Code */}
             <div>

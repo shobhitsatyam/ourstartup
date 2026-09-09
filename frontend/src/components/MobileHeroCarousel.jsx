@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, ArrowUpRight, Tag, ShieldCheck, Star } from 'lucide-react';
 import { initialHeroBanners } from './promotions/heroBannersData';
 import { getHeroConfig, HERO_UPDATE_EVENT } from '../utils/heroBannerStorage';
 
@@ -41,6 +40,7 @@ export default function MobileHeroCarousel() {
   const [isPaused, setIsPaused] = useState(false);
   const pauseTimerRef = useRef(null);
   const autoPlayTimerRef = useRef(null);
+  const isDraggingRef = useRef(false);
 
   // Trigger pause on user interaction and resume after 3.5s
   const triggerInteractionPause = useCallback(() => {
@@ -137,7 +137,10 @@ export default function MobileHeroCarousel() {
               drag="x"
               dragConstraints={{ left: 0, right: 0 }}
               dragElastic={0.2}
-              onDragStart={triggerInteractionPause}
+              onDragStart={() => {
+                isDraggingRef.current = true;
+                triggerInteractionPause();
+              }}
               onDragEnd={(e, { offset, velocity }) => {
                 triggerInteractionPause();
                 const swipeThreshold = 45;
@@ -146,75 +149,33 @@ export default function MobileHeroCarousel() {
                 } else if (offset.x > swipeThreshold || velocity.x > 300) {
                   prevSlide();
                 }
+                setTimeout(() => {
+                  isDraggingRef.current = false;
+                }, 80);
               }}
-              className="absolute inset-0 w-full h-full flex items-end cursor-grab active:cursor-grabbing"
+              className="absolute inset-0 w-full h-full cursor-grab active:cursor-grabbing"
             >
-              {/* Background Image with Calibrated Luxury Focus & Responsive Crop */}
-              <img
-                src={currentBanner.image}
-                alt={currentBanner.imageAlt}
-                className="absolute inset-0 w-full h-full object-cover object-[center_35%] pointer-events-none select-none"
-                loading="eager"
-              />
-
-              {/* Minimal Luxury Deep Vignette for Crystal-Clear Text Legibility */}
-              <div className="absolute inset-0 bg-gradient-to-t from-[#120F1D]/95 via-[#120F1D]/45 via-50% to-transparent pointer-events-none" />
-
-              {/* Overlay Content Box — Minimal, Uncluttered, Editorial */}
-              <div className="relative z-10 w-full p-4 xs:p-5 sm:p-7 md:p-8 flex flex-col justify-end text-left space-y-2 xs:space-y-2.5 sm:space-y-3.5">
-                {/* Eyebrow Pill */}
-                <div className="flex items-center gap-2">
-                  <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-white/15 backdrop-blur-md border border-white/20 shadow-2xs">
-                    <Sparkles className="w-2.5 h-2.5 text-[#D6CFFF] animate-pulse" />
-                    <span className="text-[8px] xs:text-[9px] sm:text-[10px] font-semibold tracking-[0.18em] uppercase text-[#F3EFFF]">
-                      {currentBanner.eyebrow}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Banner Heading */}
-                <h2 className="font-serif text-[21px] xs:text-[24px] sm:text-3xl md:text-4xl font-light text-white leading-[1.12] tracking-tight drop-shadow-md">
-                  {currentBanner.title}
-                </h2>
-
-                {/* Clean Subtitle or Offer Highlight */}
-                {currentBanner.offerBadge ? (
-                  <div className="inline-block">
-                    <span className="text-[9.5px] xs:text-[10.5px] sm:text-xs font-semibold text-[#D6CFFF] bg-white/10 backdrop-blur-xs px-2 py-0.5 rounded-md border border-[#D6CFFF]/30">
-                      ✨ {currentBanner.offerBadge}
-                    </span>
-                  </div>
-                ) : (
-                  <p className="text-[10px] xs:text-[11px] sm:text-xs text-[#E8E3FF]/90 font-light line-clamp-2 max-w-sm leading-relaxed drop-shadow-xs">
-                    {currentBanner.description}
-                  </p>
-                )}
-
-                {/* Action Buttons */}
-                <div className="pt-1 flex items-center gap-2 sm:gap-3">
-                  {/* Primary CTA */}
-                  <Link
-                    to={currentBanner.primaryCta.link}
-                    onClick={triggerInteractionPause}
-                    className="px-4 xs:px-5 sm:px-6 py-2 sm:py-2.5 bg-white text-[#17151F] rounded-xl font-semibold tracking-[0.14em] text-[10px] xs:text-[11px] sm:text-xs uppercase shadow-md hover:bg-[#FAF9FF] transition-all transform active:scale-95 btn-shine flex items-center gap-1.5 group"
-                  >
-                    <span>{currentBanner.primaryCta.text}</span>
-                    <ArrowUpRight className="w-3.5 h-3.5 text-[#7464B8] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-                  </Link>
-
-                  {/* Secondary CTA (If present) */}
-                  {currentBanner.secondaryCta && (
-                    <Link
-                      to={currentBanner.secondaryCta.link}
-                      onClick={triggerInteractionPause}
-                      className="px-3.5 xs:px-4 sm:px-5 py-2 sm:py-2.5 bg-black/40 backdrop-blur-md text-white rounded-xl font-semibold tracking-[0.14em] text-[10px] xs:text-[11px] sm:text-xs uppercase border border-white/30 hover:bg-white/15 transition-all transform active:scale-95 flex items-center gap-1.5 group"
-                    >
-                      <span>{currentBanner.secondaryCta.text}</span>
-                      <ArrowUpRight className="w-3.5 h-3.5 text-[#D6CFFF] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-                    </Link>
-                  )}
-                </div>
-              </div>
+              {/* Clean Image-Only Presentation (16:10 Aspect Ratio, No Overlays, No Text, No CTA Buttons) */}
+              <Link
+                to={currentBanner.primaryCta?.link || '/shop'}
+                onClick={(e) => {
+                  if (isDraggingRef.current) {
+                    e.preventDefault();
+                  } else {
+                    triggerInteractionPause();
+                  }
+                }}
+                className="block w-full h-full"
+                aria-label={`Explore ${currentBanner.title}`}
+              >
+                <img
+                  src={currentBanner.image}
+                  alt={currentBanner.imageAlt || currentBanner.title || 'Ocean Jewel Luxury Jewellery'}
+                  className="w-full h-full object-cover object-center pointer-events-none select-none"
+                  loading="eager"
+                  draggable={false}
+                />
+              </Link>
             </motion.div>
           </AnimatePresence>
         </div>

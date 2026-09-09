@@ -48,6 +48,10 @@ const couponSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    isFirstOrderOnly: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,

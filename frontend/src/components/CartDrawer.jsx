@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
+import SmartCouponSuggestion from './cart/SmartCouponSuggestion';
 
 export default function CartDrawer() {
   const {
@@ -206,6 +207,9 @@ export default function CartDrawer() {
             {/* Cart Drawer Footer */}
             {cartItems.length > 0 && (
               <div className="p-5 border-t border-[#D6CFFF]/30 bg-white/90 backdrop-blur-md space-y-4">
+                {/* Zomato-Style Smart WELCOME10 Coupon Suggestion */}
+                <SmartCouponSuggestion />
+
                 {/* Promo Code Box */}
                 <div>
                   {appliedCoupon ? (

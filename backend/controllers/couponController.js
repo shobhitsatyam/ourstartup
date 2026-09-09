@@ -1,10 +1,16 @@
 import Coupon from '../models/Coupon.js';
 import { isMongoConnected } from '../config/db.js';
 import { mockStore } from '../config/mockStore.js';
+import { checkCustomerHasCompletedOrders } from '../utils/customerOrderHelper.js';
 
 export const validateCoupon = async (req, res) => {
   try {
-    const { code, cartTotal } = req.body;
+    const { code } = req.body;
+    const cartTotal = req.body.cartTotal ?? req.body.orderAmount ?? req.body.subtotal;
+    const email = req.body.email || req.user?.email || '';
+    const phone = req.body.phone || req.user?.phone || '';
+    const userId = req.user?._id || req.user?.id || req.body.userId;
+
     if (!code || !code.trim()) {
       return res.status(400).json({ success: false, message: 'Please enter a coupon code' });
     }
@@ -33,11 +39,24 @@ export const validateCoupon = async (req, res) => {
       return res.status(400).json({ success: false, message: 'This coupon usage limit has been reached' });
     }
 
+    // First-Order Only Security Check (WELCOME10)
+    const isFirstOrderCoupon = coupon.isFirstOrderOnly || cleanCode === 'WELCOME10';
+    if (isFirstOrderCoupon) {
+      const hasCompletedOrders = await checkCustomerHasCompletedOrders({ userId, email, phone });
+      if (hasCompletedOrders) {
+        return res.status(400).json({
+          success: false,
+          message: 'WELCOME10 is available only on your first order.',
+        });
+      }
+    }
+
     const total = Number(cartTotal) || 0;
     if (total < (coupon.minOrderAmount || 0)) {
       return res.status(400).json({
         success: false,
         message: `Minimum order value of ₹${coupon.minOrderAmount} required for this coupon`,
+        minOrderAmount: coupon.minOrderAmount,
       });
     }
 
@@ -57,8 +76,11 @@ export const validateCoupon = async (req, res) => {
         code: coupon.code,
         discountType: coupon.discountType,
         discountAmount: coupon.discountAmount,
+        minOrderAmount: coupon.minOrderAmount || 0,
+        maxDiscountAmount: coupon.maxDiscountAmount || 5000,
         calculatedDiscount: discount,
         description: coupon.description,
+        isFirstOrderOnly: !!isFirstOrderCoupon,
       },
       message: `Coupon '${coupon.code}' applied! You saved ₹${discount}`,
     });

@@ -2,6 +2,7 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import User from '../models/User.js';
 import Address from '../models/Address.js';
+import Order from '../models/Order.js';
 import RewardTransaction from '../models/RewardTransaction.js';
 import { isMongoConnected } from '../config/db.js';
 import { mockStore } from '../config/mockStore.js';
@@ -343,6 +344,10 @@ export const getMe = async (req, res) => {
     if (isMongoConnected) {
       const user = await User.findById(req.user._id);
       const addresses = await Address.find({ user: req.user._id }).sort({ isDefault: -1, createdAt: -1 });
+      const completedOrderCount = await Order.countDocuments({
+        user: req.user._id,
+        orderStatus: { $nin: ['Cancelled', 'Refunded'] },
+      });
 
       return res.json({
         success: true,
@@ -355,11 +360,18 @@ export const getMe = async (req, res) => {
           oceanPoints: user.oceanPoints,
           avatar: user.avatar,
           addresses,
+          isNewCustomer: completedOrderCount === 0,
+          orderCount: completedOrderCount,
         },
       });
     } else {
       const user = mockStore.users.find((u) => u._id.toString() === req.user._id.toString());
       const addresses = mockStore.addresses.filter((a) => a.user.toString() === req.user._id.toString());
+      const completedOrderCount = (mockStore.orders || []).filter(
+        (o) =>
+          (o.user?._id || o.user)?.toString() === req.user._id.toString() &&
+          !['Cancelled', 'Refunded'].includes(o.orderStatus)
+      ).length;
 
       return res.json({
         success: true,
@@ -372,6 +384,8 @@ export const getMe = async (req, res) => {
           oceanPoints: user.oceanPoints,
           avatar: user.avatar || '',
           addresses,
+          isNewCustomer: completedOrderCount === 0,
+          orderCount: completedOrderCount,
         },
       });
     }

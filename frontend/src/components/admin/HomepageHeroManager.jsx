@@ -545,29 +545,35 @@ export default function HomepageHeroManager() {
                 className="w-full h-full object-cover object-[center_35%]"
               />
 
-              {/* Text & CTA Overlay */}
-              <div className="absolute inset-0 bg-gradient-to-t from-[#120F1D]/90 via-[#120F1D]/30 to-transparent flex flex-col justify-end p-4">
-                <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/20 backdrop-blur-xs w-fit mb-1">
-                  <Sparkles className="w-2.5 h-2.5 text-[#D6CFFF]" />
-                  <span className="text-[8px] font-semibold text-white uppercase tracking-wider">
-                    Ocean Jewel Luxury
-                  </span>
+              {/* Text & CTA Overlay (Desktop Only — Mobile/Tablet is Clean Image-Only) */}
+              {previewMode === 'desktop' ? (
+                <div className="absolute inset-0 bg-gradient-to-t from-[#120F1D]/90 via-[#120F1D]/30 to-transparent flex flex-col justify-end p-4">
+                  <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/20 backdrop-blur-xs w-fit mb-1">
+                    <Sparkles className="w-2.5 h-2.5 text-[#D6CFFF]" />
+                    <span className="text-[8px] font-semibold text-white uppercase tracking-wider">
+                      Ocean Jewel Luxury
+                    </span>
+                  </div>
+                  <h4 className="font-serif text-sm sm:text-base text-white font-light line-clamp-1">
+                    {previewSlide.title || 'JEWELLERY THAT DEFINES YOU'}
+                  </h4>
+                  {previewSlide.subtitle && (
+                    <p className="text-[10px] text-[#E8E3FF]/90 line-clamp-1 mt-0.5">
+                      {previewSlide.subtitle}
+                    </p>
+                  )}
+                  <div className="mt-2">
+                    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-white text-[#17151F] text-[10px] font-semibold uppercase tracking-wider">
+                      {previewSlide.ctaText || 'Shop Now'}
+                      <ArrowUpRight className="w-3 h-3" />
+                    </span>
+                  </div>
                 </div>
-                <h4 className="font-serif text-sm sm:text-base text-white font-light line-clamp-1">
-                  {previewSlide.title || 'JEWELLERY THAT DEFINES YOU'}
-                </h4>
-                {previewSlide.subtitle && (
-                  <p className="text-[10px] text-[#E8E3FF]/90 line-clamp-1 mt-0.5">
-                    {previewSlide.subtitle}
-                  </p>
-                )}
-                <div className="mt-2">
-                  <span className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-white text-[#17151F] text-[10px] font-semibold uppercase tracking-wider">
-                    {previewSlide.ctaText || 'Shop Now'}
-                    <ArrowUpRight className="w-3 h-3" />
-                  </span>
+              ) : (
+                <div className="absolute top-2 right-2 px-2 py-0.5 rounded-md bg-black/60 backdrop-blur-xs text-[9px] font-medium text-white/90 border border-white/20">
+                  Clean Image-Only (Mobile/Tablet)
                 </div>
-              </div>
+              )}
 
               {/* Navigation Arrows */}
               <button

@@ -485,11 +485,12 @@ const products = [
 const coupons = [
   {
     code: 'WELCOME10',
-    description: '10% discount on your first luxury order',
+    description: '10% discount on your first luxury order (Min. ₹999)',
     discountType: 'percentage',
     discountAmount: 10,
-    minOrderAmount: 499,
+    minOrderAmount: 999,
     maxDiscountAmount: 1000,
+    isFirstOrderOnly: true,
     expiryDate: new Date(Date.now() + 180 * 24 * 60 * 60 * 1000),
     usageLimit: 5000,
     isActive: true,
