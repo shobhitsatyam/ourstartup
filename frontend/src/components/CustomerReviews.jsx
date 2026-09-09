@@ -131,7 +131,7 @@ export default function CustomerReviews() {
                 4.9 / 5.0
               </span>
               <span className="text-[10px] text-[#7464B8] font-medium border-l border-[#D6CFFF] pl-2">
-                50,000+ Patrons
+                Verified Patrons
               </span>
             </div>
 
@@ -139,7 +139,7 @@ export default function CustomerReviews() {
               Client Testimonials
             </span>
             <h2 className="font-serif text-2xl sm:text-3xl font-light text-[#17151F] mt-1 tracking-tight">
-              LOVED BY 50,000+ PATRONS
+              VOICES OF OUR PATRONS
             </h2>
             <p className="text-[11.5px] sm:text-xs text-gray-500 mt-1 font-light max-w-sm mx-auto">
               Real stories from verified buyers across India.
@@ -294,7 +294,7 @@ export default function CustomerReviews() {
               Client Testimonials
             </span>
             <h2 className="font-serif text-2xl lg:text-[28px] font-light text-[#17151F] mt-0.5 tracking-tight">
-              LOVED BY 50,000+ PATRONS
+              VOICES OF OUR PATRONS
             </h2>
             <p className="text-xs text-gray-500 mt-1 font-light">
               Real stories from verified buyers across India.

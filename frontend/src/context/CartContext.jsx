@@ -114,15 +114,53 @@ export const CartProvider = ({ children }) => {
     addToast('Coupon removed', 'info');
   };
 
+  const [storeSettings, setStoreSettings] = useState({
+    freeShippingThreshold: 799,
+    standardShippingFee: 99,
+    codHandlingFee: 15,
+  });
+
+  const [hasCelebratedFreeShipping, setHasCelebratedFreeShipping] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return sessionStorage.getItem('ocean_free_shipping_celebrated') === 'true';
+  });
+
+  useEffect(() => {
+    api.get('/cms/store_settings')
+      .then((res) => {
+        if (res.data?.success && res.data?.data) {
+          setStoreSettings((prev) => ({
+            ...prev,
+            freeShippingThreshold: Number(res.data.data.freeShippingThreshold) || 799,
+            standardShippingFee: Number(res.data.data.standardShippingFee) || 99,
+            codHandlingFee: Number(res.data.data.codHandlingFee) || 15,
+          }));
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   // Calculations
   const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
   const totalItemsCount = cartItems.reduce((acc, item) => acc + item.quantity, 0);
 
-  // Free shipping threshold: ₹999
-  const freeShippingThreshold = 999;
-  const shippingPrice = subtotal >= freeShippingThreshold || subtotal === 0 ? 0 : 99;
+  // Free shipping threshold: ₹799 (Configurable via Admin Store Settings)
+  const freeShippingThreshold = storeSettings.freeShippingThreshold || 799;
+  const standardShippingFee = storeSettings.standardShippingFee || 99;
+  const shippingPrice = subtotal >= freeShippingThreshold || subtotal === 0 ? 0 : standardShippingFee;
   const freeShippingRemaining = Math.max(0, freeShippingThreshold - subtotal);
   const freeShippingProgress = Math.min(100, Math.round((subtotal / freeShippingThreshold) * 100));
+
+  // Trigger celebration banner once per session when crossing ₹799
+  useEffect(() => {
+    if (subtotal >= freeShippingThreshold && !hasCelebratedFreeShipping && cartItems.length > 0) {
+      setHasCelebratedFreeShipping(true);
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('ocean_free_shipping_celebrated', 'true');
+      }
+      addToast('🎉 Congratulations! You unlocked FREE Insured Express Shipping across India!', 'success');
+    }
+  }, [subtotal, freeShippingThreshold, hasCelebratedFreeShipping, cartItems.length]);
 
   // Coupon discount computation
   let couponDiscount = 0;

@@ -105,7 +105,7 @@ export default function Hero() {
                 return (
                   <div
                     key={slide.id || index}
-                    className={`absolute inset-0 w-full h-full transition-opacity duration-700 ease-in-out ${
+                    className={`absolute inset-0 w-full h-full transition-opacity duration-500 ease-in-out ${
                       isActive
                         ? 'opacity-100 z-10 pointer-events-auto'
                         : 'opacity-0 z-0 pointer-events-none'

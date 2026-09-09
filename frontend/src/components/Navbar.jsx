@@ -39,7 +39,7 @@ export default function Navbar({ onOpenSearch }) {
     {
       id: 1,
       title: 'Complimentary Express Delivery ⚡',
-      message: 'Orders above ₹999 qualify for express pan-India insured shipping.',
+      message: 'Orders above ₹799 qualify for express pan-India insured shipping.',
       time: 'Just now',
       read: false,
     },

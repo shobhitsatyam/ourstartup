@@ -22,6 +22,7 @@ export default function Footer() {
 
   const [email, setEmail] = useState('');
   const [subscribed, setSubscribed] = useState(false);
+  const [showReturnPolicyModal, setShowReturnPolicyModal] = useState(false);
   const { addToast } = useToast();
 
   // Mobile Accordion state
@@ -81,18 +82,21 @@ export default function Footer() {
             </div>
           </div>
 
-          {/* Card 3: Hassle-Free Returns */}
-          <div className="group relative p-3 xs:p-3.5 sm:p-4 rounded-2xl bg-gradient-to-br from-[#231E30]/90 via-[#1D1828]/90 to-[#181422]/95 border border-[#D6CFFF]/15 hover:border-[#7464B8]/50 transition-all duration-300 shadow-[0_4px_20px_rgba(0,0,0,0.25)] hover:shadow-[0_8px_25px_rgba(116,100,184,0.18)] flex items-center gap-2.5 sm:gap-3 overflow-hidden">
+          {/* Card 3: 7-Day Easy Returns */}
+          <div
+            onClick={() => setShowReturnPolicyModal(true)}
+            className="group relative p-3 xs:p-3.5 sm:p-4 rounded-2xl bg-gradient-to-br from-[#231E30]/90 via-[#1D1828]/90 to-[#181422]/95 border border-[#D6CFFF]/15 hover:border-[#7464B8]/50 transition-all duration-300 shadow-[0_4px_20px_rgba(0,0,0,0.25)] hover:shadow-[0_8px_25px_rgba(116,100,184,0.18)] flex items-center gap-2.5 sm:gap-3 overflow-hidden cursor-pointer"
+          >
             <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-[#D6CFFF]/25 to-transparent pointer-events-none" />
             <div className="w-8.5 h-8.5 xs:w-9.5 xs:h-9.5 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-br from-[#2E283F] to-[#1F192C] border border-[#D6CFFF]/25 flex items-center justify-center shrink-0 group-hover:scale-105 group-hover:border-[#7464B8] transition-all duration-300 shadow-inner">
               <RotateCcw className="w-4 h-4 sm:w-5 sm:h-5 text-[#D6CFFF] group-hover:text-white transition-colors" />
             </div>
             <div className="min-w-0">
               <h4 className="text-[10.5px] xs:text-[11px] sm:text-xs font-semibold tracking-wider uppercase text-white leading-tight">
-                Hassle-Free Returns
+                7-Day Easy Returns
               </h4>
               <p className="text-[9px] xs:text-[9.5px] sm:text-[11px] text-white/55 mt-0.5 font-light leading-tight">
-                7 days replacement policy
+                Doorstep pickup across India
               </p>
             </div>
           </div>
@@ -215,6 +219,7 @@ export default function Footer() {
             {openSection === 'support' && (
               <ul className="pt-3 space-y-2 text-xs text-white/60">
                 <li><Link to="/account" className="block py-1 hover:text-white">Track Your Order</Link></li>
+                <li><button onClick={() => setShowReturnPolicyModal(true)} className="block py-1 hover:text-white text-left cursor-pointer">7-Day Return Policy</button></li>
                 <li><Link to="/about" className="block py-1 hover:text-white">The Anti-Tarnish Guarantee</Link></li>
                 <li><Link to="/about" className="block py-1 hover:text-white">Jewellery Care Guide</Link></li>
                 <li><Link to="/account?tab=rewards" className="block py-1 hover:text-white">Ocean Points Rewards</Link></li>
@@ -259,6 +264,7 @@ export default function Footer() {
             <h4 className="text-xs font-semibold tracking-widest uppercase text-[#D6CFFF] mb-4">Client Support</h4>
             <ul className="space-y-2.5 text-xs text-white/60">
               <li><Link to="/account" className="hover:text-white transition-colors">Track Your Order</Link></li>
+              <li><button onClick={() => setShowReturnPolicyModal(true)} className="hover:text-white transition-colors cursor-pointer text-left">7-Day Return & Exchange Policy</button></li>
               <li><Link to="/about" className="hover:text-white transition-colors">The Anti-Tarnish Guarantee</Link></li>
               <li><Link to="/about" className="hover:text-white transition-colors">Jewellery Care Guide</Link></li>
               <li><Link to="/account?tab=rewards" className="hover:text-white transition-colors">Ocean Points Rewards</Link></li>
@@ -288,6 +294,51 @@ export default function Footer() {
           </div>
         </div>
       </div>
+
+      {/* 7-Day Return Policy Dedicated Modal */}
+      {showReturnPolicyModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+          <div className="bg-[#FAF9FF] text-[#17151F] max-w-lg w-full rounded-3xl p-6 sm:p-8 border border-[#D6CFFF] shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-[#D6CFFF]/40">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-[#17151F] text-[#D6CFFF] flex items-center justify-center">
+                  <RotateCcw className="w-4 h-4" />
+                </div>
+                <h3 className="font-serif text-lg font-semibold text-[#17151F]">
+                  7-Day Easy Return & Exchange Policy
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowReturnPolicyModal(false)}
+                className="text-gray-400 hover:text-black text-lg p-1"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs text-gray-700 leading-relaxed font-light">
+              <p>
+                At <strong>Ocean Jewel</strong>, we take immense pride in the craftsmanship and longevity of every heirloom. If you are not completely satisfied with your purchase, we offer a hassle-free <strong>7-day return and exchange window</strong> from the date of delivery.
+              </p>
+              <div className="p-3 rounded-2xl bg-white border border-[#D6CFFF]/60 space-y-2">
+                <p>• <strong>Doorstep Reverse Pickup:</strong> BlueDart / Delhivery will arrange pickup directly from your address across 28 states & 8 UTs.</p>
+                <p>• <strong>Free Size Exchanges:</strong> If your ring, bracelet, or chain does not fit perfectly, we will swap it for the right size free of charge.</p>
+                <p>• <strong>Full Refunds:</strong> Prepaid orders are refunded directly to the original bank account/UPI within 48 hours of inspection.</p>
+                <p>• <strong>Condition:</strong> The jewellery piece must be unworn, undamaged, and returned with original satin packaging & warranty card.</p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowReturnPolicyModal(false)}
+              className="w-full py-3 bg-[#17151F] text-white text-xs font-bold uppercase tracking-wider rounded-xl hover:bg-[#2A2635] shadow-md"
+            >
+              Understood
+            </button>
+          </div>
+        </div>
+      )}
     </footer>
   );
 }

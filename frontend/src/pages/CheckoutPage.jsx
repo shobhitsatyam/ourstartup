@@ -11,7 +11,10 @@ import {
   Lock,
   ArrowRight,
   Plus,
+  Loader2,
+  RotateCcw,
 } from 'lucide-react';
+import StateSelectDropdown from '../components/checkout/StateSelectDropdown';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
@@ -51,13 +54,45 @@ export default function CheckoutPage() {
     area: '',
     city: 'Bengaluru',
     state: 'Karnataka',
-    pincode: '560034',
+    pincode: '',
     landmark: '',
   });
 
+  const [pincodeLookupLoading, setPincodeLookupLoading] = useState(false);
+  const [pincodeSuccessMsg, setPincodeSuccessMsg] = useState('');
+
   // Payment Method
-  const [paymentMethod, setPaymentMethod] = useState('razorpay'); // 'razorpay' (UPI, Cards, NetBanking) or 'cod'
+  const [paymentMethod, setPaymentMethod] = useState('razorpay'); // 'razorpay' or 'cod'
   const [isProcessing, setIsProcessing] = useState(false);
+
+  // COD Handling Fee is ₹15 extra (Non-refundable)
+  const codFee = paymentMethod === 'cod' ? 15 : 0;
+  const finalPayableTotal = total + codFee;
+
+  const handlePincodeChange = (e) => {
+    const pin = e.target.value.replace(/\D/g, '').slice(0, 6);
+    setAddressForm((prev) => ({ ...prev, pincode: pin }));
+    setPincodeSuccessMsg('');
+
+    if (pin.length === 6) {
+      setPincodeLookupLoading(true);
+      api.get(`/shipping/pincode/${pin}`)
+        .then((res) => {
+          if (res.data?.success) {
+            setAddressForm((prev) => ({
+              ...prev,
+              city: res.data.city || prev.city,
+              state: res.data.state || prev.state,
+            }));
+            setPincodeSuccessMsg(`Auto-detected: ${res.data.city}, ${res.data.state}`);
+          }
+        })
+        .catch(() => {})
+        .finally(() => {
+          setPincodeLookupLoading(false);
+        });
+    }
+  };
 
   // Restore temporary address filled before login or update with authenticated user
   useEffect(() => {
@@ -330,16 +365,6 @@ export default function CheckoutPage() {
                   >
                     Create Account
                   </button>
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      const res = await login('riya.sharma@example.com', 'Customer@123');
-                      if (res?.success) addToast('Signed in as demo client!', 'success');
-                    }}
-                    className="px-3.5 py-2.5 bg-white/80 text-[#7464B8] border border-[#D6CFFF] text-[11px] font-semibold rounded-xl hover:bg-[#F3EFFF]"
-                  >
-                    ⚡ Quick 1-Click Demo Login
-                  </button>
                 </div>
               </div>
             )}
@@ -444,50 +469,73 @@ export default function CheckoutPage() {
                       />
                     </div>
 
-                    <div>
-                      <label className="font-bold uppercase tracking-wider text-gray-700 block mb-1">City *</label>
-                      <input
-                        type="text"
-                        value={addressForm.city}
-                        onChange={(e) => setAddressForm({ ...addressForm, city: e.target.value })}
-                        placeholder="e.g. Bengaluru"
-                        className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-[#7464B8]"
-                        required
-                      />
+                    <div className="sm:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      {/* Pincode with India Post auto-lookup */}
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="font-bold uppercase tracking-wider text-gray-700 block text-xs">
+                            PIN Code *
+                          </label>
+                          {pincodeLookupLoading && (
+                            <span className="text-[10px] text-[#7464B8] flex items-center gap-1 font-medium">
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                              Lookup...
+                            </span>
+                          )}
+                        </div>
+                        <input
+                          type="text"
+                          maxLength={6}
+                          value={addressForm.pincode}
+                          onChange={handlePincodeChange}
+                          placeholder="6-digit PIN (e.g. 110001)"
+                          className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-[#7464B8] text-xs font-mono"
+                          required
+                        />
+                        {pincodeSuccessMsg && (
+                          <p className="text-[10px] text-emerald-600 font-medium mt-1 truncate">
+                            ✓ {pincodeSuccessMsg}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* City (Auto-populated or manual fallback) */}
+                      <div>
+                        <label className="font-bold uppercase tracking-wider text-gray-700 block mb-1 text-xs">
+                          City *
+                        </label>
+                        <input
+                          type="text"
+                          value={addressForm.city}
+                          onChange={(e) => setAddressForm({ ...addressForm, city: e.target.value })}
+                          placeholder="e.g. New Delhi"
+                          className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-[#7464B8] text-xs"
+                          required
+                        />
+                      </div>
+
+                      {/* Indian State / UT Custom Searchable Dropdown */}
+                      <div>
+                        <label className="font-bold uppercase tracking-wider text-gray-700 block mb-1 text-xs">
+                          State / UT *
+                        </label>
+                        <StateSelectDropdown
+                          value={addressForm.state}
+                          onChange={(val) => setAddressForm({ ...addressForm, state: val })}
+                        />
+                      </div>
                     </div>
 
-                    <div>
-                      <label className="font-bold uppercase tracking-wider text-gray-700 block mb-1">State *</label>
-                      <input
-                        type="text"
-                        value={addressForm.state}
-                        onChange={(e) => setAddressForm({ ...addressForm, state: e.target.value })}
-                        placeholder="e.g. Karnataka"
-                        className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-[#7464B8]"
-                        required
-                      />
-                    </div>
-
-                    <div>
-                      <label className="font-bold uppercase tracking-wider text-gray-700 block mb-1">Pincode *</label>
-                      <input
-                        type="text"
-                        value={addressForm.pincode}
-                        onChange={(e) => setAddressForm({ ...addressForm, pincode: e.target.value })}
-                        placeholder="e.g. 560034"
-                        className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-[#7464B8]"
-                        required
-                      />
-                    </div>
-
-                    <div>
-                      <label className="font-bold uppercase tracking-wider text-gray-700 block mb-1">Landmark (Optional)</label>
+                    <div className="sm:col-span-2">
+                      <label className="font-bold uppercase tracking-wider text-gray-700 block mb-1 text-xs">
+                        Landmark (Optional)
+                      </label>
                       <input
                         type="text"
                         value={addressForm.landmark}
                         onChange={(e) => setAddressForm({ ...addressForm, landmark: e.target.value })}
-                        placeholder="e.g. Opposite Starbucks"
-                        className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-[#7464B8]"
+                        placeholder="e.g. Near HDFC Bank / Behind Metro Station"
+                        className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-[#7464B8] text-xs"
                       />
                     </div>
                   </div>
@@ -560,8 +608,16 @@ export default function CheckoutPage() {
                         className="mt-0.5 accent-[#17151F]"
                       />
                       <div>
-                        <p className="font-bold text-gray-900 text-sm">Cash on Delivery (COD)</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-bold text-gray-900 text-sm">Cash on Delivery (COD)</p>
+                          <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-100 text-amber-900 border border-amber-200">
+                            +₹15 HANDLING FEE
+                          </span>
+                        </div>
                         <p className="text-gray-500 mt-0.5">Pay in cash or UPI QR code at your doorstep upon delivery.</p>
+                        <p className="text-[10.5px] text-amber-800 font-medium mt-1">
+                          * ₹15 non-refundable handling fee is applied to COD orders. Prepaid orders enjoy ₹0 handling fee & priority courier dispatch.
+                        </p>
                       </div>
                     </div>
                   </label>
@@ -588,7 +644,7 @@ export default function CheckoutPage() {
                       <span>Processing Order...</span>
                     ) : (
                       <>
-                        <span>Complete Order &bull; ₹{total.toLocaleString('en-IN')}</span>
+                        <span>Complete Order &bull; ₹{finalPayableTotal.toLocaleString('en-IN')}</span>
                         <CheckCircle2 className="w-4 h-4 text-[#D6CFFF]" />
                       </>
                     )}
@@ -646,13 +702,24 @@ export default function CheckoutPage() {
               )}
 
               <div className="flex justify-between">
-                <span>Express Shipping</span>
-                <span className="text-emerald-600 font-bold">FREE</span>
+                <span>Express Indian Shipping</span>
+                {shippingPrice === 0 ? (
+                  <span className="text-emerald-600 font-bold">FREE (Order &gt; ₹799)</span>
+                ) : (
+                  <span className="font-semibold text-gray-900">₹{shippingPrice}</span>
+                )}
               </div>
+
+              {paymentMethod === 'cod' && (
+                <div className="flex justify-between text-amber-800 font-medium">
+                  <span>COD Handling Fee (Non-refundable)</span>
+                  <span>+₹15</span>
+                </div>
+              )}
 
               <div className="flex justify-between text-base font-bold text-gray-900 pt-3 border-t border-gray-200">
                 <span>Grand Total</span>
-                <span>₹{total.toLocaleString('en-IN')}</span>
+                <span>₹{finalPayableTotal.toLocaleString('en-IN')}</span>
               </div>
             </div>
 
@@ -660,6 +727,12 @@ export default function CheckoutPage() {
             <div className="p-3 rounded-2xl bg-[#F3EFFF] border border-[#D6CFFF] flex items-center gap-2.5 text-xs text-[#17151F]">
               <Sparkles className="w-4 h-4 text-[#7464B8] shrink-0" />
               <span>You will earn <strong>{potentialPointsEarned} Ocean Points</strong> (₹{potentialPointsEarned} value) on this order!</span>
+            </div>
+
+            {/* 7-Day Easy Return Guarantee Badge */}
+            <div className="p-3 rounded-2xl bg-[#FAF9FF] border border-[#D6CFFF]/60 flex items-center gap-2.5 text-xs text-gray-700">
+              <RotateCcw className="w-4 h-4 text-[#7464B8] shrink-0" />
+              <span><strong>7-Day Easy Return Policy:</strong> Doorstep pickup across 28 states & 8 UTs for size exchanges or refunds.</span>
             </div>
           </div>
         </div>

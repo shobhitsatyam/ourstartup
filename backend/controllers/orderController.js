@@ -1,10 +1,37 @@
+import mongoose from 'mongoose';
 import Order from '../models/Order.js';
 import Product from '../models/Product.js';
 import User from '../models/User.js';
 import Coupon from '../models/Coupon.js';
 import RewardTransaction from '../models/RewardTransaction.js';
+import CmsContent from '../models/CmsContent.js';
 import { isMongoConnected } from '../config/db.js';
 import { mockStore } from '../config/mockStore.js';
+
+const getStoreSettings = async () => {
+  let threshold = 799;
+  let standardFee = 99;
+  let codHandlingFee = 15;
+  try {
+    if (isMongoConnected) {
+      const cms = await CmsContent.findOne({ key: 'store_settings' }).lean();
+      if (cms && cms.data) {
+        if (cms.data.freeShippingThreshold !== undefined && cms.data.freeShippingThreshold !== null && !isNaN(cms.data.freeShippingThreshold)) {
+          threshold = Number(cms.data.freeShippingThreshold);
+        }
+        if (cms.data.standardShippingFee !== undefined && cms.data.standardShippingFee !== null && !isNaN(cms.data.standardShippingFee)) {
+          standardFee = Number(cms.data.standardShippingFee);
+        }
+        if (cms.data.codHandlingFee !== undefined && cms.data.codHandlingFee !== null && !isNaN(cms.data.codHandlingFee)) {
+          codHandlingFee = Number(cms.data.codHandlingFee);
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Error loading store_settings for order calculation:', err);
+  }
+  return { freeShippingThreshold: threshold, standardShippingFee: standardFee, codHandlingFee };
+};
 
 const generateOrderId = () => {
   const date = new Date();
@@ -25,9 +52,15 @@ export const createOrder = async (req, res) => {
       return res.status(400).json({ success: false, message: 'No order items found' });
     }
 
-    if (!shippingAddress || !shippingAddress.fullName || !shippingAddress.city || !shippingAddress.pincode) {
+    const pin = shippingAddress?.pincode || shippingAddress?.postalCode;
+    if (!shippingAddress || !shippingAddress.fullName || !shippingAddress.city || !pin) {
       return res.status(400).json({ success: false, message: 'Complete shipping address is required' });
     }
+    shippingAddress.pincode = pin;
+    shippingAddress.postalCode = pin;
+    shippingAddress.address = shippingAddress.address || [shippingAddress.house, shippingAddress.street, shippingAddress.area].filter(Boolean).join(', ');
+    shippingAddress.house = shippingAddress.house || shippingAddress.address || '';
+    shippingAddress.street = shippingAddress.street || shippingAddress.address || '';
 
     let itemsPrice = 0;
     const verifiedOrderItems = [];
@@ -35,21 +68,25 @@ export const createOrder = async (req, res) => {
     if (isMongoConnected) {
       for (const item of orderItems) {
         const prodId = item.product || item._id;
-        const dbProduct = prodId ? await Product.findById(prodId) : null;
+        const isProdValidId = prodId && mongoose.Types.ObjectId.isValid(prodId);
+        const dbProduct = isProdValidId ? await Product.findById(prodId) : null;
         const itemPrice = dbProduct ? dbProduct.price : item.price;
         itemsPrice += itemPrice * (item.quantity || 1);
         verifiedOrderItems.push({
-          product: dbProduct ? dbProduct._id : prodId,
+          product: dbProduct ? dbProduct._id : (isProdValidId ? prodId : undefined),
           name: dbProduct ? dbProduct.name : item.name,
           slug: dbProduct ? dbProduct.slug : (item.slug || 'piece'),
           image: (dbProduct && dbProduct.images && dbProduct.images[0]) ? dbProduct.images[0] : (item.image || ''),
           price: itemPrice,
           quantity: item.quantity || 1,
           size: item.size || 'Free Size',
+          sku: (dbProduct && dbProduct.sku) ? dbProduct.sku : (item.sku || ''),
         });
       }
 
-      const shippingPrice = itemsPrice >= 999 ? 0 : 99;
+      const settings = await getStoreSettings();
+      const shippingPrice = itemsPrice >= settings.freeShippingThreshold ? 0 : settings.standardShippingFee;
+      const codFee = paymentMethod === 'cod' ? settings.codHandlingFee : 0;
       let discountAmount = 0;
       let validCouponCode = '';
 
@@ -85,7 +122,7 @@ export const createOrder = async (req, res) => {
         }
       }
 
-      const payableAmount = Math.max(0, itemsPrice + shippingPrice - discountAmount - oceanPointsUsed);
+      const payableAmount = Math.max(0, itemsPrice + shippingPrice + codFee - discountAmount - oceanPointsUsed);
       const oceanPointsEarned = Math.floor(payableAmount / 100);
       const orderId = generateOrderId();
 
@@ -98,6 +135,7 @@ export const createOrder = async (req, res) => {
         itemsPrice,
         taxPrice: 0,
         shippingPrice,
+        codFee,
         discountAmount,
         couponCode: validCouponCode,
         oceanPointsUsed,
@@ -139,10 +177,13 @@ export const createOrder = async (req, res) => {
           price: itemPrice,
           quantity: item.quantity || 1,
           size: item.size || 'Free Size',
+          sku: (prod && prod.sku) ? prod.sku : (item.sku || ''),
         });
       }
 
-      const shippingPrice = itemsPrice >= 999 ? 0 : 99;
+      const settings = await getStoreSettings();
+      const shippingPrice = itemsPrice >= settings.freeShippingThreshold ? 0 : settings.standardShippingFee;
+      const codFee = paymentMethod === 'cod' ? settings.codHandlingFee : 0;
       let discountAmount = 0;
       let validCouponCode = '';
 
@@ -180,7 +221,7 @@ export const createOrder = async (req, res) => {
         }
       }
 
-      const payableAmount = Math.max(0, itemsPrice + shippingPrice - discountAmount - oceanPointsUsed);
+      const payableAmount = Math.max(0, itemsPrice + shippingPrice + codFee - discountAmount - oceanPointsUsed);
       const oceanPointsEarned = Math.floor(payableAmount / 100);
       const orderId = generateOrderId();
 
@@ -194,6 +235,7 @@ export const createOrder = async (req, res) => {
         itemsPrice,
         taxPrice: 0,
         shippingPrice,
+        codFee,
         discountAmount,
         couponCode: validCouponCode,
         oceanPointsUsed,
@@ -249,7 +291,11 @@ export const getOrderById = async (req, res) => {
     const { id } = req.params;
 
     if (isMongoConnected) {
-      const order = await Order.findById(id).populate('user', 'name email phone');
+      let query = { orderId: id };
+      if (mongoose.Types.ObjectId.isValid(id)) {
+        query = { $or: [{ _id: id }, { orderId: id }] };
+      }
+      const order = await Order.findOne(query).populate('user', 'name email phone');
       if (!order) {
         return res.status(404).json({ success: false, message: 'Order not found' });
       }

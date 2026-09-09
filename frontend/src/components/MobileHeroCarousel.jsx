@@ -18,21 +18,24 @@ export default function MobileHeroCarousel() {
     };
   }, []);
 
-  const banners = initialHeroBanners
-    .filter((b) => b.active)
-    .map((b) => {
-      if (b.id === 'hero-banner-main' && heroConfig.mobileImage) {
-        return {
-          ...b,
-          image: heroConfig.mobileImage,
-          primaryCta: {
-            ...b.primaryCta,
-            link: heroConfig.mobileDestinationUrl || b.primaryCta.link,
-          },
-        };
-      }
-      return b;
-    });
+  const banners = (heroConfig.slides && heroConfig.slides.length > 0
+    ? heroConfig.slides
+    : initialHeroBanners)
+    .filter((b) => b.active !== false)
+    .map((b, idx) => ({
+      id: b.id || `banner-${idx}`,
+      title: b.title || 'JEWELLERY THAT DEFINES YOU',
+      eyebrow: b.eyebrow || (idx === 0 ? 'The Royal Anti-Tarnish Collection' : idx === 1 ? 'Festive & Royal Edit' : idx === 2 ? 'New Arrivals' : 'Bestsellers'),
+      description: b.subtitle || b.description || 'Timeless pieces handcrafted with 18K Real Gold PVD coating.',
+      image: b.image || initialHeroBanners[Math.min(idx, initialHeroBanners.length - 1)].image,
+      imageAlt: b.title || 'Ocean Jewel Luxury Jewellery',
+      primaryCta: {
+        text: b.ctaText || b.primaryCta?.text || 'Explore Collection',
+        link: b.destinationUrl || b.primaryCta?.link || '/shop',
+      },
+      secondaryCta: b.secondaryCta || null,
+      offerBadge: b.offerBadge || null,
+    }));
   const [currentIndex, setCurrentIndex] = useState(0);
   const [direction, setDirection] = useState(1);
   const [isPaused, setIsPaused] = useState(false);
@@ -107,23 +110,19 @@ export default function MobileHeroCarousel() {
 
   return (
     <div
-      className="relative w-full px-3 sm:px-4 md:px-6 py-2 bg-[#FAF9FF]"
+      className="relative w-full bg-[#120F1D] overflow-hidden select-none"
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
       role="region"
       aria-roledescription="carousel"
       aria-label="Ocean Jewel Promotional Banners"
     >
-      {/* 1. CAROUSEL BANNER CONTAINER */}
+      {/* 1. CAROUSEL BANNER CONTAINER - Strict 16:10 Aspect Ratio, No horizontal overflow */}
       <div
-        className="relative w-full rounded-2xl xs:rounded-3xl overflow-hidden shadow-md border border-[#D6CFFF]/40 bg-[#120F1D] select-none touch-pan-y"
+        className="relative w-full aspect-[16/10] overflow-hidden touch-pan-y"
         style={{ touchAction: 'pan-y' }}
       >
-        {/* Mobile-tailored aspect ratio: 4:5 on phones, 16:10 on tablets (Never desktop 16:6) */}
-        <div
-          className="relative w-full aspect-[4/5] sm:aspect-[16/10] md:aspect-[16/9] overflow-hidden"
-        >
-          <AnimatePresence initial={false} custom={direction}>
+        <AnimatePresence initial={false} custom={direction}>
             <motion.div
               key={currentBanner.id}
               custom={direction}
@@ -154,7 +153,7 @@ export default function MobileHeroCarousel() {
               <img
                 src={currentBanner.image}
                 alt={currentBanner.imageAlt}
-                className="absolute inset-0 w-full h-full object-cover object-[center_28%] sm:object-[center_32%] pointer-events-none select-none"
+                className="absolute inset-0 w-full h-full object-cover object-[center_35%] pointer-events-none select-none"
                 loading="eager"
               />
 
@@ -219,7 +218,6 @@ export default function MobileHeroCarousel() {
             </motion.div>
           </AnimatePresence>
         </div>
-      </div>
 
       {/* 2. PAGINATION DOTS (Directly Below Hero Banner) */}
       <div

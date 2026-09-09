@@ -9,11 +9,10 @@ export default function FloatingSocialButton({ onOpenAIChat }) {
   const [hoveredBtn, setHoveredBtn] = useState(null); // 'instagram' | 'aichat' | null
 
   return (
-    // Strictly desktop-only (hidden lg:flex): never shown on mobile or tablet
-    // Fixed at bottom-left corner
+    // Fixed at bottom-right corner with safe area spacing above mobile bottom nav
     <aside
       aria-label="Floating quick actions"
-      className="hidden lg:flex fixed bottom-6 left-6 z-40 items-center gap-2.5"
+      className="fixed bottom-20 right-4 sm:bottom-22 sm:right-5 lg:bottom-6 lg:right-6 z-40 flex flex-col items-center gap-2.5"
     >
       {/* 1. Official Instagram Floating Button */}
       <div
@@ -45,7 +44,7 @@ export default function FloatingSocialButton({ onOpenAIChat }) {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 4, scale: 0.95 }}
               transition={{ duration: 0.15 }}
-              className="pointer-events-none absolute bottom-full mb-2 left-1/2 -translate-x-1/2 px-2.5 py-1 rounded-lg bg-[#17151F]/95 backdrop-blur-md text-white border border-[#D6CFFF]/30 shadow-md flex items-center gap-1.5 whitespace-nowrap"
+              className="pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 px-2.5 py-1 rounded-lg bg-[#17151F]/95 backdrop-blur-md text-white border border-[#D6CFFF]/30 shadow-md flex items-center gap-1.5 whitespace-nowrap hidden sm:flex"
             >
               <span className="w-1.5 h-1.5 rounded-full bg-[#D6CFFF] animate-pulse" />
               <span className="text-[10px] font-medium tracking-wide text-[#FAF9FF]">
@@ -92,7 +91,7 @@ export default function FloatingSocialButton({ onOpenAIChat }) {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 4, scale: 0.95 }}
               transition={{ duration: 0.15 }}
-              className="pointer-events-none absolute bottom-full mb-2 left-1/2 -translate-x-1/2 px-2.5 py-1 rounded-lg bg-[#17151F]/95 backdrop-blur-md text-white border border-[#D6CFFF]/30 shadow-md flex items-center gap-1.5 whitespace-nowrap"
+              className="pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 px-2.5 py-1 rounded-lg bg-[#17151F]/95 backdrop-blur-md text-white border border-[#D6CFFF]/30 shadow-md flex items-center gap-1.5 whitespace-nowrap hidden sm:flex"
             >
               <Sparkles className="w-3 h-3 text-[#D6CFFF]" />
               <span className="text-[10px] font-medium tracking-wide text-[#FAF9FF]">

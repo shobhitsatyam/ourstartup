@@ -37,12 +37,13 @@ export default function BrandStory() {
               </div>
             </div>
 
-            {/* Floating Glass Stats Badge */}
+            {/* Floating Glass Trust Badge */}
             <div className="absolute -bottom-6 -right-4 sm:-right-8 glass-panel-dark p-4 sm:p-5 rounded-3xl border border-[#D6CFFF]/30 shadow-2xl backdrop-blur-2xl">
-              <div className="text-2xl sm:text-3xl font-serif text-[#D6CFFF] font-light">
-                50,000+
+              <div className="text-2xl sm:text-3xl font-serif text-[#D6CFFF] font-light flex items-center gap-1.5">
+                <span>100%</span>
+                <span className="text-sm font-sans uppercase tracking-wider text-emerald-400 font-bold">PVD Gold</span>
               </div>
-              <p className="text-[11px] text-white/70 font-medium">Heirlooms Delivered Across India</p>
+              <p className="text-[11px] text-white/70 font-medium">Waterproof Anti-Tarnish Guarantee</p>
             </div>
           </motion.div>
 

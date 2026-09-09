@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ShoppingBag, Trash2, Plus, Minus, ArrowRight, Tag, Sparkles } from 'lucide-react';
+import { ShoppingBag, Trash2, Plus, Minus, ArrowRight, Tag, Sparkles, ShieldCheck, RotateCcw } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 
@@ -11,6 +11,8 @@ export default function CartPage() {
     removeFromCart,
     subtotal,
     shippingPrice,
+    freeShippingRemaining,
+    freeShippingProgress,
     appliedCoupon,
     applyCoupon,
     removeCoupon,
@@ -56,9 +58,29 @@ export default function CartPage() {
   return (
     <div className="min-h-screen bg-[#FAF9FF] py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <h1 className="font-serif text-3xl sm:text-4xl font-light text-[#17151F] mb-8">
-          SHOPPING BAG ({cartItems.length})
-        </h1>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <h1 className="font-serif text-3xl sm:text-4xl font-light text-[#17151F]">
+            SHOPPING BAG ({cartItems.length})
+          </h1>
+          <div className="p-3 px-4 rounded-2xl bg-white border border-[#D6CFFF]/60 shadow-xs max-w-sm w-full">
+            {freeShippingRemaining > 0 ? (
+              <p className="text-xs text-gray-700 font-medium">
+                Add <strong className="text-[#17151F]">₹{freeShippingRemaining}</strong> more for <strong>Free Express Shipping</strong>
+              </p>
+            ) : (
+              <p className="text-xs text-emerald-700 font-bold flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Free Express Shipping Unlocked across India! 🎉</span>
+              </p>
+            )}
+            <div className="w-full h-1.5 bg-gray-100 rounded-full mt-2 overflow-hidden">
+              <div
+                style={{ width: `${freeShippingProgress}%` }}
+                className="h-full bg-gradient-to-r from-[#D6CFFF] to-[#7464B8] rounded-full transition-all duration-300"
+              />
+            </div>
+          </div>
+        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           {/* Items List */}
@@ -172,6 +194,12 @@ export default function CartPage() {
               <span>Proceed to Checkout</span>
               <ArrowRight className="w-4 h-4 text-[#D6CFFF]" />
             </button>
+
+            {/* 7-Day Return Policy Assurance */}
+            <div className="p-3 rounded-2xl bg-[#FAF9FF] border border-[#D6CFFF]/60 flex items-center gap-2.5 text-xs text-gray-700">
+              <RotateCcw className="w-4 h-4 text-[#7464B8] shrink-0" />
+              <span><strong>7-Day Easy Returns:</strong> Free doorstep reverse pickup across all Indian pincodes for size swaps or refunds.</span>
+            </div>
           </div>
         </div>
       </div>

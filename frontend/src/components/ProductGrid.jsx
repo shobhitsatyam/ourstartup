@@ -20,7 +20,7 @@ export default function ProductGrid({ products, loading, onQuickView, columns = 
         {[...Array(skeletonCount)].map((_, i) => (
           <div
             key={i}
-            className="w-[185px] sm:w-[220px] md:w-[240px] lg:w-auto shrink-0 snap-start lg:shrink lg:snap-none rounded-2xl bg-white p-2.5 sm:p-3 shadow-sm border border-[#D6CFFF]/30 animate-pulse"
+            className="w-[168px] xs:w-[185px] sm:w-[220px] md:w-[240px] lg:w-auto shrink-0 snap-start lg:shrink lg:snap-none rounded-2xl bg-white p-2.5 sm:p-3 shadow-sm border border-[#D6CFFF]/30 animate-pulse"
           >
             <div className="aspect-[4/5] bg-gray-200 rounded-xl mb-3" />
             <div className="h-3 bg-gray-200 rounded w-1/3 mb-2" />
@@ -54,7 +54,7 @@ export default function ProductGrid({ products, loading, onQuickView, columns = 
       {products.map((product, idx) => (
         <div
           key={product._id ? `${product._id}-${idx}` : idx}
-          className="w-[185px] sm:w-[220px] md:w-[240px] lg:w-full shrink-0 snap-start lg:shrink lg:snap-none"
+          className="w-[168px] xs:w-[185px] sm:w-[220px] md:w-[240px] lg:w-full shrink-0 snap-start lg:shrink lg:snap-none"
         >
           <ProductCard product={product} onQuickView={onQuickView} priority={idx < priorityCount} />
         </div>

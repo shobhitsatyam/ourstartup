@@ -1,5 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { Sparkles, Save, Eye, CheckCircle2, ArrowUpRight, Smartphone, Monitor, RotateCcw, Compass, ChevronLeft, ChevronRight, Layers, Layers2, Loader2 } from 'lucide-react';
+import {
+  Sparkles,
+  Save,
+  Eye,
+  CheckCircle2,
+  ArrowUpRight,
+  Smartphone,
+  Monitor,
+  RotateCcw,
+  Compass,
+  ChevronLeft,
+  ChevronRight,
+  Layers2,
+  Loader2,
+  Plus,
+  Trash2,
+  ArrowLeft,
+  ArrowRight,
+  Check,
+} from 'lucide-react';
 import DragDropImageUpload from './DragDropImageUpload';
 import { useToast } from '../../context/ToastContext';
 import {
@@ -17,8 +36,9 @@ export default function HomepageHeroManager() {
   const [saved, setSaved] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [heroForm, setHeroForm] = useState(() => getHeroConfig());
-  const [activeSlideTab, setActiveSlideTab] = useState(0); // 0 = Slide 1, 1 = Slide 2, 2 = Slide 3
+  const [activeSlideTab, setActiveSlideTab] = useState(0);
   const [previewSlideIndex, setPreviewSlideIndex] = useState(0);
+  const [previewMode, setPreviewMode] = useState('desktop'); // 'desktop' (16:5) | 'mobile' (16:10)
 
   // Fetch live CMS configuration from MongoDB Atlas on mount
   useEffect(() => {
@@ -33,7 +53,7 @@ export default function HomepageHeroManager() {
     };
   }, []);
 
-  // Listen for external updates (e.g. across tabs)
+  // Listen for external updates (e.g. cross-tab)
   useEffect(() => {
     const handleUpdate = (e) => {
       if (e?.detail) {
@@ -50,7 +70,7 @@ export default function HomepageHeroManager() {
     };
   }, []);
 
-  const slides = heroForm.slides && heroForm.slides.length === 3
+  const slides = heroForm.slides && heroForm.slides.length > 0
     ? heroForm.slides
     : DEFAULT_HERO_SLIDES;
 
@@ -66,14 +86,58 @@ export default function HomepageHeroManager() {
     });
   };
 
+  const handleMoveSlide = (index, direction) => {
+    const targetIdx = index + direction;
+    if (targetIdx < 0 || targetIdx >= slides.length) return;
+    const newSlides = [...slides];
+    const temp = newSlides[index];
+    newSlides[index] = newSlides[targetIdx];
+    newSlides[targetIdx] = temp;
+    setHeroForm({ ...heroForm, slides: newSlides });
+    setActiveSlideTab(targetIdx);
+    setPreviewSlideIndex(targetIdx);
+  };
+
+  const handleRemoveSlide = (index) => {
+    if (slides.length <= 1) {
+      addToast('At least one hero banner is required.', 'warning');
+      return;
+    }
+    if (window.confirm(`Are you sure you want to remove Banner ${index + 1}?`)) {
+      const newSlides = slides.filter((_, idx) => idx !== index);
+      setHeroForm({ ...heroForm, slides: newSlides });
+      const newTab = Math.max(0, index - 1);
+      setActiveSlideTab(newTab);
+      setPreviewSlideIndex(newTab);
+      addToast(`Banner ${index + 1} removed. Remember to Save Changes.`, 'info');
+    }
+  };
+
+  const handleAddSlide = () => {
+    const newSlideNumber = slides.length + 1;
+    const newSlide = {
+      id: `slide-${Date.now()}`,
+      title: `NEW COLLECTION EDIT ${newSlideNumber}`,
+      subtitle: 'Handcrafted luxury pieces with 18K Gold PVD coating',
+      ctaText: 'Explore Collection',
+      image: DEFAULT_HERO_SLIDES[0].image,
+      destinationUrl: '/collections',
+      active: true,
+    };
+    const newSlides = [...slides, newSlide];
+    setHeroForm({ ...heroForm, slides: newSlides });
+    setActiveSlideTab(newSlides.length - 1);
+    setPreviewSlideIndex(newSlides.length - 1);
+    addToast(`New Banner ${newSlideNumber} added.`, 'success');
+  };
+
   const handleSave = async (e) => {
     if (e) e.preventDefault();
     if (isSaving) return;
 
-    // Validate each slide has an image
     for (let i = 0; i < slides.length; i++) {
       if (!slides[i]?.image) {
-        addToast(`Please upload or provide an image for Slide ${i + 1}`, 'error');
+        addToast(`Please upload or select an image for Banner ${i + 1}`, 'error');
         setActiveSlideTab(i);
         return;
       }
@@ -86,7 +150,7 @@ export default function HomepageHeroManager() {
         slides,
       });
       setSaved(true);
-      addToast('Hero Banner saved to MongoDB Atlas! All 3 slides updated live globally.', 'success');
+      addToast(`Hero banners saved to MongoDB Atlas! All ${slides.length} banners updated live globally.`, 'success');
       setTimeout(() => setSaved(false), 3000);
     } catch (err) {
       console.error('Save hero banner error:', err);
@@ -98,14 +162,14 @@ export default function HomepageHeroManager() {
   };
 
   const handleReset = async () => {
-    if (window.confirm('Reset all 3 hero slides to initial brand defaults across the live store?')) {
+    if (window.confirm('Reset all hero banners to original 4 brand defaults across the live store?')) {
       try {
         setIsSaving(true);
         await resetHeroConfigApi();
         setHeroForm(DEFAULT_HERO_CONFIG);
         setPreviewSlideIndex(0);
         setActiveSlideTab(0);
-        addToast('Hero banner reset to 3 default brand slides globally', 'info');
+        addToast('Hero banners reset to 4 brand defaults globally', 'info');
       } catch (err) {
         addToast('Failed to reset hero configuration', 'error');
       } finally {
@@ -123,6 +187,9 @@ export default function HomepageHeroManager() {
     { label: 'Men Collection (/men)', url: '/men' },
   ];
 
+  const currentSlide = slides[activeSlideTab] || slides[0] || DEFAULT_HERO_SLIDES[0];
+  const previewSlide = slides[previewSlideIndex] || slides[0] || DEFAULT_HERO_SLIDES[0];
+
   return (
     <div className="space-y-6">
       {/* Top Header & Status Bar */}
@@ -130,19 +197,19 @@ export default function HomepageHeroManager() {
         <div>
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-bold text-[#7464B8] uppercase tracking-wider bg-[#F3EFFF] px-2.5 py-0.5 rounded-full border border-[#D6CFFF]/60">
-              Desktop 16:5 3-Slide Carousel
+              Homepage Hero & Mobile Banners ({slides.length} Banners)
             </span>
           </div>
           <h2 className="font-serif text-2xl text-[#171522] font-light mt-1">
-            Desktop Hero Banner Management
+            Homepage Hero Banner Management
           </h2>
           <p className="text-xs text-[#6F6B78] mt-0.5">
-            Configure the 3 full-bleed slideshow images, 16:5 aspect ratio, and independent destination links for desktop.
+            Manage all 4 hero banners: upload images, set 16:10 mobile & 16:5 desktop view, edit titles, CTAs, destination links, reorder, and save globally to MongoDB Atlas.
           </p>
         </div>
 
         <div className="flex items-center gap-3">
-          {/* Status Switch */}
+          {/* Global Status Switch */}
           <label className="flex items-center gap-2 cursor-pointer bg-white px-3.5 py-2 rounded-xl border border-[#D6CFFF]/60 shadow-xs hover:border-[#7464B8] transition-colors">
             <input
               type="checkbox"
@@ -151,7 +218,7 @@ export default function HomepageHeroManager() {
               className="rounded text-[#7464B8] focus:ring-[#7464B8] w-4 h-4 accent-[#7464B8]"
             />
             <span className="text-xs font-semibold text-[#171522]">
-              {heroForm.active ? 'Status: Active' : 'Status: Inactive'}
+              {heroForm.active ? 'Hero: Active' : 'Hero: Inactive'}
             </span>
           </label>
 
@@ -180,132 +247,225 @@ export default function HomepageHeroManager() {
             ) : (
               <Save className="w-4 h-4" />
             )}
-            <span>{isSaving ? 'Saving to Database...' : saved ? 'Saved Live' : 'Save Changes'}</span>
+            <span>{isSaving ? 'Saving to Atlas...' : saved ? 'Saved Live' : 'Save Changes'}</span>
           </button>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Column: 3-Slide Independent Controls */}
+        {/* Left Column: Multi-Banner Controls */}
         <div className="lg:col-span-7 space-y-6">
-          {/* Slide Tab Selector */}
-          <div className="bg-white p-2 rounded-2xl border border-[#D6CFFF]/60 shadow-xs flex items-center gap-2">
-            {[0, 1, 2].map((idx) => {
-              const slide = slides[idx] || {};
+          {/* Banner Selector Tabs with Add & Reorder */}
+          <div className="bg-white p-2 rounded-2xl border border-[#D6CFFF]/60 shadow-xs flex flex-wrap items-center gap-2">
+            {slides.map((slide, idx) => {
               const isSelected = activeSlideTab === idx;
               return (
                 <button
-                  key={idx}
+                  key={slide.id || idx}
                   type="button"
                   onClick={() => {
                     setActiveSlideTab(idx);
                     setPreviewSlideIndex(idx);
                   }}
-                  className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-2 ${
+                  className={`py-2 px-3 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 ${
                     isSelected
                       ? 'bg-[#171522] text-white shadow-xs'
                       : 'bg-[#FAF9FF] text-gray-600 hover:bg-[#F3EFFF] hover:text-[#171522]'
                   }`}
                 >
-                  <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-mono ${
-                    isSelected ? 'bg-white/20 text-white' : 'bg-gray-200 text-gray-700'
-                  }`}>
+                  <span
+                    className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-mono ${
+                      isSelected ? 'bg-white/20 text-white' : 'bg-gray-200 text-gray-700'
+                    }`}
+                  >
                     {idx + 1}
                   </span>
-                  <span>Slide {idx + 1}</span>
+                  <span>Banner {idx + 1}</span>
+                  {slide.active === false && (
+                    <span className="text-[9px] uppercase px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300">
+                      Off
+                    </span>
+                  )}
                   {slide.image && (
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
                   )}
                 </button>
               );
             })}
+
+            {/* Add Slide Button */}
+            <button
+              type="button"
+              onClick={handleAddSlide}
+              className="py-2 px-3 rounded-xl text-xs font-semibold bg-[#F3EFFF] text-[#7464B8] hover:bg-[#e7e1fa] border border-[#D6CFFF]/60 transition-all flex items-center gap-1.5"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Add Banner</span>
+            </button>
           </div>
 
-          {/* Active Slide Configuration Panel */}
-          {(() => {
-            const currentIdx = activeSlideTab;
-            const currentSlide = slides[currentIdx] || DEFAULT_HERO_SLIDES[currentIdx];
+          {/* Active Banner Detailed Configuration */}
+          <div className="bg-white p-6 rounded-2xl border border-[#D6CFFF]/50 shadow-xs space-y-5">
+            <div className="flex items-center justify-between pb-3 border-b border-[#D6CFFF]/20">
+              <div className="flex items-center gap-2">
+                <span className="w-7 h-7 rounded-lg bg-[#7464B8]/10 text-[#7464B8] font-mono text-xs font-bold flex items-center justify-center">
+                  {activeSlideTab + 1}
+                </span>
+                <h3 className="text-sm font-bold uppercase tracking-wider text-[#171522]">
+                  BANNER {activeSlideTab + 1} CONFIGURATION
+                </h3>
+              </div>
 
-            return (
-              <div className="bg-white p-6 rounded-2xl border border-[#D6CFFF]/50 shadow-xs space-y-5">
-                <div className="flex items-center justify-between pb-3 border-b border-[#D6CFFF]/20">
-                  <div className="flex items-center gap-2">
-                    <span className="w-6 h-6 rounded-lg bg-[#7464B8]/10 text-[#7464B8] font-mono text-xs font-bold flex items-center justify-center">
-                      {currentIdx + 1}
-                    </span>
-                    <h3 className="text-sm font-bold uppercase tracking-wider text-[#171522]">
-                      DESKTOP HERO — SLIDE {currentIdx + 1}
-                    </h3>
-                  </div>
-                  <span className="text-[10px] font-bold text-[#7464B8] uppercase tracking-wider bg-[#F3EFFF] px-2.5 py-1 rounded-full border border-[#D6CFFF]/60">
-                    Ratio 16:5
-                  </span>
-                </div>
+              {/* Banner Actions: Active toggle, Move, Delete */}
+              <div className="flex items-center gap-2">
+                <label className="flex items-center gap-1.5 text-xs text-gray-700 font-medium cursor-pointer mr-2">
+                  <input
+                    type="checkbox"
+                    checked={currentSlide.active !== false}
+                    onChange={(e) => handleUpdateSlide(activeSlideTab, 'active', e.target.checked)}
+                    className="rounded text-[#7464B8] w-3.5 h-3.5 accent-[#7464B8]"
+                  />
+                  <span>Active</span>
+                </label>
 
-                {/* Drag & Drop Image Uploader for this slide */}
-                <DragDropImageUpload
-                  label={`Desktop Hero Slide ${currentIdx + 1} Image`}
-                  value={currentSlide.image}
-                  onChange={(val) => {
-                    handleUpdateSlide(currentIdx, 'image', val);
-                    setPreviewSlideIndex(currentIdx);
-                  }}
-                  aspectRatio="aspect-[16/5]"
-                  helperText="Recommended: 16:5 ratio (e.g. 1920x600px). Supports JPG, JPEG, PNG, or WebP up to 10MB"
+                {/* Move Left / Up */}
+                <button
+                  type="button"
+                  onClick={() => handleMoveSlide(activeSlideTab, -1)}
+                  disabled={activeSlideTab === 0}
+                  title="Move banner earlier in sequence"
+                  className="p-1.5 rounded-lg border border-[#D6CFFF]/60 hover:bg-slate-100 disabled:opacity-30"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5 text-gray-600" />
+                </button>
+
+                {/* Move Right / Down */}
+                <button
+                  type="button"
+                  onClick={() => handleMoveSlide(activeSlideTab, 1)}
+                  disabled={activeSlideTab === slides.length - 1}
+                  title="Move banner later in sequence"
+                  className="p-1.5 rounded-lg border border-[#D6CFFF]/60 hover:bg-slate-100 disabled:opacity-30"
+                >
+                  <ArrowRight className="w-3.5 h-3.5 text-gray-600" />
+                </button>
+
+                {/* Remove Banner */}
+                {slides.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveSlide(activeSlideTab)}
+                    title="Delete banner"
+                    className="p-1.5 rounded-lg border border-red-200 text-red-500 hover:bg-red-50 transition-colors"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Cloudinary Drag & Drop Uploader */}
+            <DragDropImageUpload
+              label={`Banner ${activeSlideTab + 1} Image (Cloudinary Persisted)`}
+              value={currentSlide.image}
+              onChange={(val) => {
+                handleUpdateSlide(activeSlideTab, 'image', val);
+                setPreviewSlideIndex(activeSlideTab);
+              }}
+              aspectRatio="aspect-[16/10]"
+              helperText="Uploads directly to Cloudinary and saves globally to MongoDB Atlas. Works across all devices."
+            />
+
+            {/* Banner Title */}
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold uppercase tracking-wider text-[#171522]">
+                Banner Title / Heading
+              </label>
+              <input
+                type="text"
+                value={currentSlide.title || ''}
+                onChange={(e) => handleUpdateSlide(activeSlideTab, 'title', e.target.value)}
+                placeholder="e.g. THE ROYAL ANTI-TARNISH COLLECTION"
+                className="w-full px-3.5 py-2.5 rounded-xl text-xs bg-[#FAF9FF] border border-[#D6CFFF]/60 focus:border-[#7464B8] outline-hidden text-[#171522]"
+              />
+            </div>
+
+            {/* Banner Subtitle */}
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold uppercase tracking-wider text-[#171522]">
+                Subtitle / Description
+              </label>
+              <input
+                type="text"
+                value={currentSlide.subtitle || ''}
+                onChange={(e) => handleUpdateSlide(activeSlideTab, 'subtitle', e.target.value)}
+                placeholder="e.g. Handcrafted with 18K Real Gold PVD coating & lifetime tarnish warranty"
+                className="w-full px-3.5 py-2.5 rounded-xl text-xs bg-[#FAF9FF] border border-[#D6CFFF]/60 focus:border-[#7464B8] outline-hidden text-[#171522]"
+              />
+            </div>
+
+            {/* CTA Button Text & Destination */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-[#171522]">
+                  Button CTA Text
+                </label>
+                <input
+                  type="text"
+                  value={currentSlide.ctaText || ''}
+                  onChange={(e) => handleUpdateSlide(activeSlideTab, 'ctaText', e.target.value)}
+                  placeholder="e.g. Shop Women"
+                  className="w-full px-3.5 py-2.5 rounded-xl text-xs bg-[#FAF9FF] border border-[#D6CFFF]/60 focus:border-[#7464B8] outline-hidden text-[#171522]"
                 />
+              </div>
 
-                {/* Slide Destination Link Input */}
-                <div className="pt-3 border-t border-[#D6CFFF]/20 space-y-2">
-                  <label className="block text-xs font-bold uppercase tracking-wider text-[#171522]">
-                    Slide {currentIdx + 1} Click Destination Link
-                  </label>
-                  <p className="text-[11px] text-gray-500 font-light">
-                    Clicking anywhere on Slide {currentIdx + 1} will navigate to this URL without full page reload.
-                  </p>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      value={currentSlide.destinationUrl || ''}
-                      onChange={(e) => handleUpdateSlide(currentIdx, 'destinationUrl', e.target.value)}
-                      placeholder="/collections or /new-arrivals or /bestsellers"
-                      className="w-full pl-9 pr-3.5 py-2.5 rounded-xl text-xs bg-[#FAF9FF] border border-[#D6CFFF]/60 focus:border-[#7464B8] outline-hidden text-[#171522] font-mono"
-                    />
-                    <Compass className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                  </div>
-
-                  {/* Quick Destination Pills */}
-                  <div className="flex flex-wrap gap-1.5 pt-1">
-                    <span className="text-[10px] text-gray-400 font-medium self-center mr-1">Quick Picks:</span>
-                    {QUICK_DESTINATIONS.map((dest) => (
-                      <button
-                        key={dest.url}
-                        type="button"
-                        onClick={() => handleUpdateSlide(currentIdx, 'destinationUrl', dest.url)}
-                        className={`px-2.5 py-1 rounded-lg text-[10.5px] font-medium border transition-all ${
-                          currentSlide.destinationUrl === dest.url
-                            ? 'bg-[#171522] text-white border-[#171522]'
-                            : 'bg-[#FAF9FF] text-gray-600 border-[#D6CFFF]/50 hover:border-[#7464B8]'
-                        }`}
-                      >
-                        {dest.label}
-                      </button>
-                    ))}
-                  </div>
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-[#171522]">
+                  Click Destination Link
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={currentSlide.destinationUrl || ''}
+                    onChange={(e) => handleUpdateSlide(activeSlideTab, 'destinationUrl', e.target.value)}
+                    placeholder="/collections or /women or /bestsellers"
+                    className="w-full pl-8 pr-3 py-2.5 rounded-xl text-xs bg-[#FAF9FF] border border-[#D6CFFF]/60 focus:border-[#7464B8] outline-hidden text-[#171522] font-mono"
+                  />
+                  <Compass className="w-3.5 h-3.5 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                 </div>
               </div>
-            );
-          })()}
+            </div>
 
-          {/* Quick Slides Summary Bar */}
+            {/* Quick Destination Pills */}
+            <div className="flex flex-wrap gap-1.5 pt-1">
+              <span className="text-[10px] text-gray-400 font-medium self-center mr-1">Quick Picks:</span>
+              {QUICK_DESTINATIONS.map((dest) => (
+                <button
+                  key={dest.url}
+                  type="button"
+                  onClick={() => handleUpdateSlide(activeSlideTab, 'destinationUrl', dest.url)}
+                  className={`px-2.5 py-1 rounded-lg text-[10.5px] font-medium border transition-all ${
+                    currentSlide.destinationUrl === dest.url
+                      ? 'bg-[#171522] text-white border-[#171522]'
+                      : 'bg-[#FAF9FF] text-gray-600 border-[#D6CFFF]/50 hover:border-[#7464B8]'
+                  }`}
+                >
+                  {dest.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Quick Slides Overview Bar */}
           <div className="bg-white p-4 rounded-2xl border border-[#D6CFFF]/50 shadow-xs space-y-2.5">
             <h4 className="text-xs font-bold uppercase tracking-wider text-[#171522] flex items-center gap-1.5">
               <Layers2 className="w-3.5 h-3.5 text-[#7464B8]" />
-              Configured Desktop Slides (Loop Order 1 → 2 → 3)
+              Configured Banners Sequence ({slides.length} Total)
             </h4>
-            <div className="grid grid-cols-3 gap-2.5">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
               {slides.map((s, idx) => (
                 <div
-                  key={idx}
+                  key={s.id || idx}
                   onClick={() => {
                     setActiveSlideTab(idx);
                     setPreviewSlideIndex(idx);
@@ -316,12 +476,17 @@ export default function HomepageHeroManager() {
                       : 'border-[#D6CFFF]/60 bg-[#FAF9FF] hover:border-[#7464B8]/60'
                   }`}
                 >
-                  <div className="aspect-[16/5] rounded-lg overflow-hidden bg-[#120F1D] mb-1.5">
-                    <img src={s.image} alt={`Slide ${idx + 1}`} className="w-full h-full object-cover" />
+                  <div className="aspect-[16/10] rounded-lg overflow-hidden bg-[#120F1D] mb-1.5 relative">
+                    <img src={s.image} alt={`Banner ${idx + 1}`} className="w-full h-full object-cover object-[center_35%]" />
+                    {s.active === false && (
+                      <span className="absolute top-1 right-1 text-[8px] uppercase px-1 py-0.2 rounded bg-red-600 text-white font-bold">
+                        Off
+                      </span>
+                    )}
                   </div>
                   <div className="flex items-center justify-between text-[10px]">
-                    <span className="font-bold text-[#171522]">Slide {idx + 1}</span>
-                    <span className="font-mono text-gray-500 truncate max-w-[80px]">{s.destinationUrl}</span>
+                    <span className="font-bold text-[#171522]">Banner {idx + 1}</span>
+                    <span className="font-mono text-gray-500 truncate max-w-[70px]">{s.destinationUrl}</span>
                   </div>
                 </div>
               ))}
@@ -329,104 +494,104 @@ export default function HomepageHeroManager() {
           </div>
         </div>
 
-        {/* Right Column: Live Desktop 16:5 Preview with Switcher */}
+        {/* Right Column: Live Storefront Preview (Desktop 16:5 / Mobile 16:10) */}
         <div className="lg:col-span-5 space-y-5">
-          {/* Desktop Preview Card */}
           <div className="bg-white p-5 rounded-2xl border border-[#D6CFFF]/50 shadow-xs space-y-3">
             <div className="flex items-center justify-between text-xs font-semibold text-[#171522]">
-              <span className="flex items-center gap-1.5">
-                <Monitor className="w-3.5 h-3.5 text-[#7464B8]" />
-                Live Storefront Preview (16:5 Ratio)
-              </span>
+              {/* Preview Aspect Switcher */}
+              <div className="flex items-center gap-1 bg-[#FAF9FF] p-1 rounded-xl border border-[#D6CFFF]/50">
+                <button
+                  type="button"
+                  onClick={() => setPreviewMode('desktop')}
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all ${
+                    previewMode === 'desktop'
+                      ? 'bg-[#171522] text-white shadow-2xs'
+                      : 'text-gray-600 hover:text-[#171522]'
+                  }`}
+                >
+                  <Monitor className="w-3 h-3" />
+                  <span>Desktop 16:5</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPreviewMode('mobile')}
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all ${
+                    previewMode === 'mobile'
+                      ? 'bg-[#171522] text-white shadow-2xs'
+                      : 'text-gray-600 hover:text-[#171522]'
+                  }`}
+                >
+                  <Smartphone className="w-3 h-3" />
+                  <span>Mobile 16:10</span>
+                </button>
+              </div>
+
               <div className="flex items-center gap-1">
                 <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">
-                  Slide {previewSlideIndex + 1} of 3
+                  Banner {previewSlideIndex + 1} of {slides.length}
                 </span>
               </div>
             </div>
 
-            {/* 16:5 Aspect Ratio Container with Interactive Navigation */}
+            {/* Preview Viewport Container */}
             <div
-              className="relative w-full rounded-xl overflow-hidden bg-[#120F1D] border border-[#D6CFFF]/60 shadow-sm group select-none"
-              style={{ aspectRatio: '16 / 5' }}
+              className={`relative w-full rounded-xl overflow-hidden bg-[#120F1D] border border-[#D6CFFF]/60 shadow-sm group select-none ${
+                previewMode === 'desktop' ? 'aspect-[16/5]' : 'aspect-[16/10]'
+              }`}
             >
-              {slides.map((slide, idx) => (
-                <div
-                  key={idx}
-                  className={`absolute inset-0 w-full h-full transition-opacity duration-500 ${
-                    idx === previewSlideIndex ? 'opacity-100 z-10' : 'opacity-0 z-0'
-                  }`}
-                >
-                  <img
-                    src={slide.image}
-                    alt={`Preview Slide ${idx + 1}`}
-                    className="w-full h-full object-cover object-center"
-                  />
-                </div>
-              ))}
+              <img
+                src={previewSlide.image}
+                alt={previewSlide.title}
+                className="w-full h-full object-cover object-[center_35%]"
+              />
 
-              {/* Preview Arrows */}
+              {/* Text & CTA Overlay */}
+              <div className="absolute inset-0 bg-gradient-to-t from-[#120F1D]/90 via-[#120F1D]/30 to-transparent flex flex-col justify-end p-4">
+                <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/20 backdrop-blur-xs w-fit mb-1">
+                  <Sparkles className="w-2.5 h-2.5 text-[#D6CFFF]" />
+                  <span className="text-[8px] font-semibold text-white uppercase tracking-wider">
+                    Ocean Jewel Luxury
+                  </span>
+                </div>
+                <h4 className="font-serif text-sm sm:text-base text-white font-light line-clamp-1">
+                  {previewSlide.title || 'JEWELLERY THAT DEFINES YOU'}
+                </h4>
+                {previewSlide.subtitle && (
+                  <p className="text-[10px] text-[#E8E3FF]/90 line-clamp-1 mt-0.5">
+                    {previewSlide.subtitle}
+                  </p>
+                )}
+                <div className="mt-2">
+                  <span className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-white text-[#17151F] text-[10px] font-semibold uppercase tracking-wider">
+                    {previewSlide.ctaText || 'Shop Now'}
+                    <ArrowUpRight className="w-3 h-3" />
+                  </span>
+                </div>
+              </div>
+
+              {/* Navigation Arrows */}
               <button
                 type="button"
                 onClick={() => setPreviewSlideIndex((prev) => (prev - 1 + slides.length) % slides.length)}
-                className="absolute left-2 top-1/2 -translate-y-1/2 z-20 w-7 h-7 rounded-full bg-black/40 hover:bg-black/70 text-white backdrop-blur-xs flex items-center justify-center transition-all"
+                className="absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/40 hover:bg-black/70 text-white flex items-center justify-center backdrop-blur-xs border border-white/20"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
-
               <button
                 type="button"
                 onClick={() => setPreviewSlideIndex((prev) => (prev + 1) % slides.length)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 z-20 w-7 h-7 rounded-full bg-black/40 hover:bg-black/70 text-white backdrop-blur-xs flex items-center justify-center transition-all"
+                className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/40 hover:bg-black/70 text-white flex items-center justify-center backdrop-blur-xs border border-white/20"
               >
                 <ChevronRight className="w-4 h-4" />
               </button>
-
-              {/* Preview Indicator Dots */}
-              <div className="absolute bottom-2.5 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/30 backdrop-blur-xs">
-                {slides.map((_, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => setPreviewSlideIndex(idx)}
-                    className={`transition-all rounded-full ${
-                      idx === previewSlideIndex ? 'w-4 h-1 bg-white' : 'w-1 h-1 bg-white/40'
-                    }`}
-                  />
-                ))}
-              </div>
-
-              {/* Destination URL Indicator Badge */}
-              <div className="absolute top-2 left-2 z-20 pointer-events-none">
-                <span className="px-2 py-0.5 rounded-md bg-black/75 backdrop-blur-xs text-[9px] font-mono text-white flex items-center gap-1 border border-white/20">
-                  <Compass className="w-2.5 h-2.5 text-[#D6CFFF]" />
-                  <span>{slides[previewSlideIndex]?.destinationUrl || '/collections'}</span>
-                </span>
-              </div>
             </div>
 
-            <div className="p-2.5 rounded-xl bg-[#FAF9FF] border border-[#D6CFFF]/50 text-[11px] text-[#6F6B78] flex items-center justify-between">
-              <span>Current slide destination: <strong className="text-[#171522] font-mono">{slides[previewSlideIndex]?.destinationUrl || '/collections'}</strong></span>
-              <span className="text-[10px] font-semibold text-[#7464B8] uppercase tracking-wider">Auto-loops every 4.5s</span>
+            <div className="flex items-center justify-between text-[11px] text-gray-500 pt-1">
+              <span>Aspect Ratio: {previewMode === 'desktop' ? '16:5 Desktop' : '16:10 Mobile/Tablet'}</span>
+              <span className="font-mono text-[10px] text-[#7464B8] truncate max-w-[180px]">
+                {previewSlide.destinationUrl}
+              </span>
             </div>
-          </div>
-
-          {/* Ready to Publish Card */}
-          <div className="p-5 rounded-2xl bg-white border border-[#D6CFFF]/60 shadow-xs space-y-3">
-            <div>
-              <p className="text-xs font-bold text-[#171522]">Publish 3-Slide Carousel?</p>
-              <p className="text-[11px] text-gray-500 font-light mt-0.5">
-                Saving updates all 3 desktop slideshow images and links immediately on the live storefront.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={handleSave}
-              className="w-full py-2.5 bg-[#7464B8] text-white rounded-xl text-xs font-bold hover:bg-[#5f509e] transition-all shadow-xs flex items-center justify-center gap-2 active:scale-98"
-            >
-              {saved ? <CheckCircle2 className="w-4 h-4" /> : <Save className="w-4 h-4" />}
-              <span>{saved ? 'Saved Live on Storefront' : 'Save Changes'}</span>
-            </button>
           </div>
         </div>
       </div>

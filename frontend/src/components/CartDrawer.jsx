@@ -299,6 +299,12 @@ export default function CartDrawer() {
                   </p>
                 </div>
 
+                {/* Return Policy Assurance */}
+                <div className="flex items-center justify-center gap-1.5 text-[10px] text-gray-500 py-1">
+                  <ShieldCheck className="w-3.5 h-3.5 text-[#7464B8]" />
+                  <span>100% Anti-Tarnish &bull; 7-Day Easy Returns Across India</span>
+                </div>
+
                 {/* Checkout CTA */}
                 <button
                   onClick={handleCheckoutClick}

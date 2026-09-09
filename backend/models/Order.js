@@ -4,7 +4,6 @@ const orderItemSchema = new mongoose.Schema({
   product: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Product',
-    required: true,
   },
   name: { type: String, required: true },
   slug: { type: String, required: true },
@@ -12,6 +11,7 @@ const orderItemSchema = new mongoose.Schema({
   price: { type: Number, required: true },
   quantity: { type: Number, required: true, default: 1 },
   size: { type: String, default: 'Free Size' },
+  sku: { type: String, default: '' },
 });
 
 const statusTimelineSchema = new mongoose.Schema({
@@ -36,8 +36,9 @@ const orderSchema = new mongoose.Schema(
     shippingAddress: {
       fullName: { type: String, required: true },
       phone: { type: String, required: true },
-      house: { type: String, required: true },
-      street: { type: String, required: true },
+      house: { type: String, default: '' },
+      street: { type: String, default: '' },
+      address: { type: String, default: '' },
       area: { type: String, default: '' },
       city: { type: String, required: true },
       state: { type: String, required: true },
@@ -60,6 +61,7 @@ const orderSchema = new mongoose.Schema(
     itemsPrice: { type: Number, required: true, default: 0.0 },
     taxPrice: { type: Number, required: true, default: 0.0 },
     shippingPrice: { type: Number, required: true, default: 0.0 },
+    codFee: { type: Number, required: true, default: 0.0 },
     discountAmount: { type: Number, required: true, default: 0.0 },
     couponCode: { type: String, default: '' },
     oceanPointsUsed: { type: Number, required: true, default: 0 },
@@ -72,9 +74,11 @@ const orderSchema = new mongoose.Schema(
       required: true,
       enum: [
         'Pending',
-        'Confirmed',
         'Processing',
+        'Confirmed',
+        'Packed',
         'Shipped',
+        'In Transit',
         'Out for Delivery',
         'Delivered',
         'Cancelled',

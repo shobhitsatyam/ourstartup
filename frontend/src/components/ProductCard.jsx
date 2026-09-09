@@ -57,7 +57,7 @@ export default function ProductCard({ product, onQuickView, priority = false }) 
     >
       {/* Product Image Frame */}
       <div className="relative aspect-[4/5] rounded-xl sm:rounded-2xl lg:rounded-xl overflow-hidden bg-[#F3EFFF] mb-2 sm:mb-3">
-        <Link to={`/products/${product.slug}`} className="block w-full h-full">
+        <Link to={`/products/${product.slug}`} state={{ initialProduct: product }} className="block w-full h-full">
           <img
             src={imageSrc}
             alt={product.name}
@@ -147,13 +147,15 @@ export default function ProductCard({ product, onQuickView, priority = false }) 
             </span>
             <div className="flex items-center gap-0.5 text-amber-500 font-semibold text-[9.5px] sm:text-[10px] shrink-0">
               <Star className="w-2.5 h-2.5 sm:w-3 sm:h-3 fill-current" />
-              <span>{product.rating || 4.8}</span>
-              <span className="text-gray-400 font-normal text-[8.5px] sm:text-[9px]">({product.numReviews || 12})</span>
+              <span>{product.rating ? Number(product.rating).toFixed(1) : '4.8'}</span>
+              {Boolean(product.numReviews) && (
+                <span className="text-gray-400 font-normal text-[8.5px] sm:text-[9px]">({product.numReviews})</span>
+              )}
             </div>
           </div>
 
           {/* Title */}
-          <Link to={`/products/${product.slug}`} className="block group-hover:text-[#7464B8] transition-colors">
+          <Link to={`/products/${product.slug}`} state={{ initialProduct: product }} className="block group-hover:text-[#7464B8] transition-colors">
             <h3 className="font-serif text-xs sm:text-base font-normal text-[#17151F] line-clamp-1 leading-snug">
               {product.name}
             </h3>

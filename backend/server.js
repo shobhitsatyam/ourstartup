@@ -17,6 +17,8 @@ import rewardRoutes from './routes/rewardRoutes.js';
 import reviewRoutes from './routes/reviewRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import cmsRoutes from './routes/cmsRoutes.js';
+import chatRoutes from './routes/chatRoutes.js';
+import pincodeRoutes from './routes/pincodeRoutes.js';
 
 
 // Environment Validation
@@ -84,6 +86,8 @@ app.use('/api/rewards', rewardRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/cms', cmsRoutes);
+app.use('/api/chat', chatRoutes);
+app.use('/api/shipping/pincode', pincodeRoutes);
 
 // Error Handling
 app.use(notFound);

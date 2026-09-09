@@ -6,31 +6,50 @@
  * individual slide click destinations, real-time event broadcasting, and global multi-device persistence.
  */
 import defaultHeroBannerAsset1 from '../assets/a_high_end_fashion_jewelry_website_hero_banner_l.png';
-import defaultHeroBannerAsset2 from '../assets/new_arrivals_hero_banner.jpg';
-import defaultHeroBannerAsset3 from '../assets/bestsellers_hero_banner.jpg';
+import defaultHeroBannerAsset2 from '../assets/teej_festive_offer_banner.png';
+import defaultHeroBannerAsset3 from '../assets/new_arrivals_hero_banner.jpg';
+import defaultHeroBannerAsset4 from '../assets/luxury_editorial_hero_banner_4.jpg';
 import api from '../services/api';
 
-export const HERO_STORAGE_KEY = 'oceanjewel_hero_banner_config_v3';
+export const HERO_STORAGE_KEY = 'oceanjewel_hero_banner_config_v4';
 export const HERO_UPDATE_EVENT = 'oceanjewel_hero_banner_updated';
 
 export const DEFAULT_HERO_SLIDES = [
   {
     id: 'slide-1',
-    title: 'Slide 1 — Signature Collection',
+    title: 'THE ROYAL ANTI-TARNISH COLLECTION',
+    subtitle: 'Handcrafted with 18K Real Gold PVD coating & guaranteed zero tarnish',
+    ctaText: 'Shop Women',
     image: defaultHeroBannerAsset1,
-    destinationUrl: '/collections',
+    destinationUrl: '/women',
+    active: true,
   },
   {
     id: 'slide-2',
-    title: 'Slide 2 — New Arrivals',
+    title: 'THE FESTIVE & ROYAL EDIT',
+    subtitle: 'Celebrate traditions with handcrafted Kundan motifs and waterproof brilliance',
+    ctaText: 'Shop Festive',
     image: defaultHeroBannerAsset2,
-    destinationUrl: '/new-arrivals',
+    destinationUrl: '/collections',
+    active: true,
   },
   {
     id: 'slide-3',
-    title: 'Slide 3 — Royal Best Sellers',
+    title: 'AUTUMN RADIANCE NEW ARRIVALS',
+    subtitle: 'Featuring freshwater pearls, emerald drops, and architectural statement heirlooms',
+    ctaText: 'Explore New Arrivals',
     image: defaultHeroBannerAsset3,
+    destinationUrl: '/new-arrivals',
+    active: true,
+  },
+  {
+    id: 'slide-4',
+    title: 'MOST COVETED BESTSELLERS',
+    subtitle: 'Discover daily waterproof bracelets, rings, and tennis chains loved across India',
+    ctaText: 'Shop Bestsellers',
+    image: defaultHeroBannerAsset4,
     destinationUrl: '/bestsellers',
+    active: true,
   },
 ];
 
@@ -53,20 +72,26 @@ function mergeHeroWithDefaults(rawConfig) {
     return DEFAULT_HERO_CONFIG;
   }
 
-  const mergedSlides = DEFAULT_HERO_SLIDES.map((defSlide, idx) => {
-    const savedSlide = rawConfig.slides && rawConfig.slides[idx] ? rawConfig.slides[idx] : {};
-    return {
-      ...defSlide,
-      ...savedSlide,
-      image: savedSlide.image || defSlide.image,
-      destinationUrl: savedSlide.destinationUrl || defSlide.destinationUrl,
-    };
-  });
+  let slides = DEFAULT_HERO_SLIDES;
+  if (Array.isArray(rawConfig.slides) && rawConfig.slides.length > 0) {
+    slides = rawConfig.slides.map((s, idx) => {
+      const def = DEFAULT_HERO_SLIDES[idx] || DEFAULT_HERO_SLIDES[0];
+      return {
+        id: s.id || `slide-${idx + 1}`,
+        title: s.title || def.title,
+        subtitle: s.subtitle !== undefined ? s.subtitle : def.subtitle,
+        ctaText: s.ctaText || def.ctaText || 'Shop Now',
+        image: s.image || def.image,
+        destinationUrl: s.destinationUrl || def.destinationUrl,
+        active: s.active !== false,
+      };
+    });
+  }
 
   return {
     ...DEFAULT_HERO_CONFIG,
     ...rawConfig,
-    slides: mergedSlides,
+    slides,
   };
 }
 

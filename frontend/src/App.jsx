@@ -4,9 +4,9 @@ import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import CartDrawer from './components/CartDrawer';
 import SearchOverlay from './components/SearchOverlay';
-import LuxuryLoader from './components/LuxuryLoader';
 import MobileBottomNav from './components/MobileBottomNav';
 import FloatingSocialButton from './components/FloatingSocialButton';
+import AIChatbotDrawer from './components/AIChatbotDrawer';
 import { ProtectedRoute } from './components/ProtectedRoute';
 
 import HomePage from './pages/HomePage';
@@ -26,20 +26,15 @@ import NotFoundPage from './pages/NotFoundPage';
 export default function App() {
   const location = useLocation();
   const isAdminRoute = location.pathname.startsWith('/admin');
-  const [showIntroLoader, setShowIntroLoader] = useState(true);
+  const [chatbotOpen, setChatbotOpen] = useState(false);
   const [searchOverlayOpen, setSearchOverlayOpen] = useState(false);
 
   return (
     <div className="flex flex-col min-h-screen bg-[#FAF9FF] selection:bg-[#D6CFFF] selection:text-[#17151F]">
-      {/* 1. Luxury Initial Loading Screen */}
-      {showIntroLoader && (
-        <LuxuryLoader onComplete={() => setShowIntroLoader(false)} />
-      )}
-
-      {/* 2. Frosted Floating Navbar */}
+      {/* 1. Frosted Floating Navbar */}
       <Navbar onOpenSearch={() => setSearchOverlayOpen(true)} />
 
-      {/* 3. Slide-out Cart Drawer */}
+      {/* 2. Slide-out Cart Drawer */}
       <CartDrawer />
 
       {/* 4. Fullscreen Search Overlay */}
@@ -114,12 +109,19 @@ export default function App() {
       </main>
 
       {/* 6. Fixed Luxury Mobile Bottom Navigation Bar (Hidden on Desktop) */}
-      <MobileBottomNav />
+      {!isAdminRoute && <MobileBottomNav />}
 
-      {/* 7. Floating Social Button (Fixed Bottom-Left, Desktop Only) */}
-      <FloatingSocialButton />
+      {/* 7. Floating Social & AI Concierge Buttons (Bottom-Right, Public Only) */}
+      {!isAdminRoute && (
+        <FloatingSocialButton onOpenAIChat={() => setChatbotOpen(true)} />
+      )}
 
-      {/* 8. Luxury Footer (Public Customer Pages Only) */}
+      {/* 8. AI Jewellery Stylist Drawer */}
+      {!isAdminRoute && (
+        <AIChatbotDrawer isOpen={chatbotOpen} onClose={() => setChatbotOpen(false)} />
+      )}
+
+      {/* 9. Luxury Footer (Public Customer Pages Only) */}
       {!isAdminRoute && <Footer />}
     </div>
   );

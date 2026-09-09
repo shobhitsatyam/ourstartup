@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Star,
@@ -29,10 +29,13 @@ import api from '../services/api';
 export default function ProductDetailPage() {
   const { slug } = useParams();
   const navigate = useNavigate();
-  const [product, setProduct] = useState(null);
+  const location = useLocation();
+  const initialProduct = location.state?.initialProduct;
+
+  const [product, setProduct] = useState(initialProduct || null);
   const [reviews, setReviews] = useState([]);
   const [relatedProducts, setRelatedProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!initialProduct);
 
   const [selectedSize, setSelectedSize] = useState('Free Size');
   const [quantity, setQuantity] = useState(1);
@@ -52,40 +55,24 @@ export default function ProductDetailPage() {
   const { addToast } = useToast();
 
   useEffect(() => {
+    let isMounted = true;
+
     const fetchProduct = async () => {
-      setLoading(true);
+      // Only show full-screen skeleton if no initialProduct was passed
+      if (!initialProduct) {
+        setLoading(true);
+      }
       window.scrollTo(0, 0);
+
       try {
         const res = await api.get(`/products/slug/${slug}`);
-        if (res.data?.success) {
+        if (res.data?.success && isMounted) {
           const prod = res.data.data.product;
           setProduct(prod);
           setReviews(res.data.data.reviews || []);
-          let related = res.data.data.relatedProducts || [];
-          if (related.length < 10) {
-            try {
-              const extraRes = await api.get(`/products?gender=${prod.gender || 'women'}&limit=16`);
-              const extraList = extraRes.data?.data?.products || extraRes.data?.data || [];
-              const combined = [...related, ...extraList].filter(
-                (p, idx, arr) =>
-                  (p._id || p.id) !== (prod._id || prod.id) &&
-                  arr.findIndex((x) => (x._id || x.id) === (p._id || p.id)) === idx
-              );
-              related = combined.slice(0, 12);
-            } catch (err) {
-              console.warn('Could not load additional recommendations:', err);
-            }
-          }
-          if (related.length < 10 && related.length > 0) {
-            const filled = [...related];
-            let i = 0;
-            while (filled.length < 10) {
-              filled.push({ ...related[i % related.length], _cloneId: `clone-${filled.length}` });
-              i++;
-            }
-            related = filled;
-          }
-          setRelatedProducts(related);
+          const related = res.data.data.relatedProducts || [];
+          setRelatedProducts(related.slice(0, 12));
+
           if (prod.sizes && prod.sizes.length > 0) {
             setSelectedSize(prod.sizes[0]);
           }
@@ -93,19 +80,43 @@ export default function ProductDetailPage() {
       } catch (e) {
         console.error('Error fetching product:', e);
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     };
 
     fetchProduct();
+
+    return () => {
+      isMounted = false;
+    };
   }, [slug]);
 
-  if (loading) {
+  if (loading && !product) {
     return (
-      <div className="min-h-[80vh] flex items-center justify-center bg-[#FAF9FF]">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-12 h-12 rounded-full border-2 border-[#D6CFFF] border-t-[#17151F] animate-spin" />
-          <span className="text-xs font-serif tracking-widest text-[#7464B8] uppercase">Loading Piece...</span>
+      <div className="min-h-screen bg-[#FAF9FF] py-8 sm:py-10">
+        <div className="max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="h-4 w-44 bg-[#EADBFF]/50 rounded-full animate-pulse mb-6" />
+          <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-8 lg:gap-12">
+            <div className="w-full lg:w-[54%] space-y-4">
+              <div className="aspect-[4/5] w-full rounded-2xl bg-[#EADBFF]/30 border border-[#D6CFFF]/40 animate-pulse" />
+              <div className="flex gap-3">
+                {[...Array(4)].map((_, i) => (
+                  <div key={i} className="w-20 h-20 rounded-xl bg-[#EADBFF]/20 animate-pulse border border-[#D6CFFF]/30" />
+                ))}
+              </div>
+            </div>
+            <div className="w-full lg:w-[46%] space-y-5">
+              <div className="h-3 w-28 bg-[#7464B8]/20 rounded-full animate-pulse" />
+              <div className="h-8 w-4/5 bg-slate-200/80 rounded-xl animate-pulse" />
+              <div className="h-5 w-32 bg-amber-100 rounded-md animate-pulse" />
+              <div className="h-16 w-full bg-white/70 border border-[#D6CFFF]/50 rounded-2xl animate-pulse" />
+              <div className="h-10 w-full bg-slate-100 rounded-xl animate-pulse" />
+              <div className="flex gap-3 pt-2">
+                <div className="h-12 flex-1 bg-white border border-[#D6CFFF] rounded-xl animate-pulse" />
+                <div className="h-12 flex-1 bg-[#17151F]/80 rounded-xl animate-pulse" />
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -218,12 +229,12 @@ export default function ProductDetailPage() {
     },
     {
       id: 'shipping',
-      title: 'Indian Express Shipping & Easy Returns',
+      title: 'Indian Express Shipping & 7-Day Easy Returns',
       content: (
         <div className="space-y-2 text-xs text-gray-600 font-light leading-relaxed">
-          <p>• <strong>Free Express Shipping:</strong> Orders above ₹999 enjoy complimentary delivery in 2-4 business days.</p>
+          <p>• <strong>Free Express Shipping:</strong> Orders above ₹799 enjoy complimentary insured delivery across India in 2-4 business days.</p>
           <p>• <strong>Dispatched within 24 Hours:</strong> Hand-packed in luxury tamper-proof satin gift boxes.</p>
-          <p>• <strong>7-Day Replacement Policy:</strong> Hassle-free exchanges in the rare event of sizing issues or transit defects.</p>
+          <p>• <strong>7-Day Easy Return Policy:</strong> Doorstep pickup across all Indian pincodes with instant size exchanges or refunds.</p>
         </div>
       ),
     },
@@ -457,6 +468,24 @@ export default function ProductDetailPage() {
                 </div>
               </div>
 
+              {/* 7-Day Return Policy Card */}
+              <div className="p-2.5 sm:p-3 rounded-xl bg-gradient-to-br from-white via-[#FCFBFF] to-[#F8F5FF] border border-[#E4DDFF] shadow-2xs flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#17151F] to-[#2E283F] text-[#D6CFFF] flex items-center justify-center shrink-0 shadow-xs border border-[#D6CFFF]/25">
+                  <RotateCcw className="w-4 h-4 text-[#D6CFFF]" />
+                </div>
+                <div className="text-xs">
+                  <div className="flex items-center gap-2">
+                    <h4 className="font-bold text-[#17151F] text-[11px]">7-Day Hassle-Free Returns</h4>
+                    <span className="text-[8.5px] font-bold uppercase tracking-wider px-1.5 py-0.2 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
+                      Doorstep Pickup
+                    </span>
+                  </div>
+                  <p className="text-gray-500 text-[10.5px] font-light leading-snug mt-0.5">
+                    Hassle-free reverse pickup across India. Sizing exchanges or prompt refunds.
+                  </p>
+                </div>
+              </div>
+
               {/* Information Accordions */}
               <div className="space-y-1.5 pt-1.5 border-t border-[#D6CFFF]/40">
                 {accordions.map((acc) => {
@@ -661,6 +690,19 @@ export default function ProductDetailPage() {
                   <h4 className="font-bold text-[#17151F] text-[11px]">Lifetime Anti-Tarnish Guarantee</h4>
                   <p className="text-gray-500 text-[10.5px] mt-0.5">
                     18K PVD coated. 100% waterproof, sweatproof, and skin-friendly.
+                  </p>
+                </div>
+              </div>
+
+              {/* 7-Day Return Guarantee Card */}
+              <div className="p-2.5 xl:p-3 rounded-xl bg-white border border-[#D6CFFF]/50 shadow-2xs flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-[#17151F] text-[#D6CFFF] flex items-center justify-center shrink-0">
+                  <RotateCcw className="w-4 h-4" />
+                </div>
+                <div className="text-xs">
+                  <h4 className="font-bold text-[#17151F] text-[11px]">7-Day Easy Return & Exchange</h4>
+                  <p className="text-gray-500 text-[10.5px] mt-0.5">
+                    Doorstep reverse pickup across all Indian pincodes. Full refunds or instant sizing swap.
                   </p>
                 </div>
               </div>
