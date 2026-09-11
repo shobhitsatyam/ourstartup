@@ -252,20 +252,20 @@ export default function CheckoutPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FAF9FF] py-10">
+    <div className="bg-[#FAF9FF] py-6 sm:py-8 lg:pt-2 lg:pb-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className="text-center max-w-xl mx-auto mb-10">
-          <span className="text-xs font-bold uppercase tracking-[0.3em] text-[#7464B8]">
+        <div className="text-center max-w-xl mx-auto mb-6 lg:mb-2.5">
+          <span className="text-[11px] sm:text-xs font-bold uppercase tracking-[0.25em] lg:tracking-[0.3em] text-[#7464B8]">
             Secure Indian Checkout
           </span>
-          <h1 className="font-serif text-3xl sm:text-4xl font-light text-[#17151F] mt-1">
+          <h1 className="font-serif text-2xl sm:text-3xl lg:text-[30px] font-light text-[#17151F] mt-0.5">
             CONFIRM YOUR HEIRLOOM
           </h1>
         </div>
 
         {/* Steps Progress Header (Streamlined: Address -> Payment) */}
-        <div className="max-w-md mx-auto mb-12">
+        <div className="max-w-md lg:max-w-xs mx-auto mb-8 lg:mb-4">
           <div className="flex items-center justify-between relative">
             <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-gray-200 -translate-y-1/2 z-0" />
             <div
@@ -284,15 +284,15 @@ export default function CheckoutPage() {
               return (
                 <div key={s.num} className="relative z-10 flex flex-col items-center">
                   <div
-                    className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-xs transition-all shadow-md ${
+                    className={`w-9 h-9 sm:w-10 sm:h-10 lg:w-8 lg:h-8 rounded-full flex items-center justify-center font-bold text-xs transition-all shadow-xs ${
                       isCompleted || isCurrent
                         ? 'bg-[#17151F] text-[#D6CFFF] border-2 border-[#D6CFFF]'
                         : 'bg-white text-gray-400 border border-gray-200'
                     }`}
                   >
-                    <Icon className="w-4 h-4" />
+                    <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 lg:w-3.5 lg:h-3.5" />
                   </div>
-                  <span className={`text-[11px] font-semibold mt-2 uppercase tracking-wider ${
+                  <span className={`text-[10px] sm:text-[11px] font-semibold mt-1 uppercase tracking-wider ${
                     isCurrent ? 'text-[#17151F]' : 'text-gray-400'
                   }`}>
                     {s.label}
@@ -304,83 +304,93 @@ export default function CheckoutPage() {
         </div>
 
         {/* Checkout Main Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,62fr)_minmax(0,38fr)] gap-6 lg:gap-8 items-start">
           {/* Left Flow Steps */}
-          <div className="lg:col-span-7 space-y-6">
-            {/* Contact / Patron Verification Card */}
-            {isAuthenticated ? (
-              <div className="p-4 rounded-2xl bg-white border border-[#D6CFFF]/60 flex items-center justify-between shadow-2xs">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-[#7464B8]/15 text-[#7464B8] font-bold text-xs flex items-center justify-center">
-                    {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
+          <div className="space-y-4 lg:space-y-4">
+            {/* Contact / Patron Verification Card (Mobile/Tablet only: preserves exact mobile layout) */}
+            <div className="block lg:hidden">
+              {isAuthenticated ? (
+                <div className="p-4 rounded-2xl bg-white border border-[#D6CFFF]/60 flex items-center justify-between shadow-2xs">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-full bg-[#7464B8]/15 text-[#7464B8] font-bold text-xs flex items-center justify-center">
+                      {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-[#17151F] flex items-center gap-2">
+                        <span>{user?.name}</span>
+                        <span className="text-[10px] font-normal px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          Patron Verified
+                        </span>
+                      </p>
+                      <p className="text-[11px] text-gray-500">{user?.email}</p>
+                    </div>
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => navigate('/account')}
+                    className="text-[11px] font-semibold text-[#7464B8] hover:underline"
+                  >
+                    Account Profile
+                  </button>
+                </div>
+              ) : (
+                <div className="p-5 rounded-2xl bg-gradient-to-br from-[#FDFCFE] via-[#F8F6FF] to-[#F1EDFF] border-2 border-[#D6CFFF] shadow-sm space-y-3">
                   <div>
-                    <p className="text-xs font-bold text-[#17151F] flex items-center gap-2">
-                      <span>{user?.name}</span>
-                      <span className="text-[10px] font-normal px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                        Patron Verified
-                      </span>
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-[#7464B8]">
+                      Patron Verification Required
+                    </span>
+                    <h3 className="font-serif text-lg font-medium text-[#17151F] mt-0.5">
+                      Sign in or Register Before Payment
+                    </h3>
+                    <p className="text-xs text-gray-600 mt-1 font-light leading-relaxed">
+                      Ocean Jewel protects your order and guarantees authenticity. Please sign in or register before accessing payment. Your cart items are preserved.
                     </p>
-                    <p className="text-[11px] text-gray-500">{user?.email}</p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2.5 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        sessionStorage.setItem('checkout_temp_address', JSON.stringify(addressForm));
+                        navigate('/login?redirect=/checkout');
+                      }}
+                      className="px-4 py-2.5 bg-[#17151F] text-white text-xs font-bold uppercase tracking-wider rounded-xl hover:bg-[#2A2635] shadow-xs"
+                    >
+                      Sign In
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        sessionStorage.setItem('checkout_temp_address', JSON.stringify(addressForm));
+                        navigate('/signup?redirect=/checkout');
+                      }}
+                      className="px-4 py-2.5 bg-white text-[#17151F] border border-gray-300 text-xs font-bold uppercase tracking-wider rounded-xl hover:border-black shadow-xs"
+                    >
+                      Create Account
+                    </button>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => navigate('/account')}
-                  className="text-[11px] font-semibold text-[#7464B8] hover:underline"
-                >
-                  Account Profile
-                </button>
-              </div>
-            ) : (
-              <div className="p-5 rounded-2xl bg-gradient-to-br from-[#FDFCFE] via-[#F8F6FF] to-[#F1EDFF] border-2 border-[#D6CFFF] shadow-sm space-y-3">
-                <div>
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-[#7464B8]">
-                    Patron Verification Required
-                  </span>
-                  <h3 className="font-serif text-lg font-medium text-[#17151F] mt-0.5">
-                    Sign in or Register Before Payment
-                  </h3>
-                  <p className="text-xs text-gray-600 mt-1 font-light leading-relaxed">
-                    Ocean Jewel protects your order and guarantees authenticity. Please sign in or register before accessing payment. Your cart items are preserved.
-                  </p>
-                </div>
-                <div className="flex flex-wrap items-center gap-2.5 pt-1">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      sessionStorage.setItem('checkout_temp_address', JSON.stringify(addressForm));
-                      navigate('/login?redirect=/checkout');
-                    }}
-                    className="px-4 py-2.5 bg-[#17151F] text-white text-xs font-bold uppercase tracking-wider rounded-xl hover:bg-[#2A2635] shadow-xs"
-                  >
-                    Sign In
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      sessionStorage.setItem('checkout_temp_address', JSON.stringify(addressForm));
-                      navigate('/signup?redirect=/checkout');
-                    }}
-                    className="px-4 py-2.5 bg-white text-[#17151F] border border-gray-300 text-xs font-bold uppercase tracking-wider rounded-xl hover:border-black shadow-xs"
-                  >
-                    Create Account
-                  </button>
-                </div>
-              </div>
-            )}
+              )}
+            </div>
 
             {/* STEP 1: ADDRESS */}
             {currentStep === 1 && (
               <motion.div
                 initial={{ opacity: 0, x: -15 }}
                 animate={{ opacity: 1, x: 0 }}
-                className="p-6 sm:p-8 rounded-3xl bg-white border border-[#D6CFFF]/60 shadow-sm space-y-6"
+                className="p-5 sm:p-7 lg:p-6 rounded-3xl bg-white border border-[#D6CFFF]/60 shadow-sm space-y-4 sm:space-y-5 lg:space-y-4"
               >
-                <div className="flex items-center justify-between pb-4 border-b border-gray-100">
-                  <h3 className="font-serif text-xl font-medium text-gray-900">
-                    1. Shipping & Delivery Address
-                  </h3>
+                <div className="flex items-center justify-between pb-3.5 lg:pb-3 border-b border-gray-100">
+                  <div className="flex items-center gap-3">
+                    <h3 className="font-serif text-lg sm:text-xl font-medium text-gray-900">
+                      1. Shipping & Delivery Address
+                    </h3>
+                    {isAuthenticated && (
+                      <span className="hidden lg:inline-flex items-center gap-1 text-[10.5px] font-medium px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                        Patron Verified
+                      </span>
+                    )}
+                  </div>
                   {savedAddresses.length > 0 && (
                     <button
                       onClick={() => setIsNewAddressMode(!isNewAddressMode)}
@@ -421,7 +431,7 @@ export default function CheckoutPage() {
                   </div>
                 ) : (
                   /* New Address Form */
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 lg:gap-3 text-xs">
                     <div>
                       <label className="font-bold uppercase tracking-wider text-gray-700 block mb-1">Full Name *</label>
                       <input
@@ -542,6 +552,47 @@ export default function CheckoutPage() {
                   </div>
                 )}
 
+                {/* Desktop Patron Verification Notice (Desktop Only: Placed before action button) */}
+                {!isAuthenticated && (
+                  <div className="hidden lg:block p-3.5 rounded-2xl bg-gradient-to-br from-[#FDFCFE] via-[#F8F6FF] to-[#F1EDFF] border border-[#D6CFFF] shadow-2xs">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <span className="text-[9.5px] font-bold uppercase tracking-widest text-[#7464B8] flex items-center gap-1">
+                          <Lock className="w-3 h-3 text-[#7464B8]" /> Patron Verification Required
+                        </span>
+                        <h4 className="font-serif text-[13px] font-medium text-[#17151F]">
+                          Sign in or Register Before Payment
+                        </h4>
+                        <p className="text-[11px] text-gray-500 font-light">
+                          Ocean Jewel protects your order. Your address and cart are preserved.
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            sessionStorage.setItem('checkout_temp_address', JSON.stringify(addressForm));
+                            navigate('/login?redirect=/checkout');
+                          }}
+                          className="px-3 py-1.5 bg-[#17151F] text-white text-[11px] font-bold uppercase tracking-wider rounded-xl hover:bg-[#2A2635] shadow-xs"
+                        >
+                          Sign In
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            sessionStorage.setItem('checkout_temp_address', JSON.stringify(addressForm));
+                            navigate('/signup?redirect=/checkout');
+                          }}
+                          className="px-3 py-1.5 bg-white text-[#17151F] border border-gray-300 text-[11px] font-bold uppercase tracking-wider rounded-xl hover:border-black shadow-xs"
+                        >
+                          Register
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <button
                   onClick={handleAddressSubmit}
                   className="w-full py-3.5 bg-[#17151F] text-white rounded-2xl text-xs font-bold uppercase tracking-widest hover:bg-[#2A2635] shadow-lg flex items-center justify-center gap-2 btn-shine"
@@ -557,9 +608,9 @@ export default function CheckoutPage() {
               <motion.div
                 initial={{ opacity: 0, x: -15 }}
                 animate={{ opacity: 1, x: 0 }}
-                className="p-6 sm:p-8 rounded-3xl bg-white border border-[#D6CFFF]/60 shadow-sm space-y-6"
+                className="p-5 sm:p-7 lg:p-6 rounded-3xl bg-white border border-[#D6CFFF]/60 shadow-sm space-y-4 sm:space-y-5 lg:space-y-4"
               >
-                <h3 className="font-serif text-xl font-medium text-gray-900 pb-4 border-b border-gray-100">
+                <h3 className="font-serif text-lg sm:text-xl font-medium text-gray-900 pb-3.5 lg:pb-3 border-b border-gray-100">
                   2. Select Payment Mode
                 </h3>
 
@@ -656,25 +707,25 @@ export default function CheckoutPage() {
           </div>
 
           {/* Right Sticky Order Summary */}
-          <div className="lg:col-span-5 rounded-3xl bg-white p-6 sm:p-7 border border-[#D6CFFF]/60 shadow-sm space-y-5 sticky top-24">
-            <h3 className="font-serif text-lg font-medium text-gray-900 pb-3 border-b border-gray-100">
-              Order Summary ({cartItems.length} items)
+          <div className="rounded-3xl bg-white p-5 sm:p-6 lg:p-5 border border-[#D6CFFF]/60 shadow-sm space-y-4 sticky lg:top-[84px]">
+            <h3 className="font-serif text-base sm:text-lg font-medium text-gray-900 pb-2.5 border-b border-gray-100">
+              Order Summary ({cartItems.length} {cartItems.length === 1 ? 'item' : 'items'})
             </h3>
 
             {/* Items Mini List */}
-            <div className="space-y-3 max-h-60 overflow-y-auto pr-1 divide-y divide-gray-50">
+            <div className="space-y-2.5 max-h-60 lg:max-h-none overflow-y-auto lg:overflow-visible pr-1 lg:pr-0 divide-y divide-gray-50">
               {cartItems.map((item) => (
                 <div key={`${item._id}-${item.size}`} className="pt-2 flex items-center gap-3">
                   <img
                     src={item.image}
                     alt={item.name}
-                    className="w-12 h-14 rounded-xl object-cover bg-gray-100 shrink-0"
+                    className="w-11 h-13 rounded-xl object-cover bg-gray-100 shrink-0"
                   />
-                  <div className="flex-1 text-xs">
-                    <p className="font-semibold text-gray-900 line-clamp-1">{item.name}</p>
+                  <div className="flex-1 text-xs min-w-0">
+                    <p className="font-semibold text-gray-900 truncate">{item.name}</p>
                     <p className="text-gray-400 text-[10px]">Qty: {item.quantity} &bull; {item.size}</p>
                   </div>
-                  <span className="font-bold text-xs text-gray-900">
+                  <span className="font-bold text-xs text-gray-900 shrink-0">
                     ₹{(item.price * item.quantity).toLocaleString('en-IN')}
                   </span>
                 </div>
@@ -685,7 +736,7 @@ export default function CheckoutPage() {
             <SmartCouponSuggestion variant="checkout" />
 
             {/* Price Calculations */}
-            <div className="space-y-2 text-xs text-gray-600 border-t border-gray-100 pt-4">
+            <div className="space-y-2 text-xs text-gray-600 border-t border-gray-100 pt-3 lg:space-y-1.5">
               <div className="flex justify-between">
                 <span>Items Subtotal</span>
                 <span className="font-semibold text-gray-900">₹{subtotal.toLocaleString('en-IN')}</span>
@@ -721,21 +772,21 @@ export default function CheckoutPage() {
                 </div>
               )}
 
-              <div className="flex justify-between text-base font-bold text-gray-900 pt-3 border-t border-gray-200">
+              <div className="flex justify-between text-base font-bold text-gray-900 pt-2.5 border-t border-gray-200">
                 <span>Grand Total</span>
                 <span>₹{finalPayableTotal.toLocaleString('en-IN')}</span>
               </div>
             </div>
 
             {/* Loyalty Points Earning Badge */}
-            <div className="p-3 rounded-2xl bg-[#F3EFFF] border border-[#D6CFFF] flex items-center gap-2.5 text-xs text-[#17151F]">
-              <Sparkles className="w-4 h-4 text-[#7464B8] shrink-0" />
+            <div className="p-2.5 rounded-2xl bg-[#F3EFFF] border border-[#D6CFFF] flex items-center gap-2 text-[11px] text-[#17151F]">
+              <Sparkles className="w-3.5 h-3.5 text-[#7464B8] shrink-0" />
               <span>You will earn <strong>{potentialPointsEarned} Ocean Points</strong> (₹{potentialPointsEarned} value) on this order!</span>
             </div>
 
             {/* 7-Day Easy Return Guarantee Badge */}
-            <div className="p-3 rounded-2xl bg-[#FAF9FF] border border-[#D6CFFF]/60 flex items-center gap-2.5 text-xs text-gray-700">
-              <RotateCcw className="w-4 h-4 text-[#7464B8] shrink-0" />
+            <div className="p-2.5 rounded-2xl bg-[#FAF9FF] border border-[#D6CFFF]/60 flex items-center gap-2 text-[11px] text-gray-700">
+              <RotateCcw className="w-3.5 h-3.5 text-[#7464B8] shrink-0" />
               <span><strong>7-Day Easy Return Policy:</strong> Doorstep pickup across 28 states & 8 UTs for size exchanges or refunds.</span>
             </div>
           </div>
