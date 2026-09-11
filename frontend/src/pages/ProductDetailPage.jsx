@@ -94,9 +94,9 @@ export default function ProductDetailPage() {
 
   if (loading && !product) {
     return (
-      <div className="min-h-screen bg-[#FAF9FF] py-8 sm:py-10">
+      <div className="min-h-screen bg-[#FAF9FF] pt-3.5 pb-8 sm:pt-5 sm:pb-10 lg:py-8">
         <div className="max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="h-4 w-44 bg-[#EADBFF]/50 rounded-full animate-pulse mb-6" />
+          <div className="h-3.5 w-44 bg-[#EADBFF]/50 rounded-full animate-pulse mb-3 sm:mb-4 lg:mb-6" />
           <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-8 lg:gap-12">
             <div className="w-full lg:w-[54%] space-y-4">
               <div className="aspect-[4/5] w-full rounded-2xl bg-[#EADBFF]/30 border border-[#D6CFFF]/40 animate-pulse" />
@@ -242,18 +242,26 @@ export default function ProductDetailPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#FAF9FF] py-8 sm:py-10 lg:py-8">
+    <div className="min-h-screen bg-[#FAF9FF] pt-3.5 pb-8 sm:pt-5 sm:pb-10 lg:py-8">
       <div className="max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Breadcrumbs */}
-        <div className="flex items-center gap-2 text-xs text-gray-500 mb-4 lg:mb-3 uppercase tracking-wider font-medium">
-          <Link to="/" className="hover:text-black">Home</Link>
-          <span>/</span>
-          <Link to={`/${product.gender}`} className="hover:text-black capitalize">{product.gender}</Link>
-          <span>/</span>
-          <Link to={`/${product.gender}/${product.category.toLowerCase().replace(/ /g, '-')}`} className="hover:text-black">{product.category}</Link>
-          <span>/</span>
-          <span className="text-[#17151F] font-semibold truncate max-w-xs">{product.name}</span>
-        </div>
+        {/* Breadcrumbs - Compact Luxury Hierarchy on Mobile/Tablet */}
+        <nav
+          aria-label="Breadcrumb"
+          className="flex items-center flex-wrap sm:flex-nowrap gap-1.5 sm:gap-2 text-[10px] sm:text-[11px] lg:text-xs text-gray-500 mb-2 sm:mb-2.5 lg:mb-3 uppercase tracking-wider font-medium leading-none overflow-hidden"
+        >
+          <Link to="/" className="shrink-0 hover:text-black transition-colors">Home</Link>
+          <span className="text-gray-300 select-none">/</span>
+          <Link to={`/${product.gender}`} className="shrink-0 hover:text-black capitalize transition-colors">{product.gender}</Link>
+          <span className="text-gray-300 select-none">/</span>
+          <Link
+            to={`/${product.gender}/${product.category.toLowerCase().replace(/ /g, '-')}`}
+            className="shrink-0 hover:text-black truncate max-w-[110px] sm:max-w-[180px] lg:max-w-none transition-colors"
+          >
+            {product.category}
+          </Link>
+          <span className="text-gray-300 select-none">/</span>
+          <span className="text-[#17151F] font-semibold truncate max-w-[130px] sm:max-w-[220px] lg:max-w-xs">{product.name}</span>
+        </nav>
 
         {/* PDP Main Product Grid - Centered & Proportional */}
         <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6 lg:gap-10 xl:gap-12">

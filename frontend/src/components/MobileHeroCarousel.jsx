@@ -110,106 +110,109 @@ export default function MobileHeroCarousel() {
 
   return (
     <div
-      className="relative w-full bg-[#120F1D] overflow-hidden select-none"
+      className="relative w-full bg-transparent px-3 sm:px-6 pt-2.5 sm:pt-4 pb-1 select-none"
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
       role="region"
       aria-roledescription="carousel"
       aria-label="Zivana Jewels Promotional Banners"
     >
-      {/* 1. CAROUSEL BANNER CONTAINER - Strict 16:10 Aspect Ratio, No horizontal overflow */}
+      {/* 1. CAROUSEL BANNER CONTAINER - Strict 16:10 Aspect Ratio, Rounded Corners, No Black Strip */}
       <div
-        className="relative w-full aspect-[16/10] overflow-hidden touch-pan-y"
+        className="relative w-full aspect-[16/10] rounded-2xl sm:rounded-3xl overflow-hidden shadow-xs border border-[#D6CFFF]/25 touch-pan-y bg-[#FAF9FF]"
         style={{ touchAction: 'pan-y' }}
       >
         <AnimatePresence initial={false} custom={direction}>
-            <motion.div
-              key={currentBanner.id}
-              custom={direction}
-              variants={slideVariants}
-              initial="enter"
-              animate="center"
-              exit="exit"
-              transition={{
-                x: { type: 'spring', stiffness: 320, damping: 32 },
-                opacity: { duration: 0.25 },
-              }}
-              drag="x"
-              dragConstraints={{ left: 0, right: 0 }}
-              dragElastic={0.2}
-              onDragStart={() => {
-                isDraggingRef.current = true;
-                triggerInteractionPause();
-              }}
-              onDragEnd={(e, { offset, velocity }) => {
-                triggerInteractionPause();
-                const swipeThreshold = 45;
-                if (offset.x < -swipeThreshold || velocity.x < -300) {
-                  nextSlide();
-                } else if (offset.x > swipeThreshold || velocity.x > 300) {
-                  prevSlide();
+          <motion.div
+            key={currentBanner.id}
+            custom={direction}
+            variants={slideVariants}
+            initial="enter"
+            animate="center"
+            exit="exit"
+            transition={{
+              x: { type: 'spring', stiffness: 320, damping: 32 },
+              opacity: { duration: 0.25 },
+            }}
+            drag="x"
+            dragConstraints={{ left: 0, right: 0 }}
+            dragElastic={0.2}
+            onDragStart={() => {
+              isDraggingRef.current = true;
+              triggerInteractionPause();
+            }}
+            onDragEnd={(e, { offset, velocity }) => {
+              triggerInteractionPause();
+              const swipeThreshold = 45;
+              if (offset.x < -swipeThreshold || velocity.x < -300) {
+                nextSlide();
+              } else if (offset.x > swipeThreshold || velocity.x > 300) {
+                prevSlide();
+              }
+              setTimeout(() => {
+                isDraggingRef.current = false;
+              }, 80);
+            }}
+            className="absolute inset-0 w-full h-full cursor-grab active:cursor-grabbing rounded-2xl sm:rounded-3xl overflow-hidden"
+          >
+            {/* Clean Image-Only Presentation (16:10 Aspect Ratio, No Overlays, No Text, No CTA Buttons) */}
+            <Link
+              to={currentBanner.primaryCta?.link || '/shop'}
+              onClick={(e) => {
+                if (isDraggingRef.current) {
+                  e.preventDefault();
+                } else {
+                  triggerInteractionPause();
                 }
-                setTimeout(() => {
-                  isDraggingRef.current = false;
-                }, 80);
               }}
-              className="absolute inset-0 w-full h-full cursor-grab active:cursor-grabbing"
+              className="block w-full h-full rounded-2xl sm:rounded-3xl overflow-hidden"
+              aria-label={`Explore ${currentBanner.title}`}
             >
-              {/* Clean Image-Only Presentation (16:10 Aspect Ratio, No Overlays, No Text, No CTA Buttons) */}
-              <Link
-                to={currentBanner.primaryCta?.link || '/shop'}
-                onClick={(e) => {
-                  if (isDraggingRef.current) {
-                    e.preventDefault();
-                  } else {
-                    triggerInteractionPause();
-                  }
-                }}
-                className="block w-full h-full"
-                aria-label={`Explore ${currentBanner.title}`}
-              >
-                <img
-                  src={currentBanner.image}
-                  alt={currentBanner.imageAlt || currentBanner.title || 'Zivana Jewels Luxury Jewellery'}
-                  className="w-full h-full object-cover object-center pointer-events-none select-none"
-                  loading="eager"
-                  draggable={false}
-                />
-              </Link>
-            </motion.div>
-          </AnimatePresence>
-        </div>
-
-      {/* 2. PAGINATION DOTS (Directly Below Hero Banner) */}
-      <div
-        className="flex items-center justify-center gap-2 pt-2.5 pb-1"
-        role="tablist"
-        aria-label="Carousel pagination dots"
-      >
-        {banners.map((b, idx) => {
-          const isActive = idx === currentIndex;
-          return (
-            <button
-              key={b.id}
-              onClick={() => goToSlide(idx)}
-              role="tab"
-              aria-selected={isActive}
-              aria-label={`Go to slide ${idx + 1}: ${b.title}`}
-              className="py-1 px-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7464B8] rounded-full transition-all"
-            >
-              <motion.div
-                animate={{
-                  width: isActive ? 24 : 7,
-                  backgroundColor: isActive ? '#7464B8' : '#D6CFFF',
-                  opacity: isActive ? 1 : 0.6,
-                }}
-                transition={{ duration: 0.3, ease: 'easeOut' }}
-                className="h-1.5 rounded-full shadow-2xs hover:opacity-100 transition-opacity"
+              <img
+                src={currentBanner.image}
+                alt={currentBanner.imageAlt || currentBanner.title || 'Zivana Jewels Luxury Jewellery'}
+                className="w-full h-full object-cover object-center pointer-events-none select-none rounded-2xl sm:rounded-3xl"
+                loading="eager"
+                draggable={false}
               />
-            </button>
-          );
-        })}
+            </Link>
+          </motion.div>
+        </AnimatePresence>
+
+        {/* 2. PAGINATION DOTS (Inside Hero Banner with Luxury Frosted Glass Pill) */}
+        {banners.length > 1 && (
+          <div
+            className="absolute bottom-2 sm:bottom-3 left-1/2 -translate-x-1/2 z-20 flex items-center justify-center gap-1.5 px-2.5 py-1 rounded-full bg-black/30 backdrop-blur-md border border-white/20 shadow-xs"
+            role="tablist"
+            aria-label="Carousel pagination dots"
+          >
+            {banners.map((b, idx) => {
+              const isActive = idx === currentIndex;
+              return (
+                <button
+                  key={b.id}
+                  onClick={() => goToSlide(idx)}
+                  role="tab"
+                  aria-selected={isActive}
+                  aria-label={`Go to slide ${idx + 1}: ${b.title}`}
+                  className="p-0.5 focus:outline-none rounded-full transition-all"
+                >
+                  <motion.div
+                    animate={{
+                      width: isActive ? 20 : 6,
+                      backgroundColor: isActive ? '#FFFFFF' : '#D6CFFF',
+                      opacity: isActive ? 1 : 0.6,
+                    }}
+                    transition={{ duration: 0.3, ease: 'easeOut' }}
+                    className="h-1.5 rounded-full shadow-2xs hover:opacity-100 transition-opacity"
+                  />
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );
 }
+

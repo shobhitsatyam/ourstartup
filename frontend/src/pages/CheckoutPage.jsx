@@ -10,6 +10,7 @@ import {
   Sparkles,
   Lock,
   ArrowRight,
+  ArrowLeft,
   Plus,
   Loader2,
   RotateCcw,
@@ -252,25 +253,25 @@ export default function CheckoutPage() {
   };
 
   return (
-    <div className="bg-[#FAF9FF] py-6 sm:py-8 lg:pt-2 lg:pb-8">
+    <div className="bg-[#FAF9FF] py-4 sm:py-6 lg:pt-2 lg:pb-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className="text-center max-w-xl mx-auto mb-6 lg:mb-2.5">
-          <span className="text-[11px] sm:text-xs font-bold uppercase tracking-[0.25em] lg:tracking-[0.3em] text-[#7464B8]">
+        <div className="text-center max-w-xl mx-auto mb-3.5 sm:mb-4 lg:mb-2.5">
+          <span className="text-[10.5px] sm:text-xs font-bold uppercase tracking-[0.25em] lg:tracking-[0.3em] text-[#7464B8]">
             Secure Indian Checkout
           </span>
-          <h1 className="font-serif text-2xl sm:text-3xl lg:text-[30px] font-light text-[#17151F] mt-0.5">
+          <h1 className="font-serif text-xl sm:text-2xl lg:text-[30px] font-light text-[#17151F] mt-0.5 tracking-tight">
             CONFIRM YOUR HEIRLOOM
           </h1>
         </div>
 
         {/* Steps Progress Header (Streamlined: Address -> Payment) */}
-        <div className="max-w-md lg:max-w-xs mx-auto mb-8 lg:mb-4">
-          <div className="flex items-center justify-between relative">
-            <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-gray-200 -translate-y-1/2 z-0" />
+        <div className="max-w-[240px] sm:max-w-[260px] lg:max-w-xs mx-auto mb-4 sm:mb-5 lg:mb-4">
+          <div className="flex items-center justify-between relative px-2">
+            <div className="absolute top-4 sm:top-4.5 lg:top-4 left-6 right-6 h-0.5 bg-gray-200 -translate-y-1/2 z-0" />
             <div
-              className="absolute top-1/2 left-0 h-0.5 bg-[#7464B8] -translate-y-1/2 z-0 transition-all duration-500"
-              style={{ width: `${((currentStep - 1) / 1) * 100}%` }}
+              className="absolute top-4 sm:top-4.5 lg:top-4 left-6 h-0.5 bg-[#7464B8] -translate-y-1/2 z-0 transition-all duration-500"
+              style={{ width: currentStep === 1 ? '0%' : 'calc(100% - 48px)' }}
             />
 
             {[
@@ -284,7 +285,7 @@ export default function CheckoutPage() {
               return (
                 <div key={s.num} className="relative z-10 flex flex-col items-center">
                   <div
-                    className={`w-9 h-9 sm:w-10 sm:h-10 lg:w-8 lg:h-8 rounded-full flex items-center justify-center font-bold text-xs transition-all shadow-xs ${
+                    className={`w-8 h-8 sm:w-9 sm:h-9 lg:w-8 lg:h-8 rounded-full flex items-center justify-center font-bold text-xs transition-all shadow-xs ${
                       isCompleted || isCurrent
                         ? 'bg-[#17151F] text-[#D6CFFF] border-2 border-[#D6CFFF]'
                         : 'bg-white text-gray-400 border border-gray-200'
@@ -307,66 +308,74 @@ export default function CheckoutPage() {
         <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,62fr)_minmax(0,38fr)] gap-6 lg:gap-8 items-start">
           {/* Left Flow Steps */}
           <div className="space-y-4 lg:space-y-4">
-            {/* Contact / Patron Verification Card (Mobile/Tablet only: preserves exact mobile layout) */}
+            {/* Contact / Patron Verification Card (Mobile/Tablet only: Compact, balanced, aligned) */}
             <div className="block lg:hidden">
               {isAuthenticated ? (
-                <div className="p-4 rounded-2xl bg-white border border-[#D6CFFF]/60 flex items-center justify-between shadow-2xs">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-full bg-[#7464B8]/15 text-[#7464B8] font-bold text-xs flex items-center justify-center">
+                <div className="p-3 sm:p-3.5 rounded-xl sm:rounded-2xl bg-white border border-[#D6CFFF]/60 flex items-center justify-between gap-2.5 shadow-2xs">
+                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                    <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-[#7464B8]/15 text-[#7464B8] font-bold text-xs flex items-center justify-center shrink-0 ring-1 ring-[#7464B8]/20">
                       {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
                     </div>
-                    <div>
-                      <p className="text-xs font-bold text-[#17151F] flex items-center gap-2">
-                        <span>{user?.name}</span>
-                        <span className="text-[10px] font-normal px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-xs font-bold text-[#17151F] truncate max-w-[130px] sm:max-w-[200px]">
+                          {user?.name || 'Zivana Patron'}
+                        </span>
+                        <span className="inline-flex items-center gap-1 text-[9px] font-medium px-1.5 py-0.2 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
+                          <CheckCircle2 className="w-2.5 h-2.5 text-emerald-600" />
                           Patron Verified
                         </span>
-                      </p>
-                      <p className="text-[11px] text-gray-500">{user?.email}</p>
+                      </div>
+                      <p className="text-[10.5px] sm:text-[11px] text-gray-500 truncate mt-0.5">{user?.email}</p>
                     </div>
                   </div>
                   <button
                     type="button"
                     onClick={() => navigate('/account')}
-                    className="text-[11px] font-semibold text-[#7464B8] hover:underline"
+                    className="shrink-0 text-[10.5px] sm:text-[11px] font-semibold text-[#7464B8] hover:text-[#5B4C99] px-2 py-1 rounded-lg hover:bg-[#7464B8]/10 transition-colors"
                   >
                     Account Profile
                   </button>
                 </div>
               ) : (
-                <div className="p-5 rounded-2xl bg-gradient-to-br from-[#FDFCFE] via-[#F8F6FF] to-[#F1EDFF] border-2 border-[#D6CFFF] shadow-sm space-y-3">
-                  <div>
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-[#7464B8]">
-                      Patron Verification Required
-                    </span>
-                    <h3 className="font-serif text-lg font-medium text-[#17151F] mt-0.5">
-                      Sign in or Register Before Payment
-                    </h3>
-                    <p className="text-xs text-gray-600 mt-1 font-light leading-relaxed">
-                      Zivana Jewels protects your order and guarantees authenticity. Please sign in or register before accessing payment. Your cart items are preserved.
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2.5 pt-1">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        sessionStorage.setItem('checkout_temp_address', JSON.stringify(addressForm));
-                        navigate('/login?redirect=/checkout');
-                      }}
-                      className="px-4 py-2.5 bg-[#17151F] text-white text-xs font-bold uppercase tracking-wider rounded-xl hover:bg-[#2A2635] shadow-xs"
-                    >
-                      Sign In
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        sessionStorage.setItem('checkout_temp_address', JSON.stringify(addressForm));
-                        navigate('/signup?redirect=/checkout');
-                      }}
-                      className="px-4 py-2.5 bg-white text-[#17151F] border border-gray-300 text-xs font-bold uppercase tracking-wider rounded-xl hover:border-black shadow-xs"
-                    >
-                      Create Account
-                    </button>
+                <div className="p-3.5 sm:p-4 rounded-xl sm:rounded-2xl bg-gradient-to-br from-[#FDFCFE] via-[#F8F6FF] to-[#F1EDFF] border border-[#D6CFFF] shadow-xs space-y-2.5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5">
+                        <ShieldCheck className="w-3.5 h-3.5 text-[#7464B8] shrink-0" />
+                        <span className="text-[9.5px] font-bold uppercase tracking-wider text-[#7464B8]">
+                          Patron Verification
+                        </span>
+                      </div>
+                      <h3 className="font-serif text-sm sm:text-base font-medium text-[#17151F] mt-0.5">
+                        Sign in or Register Before Payment
+                      </h3>
+                      <p className="text-[11px] text-gray-500 mt-0.5 font-light leading-snug">
+                        Zivana Jewels protects your order and preserves your cart items.
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0 pt-0.5">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          sessionStorage.setItem('checkout_temp_address', JSON.stringify(addressForm));
+                          navigate('/login?redirect=/checkout');
+                        }}
+                        className="px-3 py-1.5 bg-[#17151F] text-white text-[11px] font-bold uppercase tracking-wider rounded-lg hover:bg-[#2A2635] shadow-xs"
+                      >
+                        Sign In
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          sessionStorage.setItem('checkout_temp_address', JSON.stringify(addressForm));
+                          navigate('/signup?redirect=/checkout');
+                        }}
+                        className="px-3 py-1.5 bg-white text-[#17151F] border border-gray-300 text-[11px] font-bold uppercase tracking-wider rounded-lg hover:border-black shadow-xs"
+                      >
+                        Create Account
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}
@@ -680,24 +689,37 @@ export default function CheckoutPage() {
                   <span>256-Bit Encrypted Bank-Grade Checkout. Razorpay Verified.</span>
                 </div>
 
-                <div className="flex gap-3 pt-2">
+                <div className="flex gap-2.5 sm:gap-3 pt-2">
+                  {/* Secondary: Back to Address (Equal height, centered icon & text, responsive) */}
                   <button
+                    type="button"
                     onClick={() => setCurrentStep(1)}
-                    className="flex-1 py-3.5 bg-gray-100 rounded-2xl text-xs font-bold uppercase tracking-wider text-gray-700 hover:bg-gray-200 transition-colors"
+                    className="flex-1 h-12 sm:h-12 lg:h-auto lg:py-3.5 px-2 sm:px-4 bg-[#FAF9FF] lg:bg-gray-100 border border-[#D6CFFF] lg:border-transparent text-[#17151F] lg:text-gray-700 hover:bg-[#F3EEFF] lg:hover:bg-gray-200 rounded-xl sm:rounded-2xl text-[10.5px] sm:text-xs font-bold uppercase tracking-wider transition-colors inline-flex items-center justify-center gap-1.5 shadow-2xs group cursor-pointer"
                   >
-                    &larr; Back to Address
+                    <ArrowLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#7464B8] lg:text-gray-700 shrink-0 group-hover:-translate-x-0.5 transition-transform" />
+                    <span className="truncate">Back to Address</span>
                   </button>
+
+                  {/* Primary: Complete Order (Equal height, balanced spacing, responsive typography) */}
                   <button
+                    type="button"
                     onClick={handlePlaceOrder}
                     disabled={isProcessing}
-                    className="flex-1 py-4 bg-[#17151F] text-white rounded-2xl text-xs font-bold uppercase tracking-widest hover:bg-[#2A2635] shadow-xl flex items-center justify-center gap-2 btn-shine"
+                    className="flex-1 h-12 sm:h-12 lg:h-auto lg:py-4 px-2 sm:px-4 bg-[#17151F] text-white rounded-xl sm:rounded-2xl text-[10.5px] sm:text-xs font-bold uppercase tracking-wider lg:tracking-widest hover:bg-[#2A2635] shadow-md lg:shadow-xl inline-flex items-center justify-center gap-1.5 btn-shine cursor-pointer disabled:opacity-75"
                   >
                     {isProcessing ? (
-                      <span>Processing Order...</span>
+                      <span className="inline-flex items-center gap-1.5">
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-[#D6CFFF]" />
+                        <span>Processing...</span>
+                      </span>
                     ) : (
                       <>
-                        <span>Complete Order &bull; ₹{finalPayableTotal.toLocaleString('en-IN')}</span>
-                        <CheckCircle2 className="w-4 h-4 text-[#D6CFFF]" />
+                        <span className="whitespace-nowrap">Complete Order</span>
+                        <span className="text-[#D6CFFF]/70 font-normal">&bull;</span>
+                        <span className="font-price font-semibold text-[#D6CFFF] whitespace-nowrap">
+                          ₹{finalPayableTotal.toLocaleString('en-IN')}
+                        </span>
+                        <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#D6CFFF] shrink-0" />
                       </>
                     )}
                   </button>
