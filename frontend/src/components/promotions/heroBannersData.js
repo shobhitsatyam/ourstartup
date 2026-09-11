@@ -27,7 +27,7 @@ export const initialHeroBanners = [
     offerBadge: null,
     couponCode: null,
     image: heroBannerImage,
-    imageAlt: 'Ocean Jewel Luxury Indian Jewellery Campaign featuring 18K Gold Heirlooms',
+    imageAlt: 'Zivana Jewels Luxury Indian Jewellery Campaign featuring 18K Gold Heirlooms',
     align: 'left',
   },
   {
@@ -46,7 +46,7 @@ export const initialHeroBanners = [
     offerBadge: 'Flat ₹500 OFF on orders above ₹2,499',
     couponCode: 'TEEJ500',
     image: teejBannerImage,
-    imageAlt: 'Ocean Jewel The Teej Festive Edit Jewellery Collection',
+    imageAlt: 'Zivana Jewels The Teej Festive Edit Jewellery Collection',
     align: 'left',
   },
   {
@@ -65,7 +65,7 @@ export const initialHeroBanners = [
     offerBadge: 'Complimentary Express Insured Delivery',
     couponCode: 'WELCOME10',
     image: newArrivalsBannerImage,
-    imageAlt: 'Ocean Jewel Autumn Radiance Emerald & Gold Fine Jewellery',
+    imageAlt: 'Zivana Jewels Autumn Radiance Emerald & Gold Fine Jewellery',
     align: 'left',
   },
   {
@@ -87,7 +87,7 @@ export const initialHeroBanners = [
     offerBadge: 'Up to 40% OFF + Extra 10% OFF',
     couponCode: 'WELCOME10',
     image: bestsellersBannerImage,
-    imageAlt: 'Ocean Jewel Signature Anti-Tarnish Bestseller Pieces',
+    imageAlt: 'Zivana Jewels Signature Anti-Tarnish Bestseller Pieces',
     align: 'left',
   },
 ];

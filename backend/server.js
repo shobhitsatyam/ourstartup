@@ -69,7 +69,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'online',
-    brand: 'Ocean Jewel — Luxury Indian Jewellery',
+    brand: 'Zivana Jewels — Luxury Indian Jewellery',
     timestamp: new Date().toISOString(),
     version: '1.0.0',
   });
@@ -104,7 +104,7 @@ const startServer = async () => {
     app.listen(PORT, () => {
       console.log(`
 💎 =======================================================
-💎  OCEAN JEWEL — LUXURY JEWELLERY API SERVER
+💎  ZIVANA JEWELS — LUXURY JEWELLERY API SERVER
 💎  Listening on http://localhost:${PORT}
 💎  Brand Theme: #D6CFFF | Pure Pearl & Frosted Lavender
 💎 =======================================================

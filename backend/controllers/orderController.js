@@ -173,7 +173,7 @@ export const createOrder = async (req, res) => {
         isPaid: false,
         orderStatus: 'Confirmed',
         statusTimeline: [
-          { status: 'Confirmed', note: 'Order placed and confirmed at Ocean Jewel.', timestamp: new Date() },
+          { status: 'Confirmed', note: 'Order placed and confirmed at Zivana Jewels.', timestamp: new Date() },
         ],
         shipmentTracking: {
           courier: 'BlueDart Luxury Express',
@@ -301,7 +301,7 @@ export const createOrder = async (req, res) => {
         isPaid: false,
         orderStatus: 'Confirmed',
         statusTimeline: [
-          { status: 'Confirmed', note: 'Order placed and confirmed at Ocean Jewel.', timestamp: new Date().toISOString() },
+          { status: 'Confirmed', note: 'Order placed and confirmed at Zivana Jewels.', timestamp: new Date().toISOString() },
         ],
         shipmentTracking: {
           courier: 'BlueDart Luxury Express',

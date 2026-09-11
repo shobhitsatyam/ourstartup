@@ -343,7 +343,7 @@ export default function CheckoutPage() {
                       Sign in or Register Before Payment
                     </h3>
                     <p className="text-xs text-gray-600 mt-1 font-light leading-relaxed">
-                      Ocean Jewel protects your order and guarantees authenticity. Please sign in or register before accessing payment. Your cart items are preserved.
+                      Zivana Jewels protects your order and guarantees authenticity. Please sign in or register before accessing payment. Your cart items are preserved.
                     </p>
                   </div>
                   <div className="flex flex-wrap items-center gap-2.5 pt-1">
@@ -564,7 +564,7 @@ export default function CheckoutPage() {
                           Sign in or Register Before Payment
                         </h4>
                         <p className="text-[11px] text-gray-500 font-light">
-                          Ocean Jewel protects your order. Your address and cart are preserved.
+                          Zivana Jewels protects your order. Your address and cart are preserved.
                         </p>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
@@ -751,7 +751,7 @@ export default function CheckoutPage() {
 
               {pointsDiscount > 0 && (
                 <div className="flex justify-between text-[#7464B8] font-medium">
-                  <span>Ocean Points Reward</span>
+                  <span>Zivana Points Reward</span>
                   <span>-₹{pointsDiscount.toLocaleString('en-IN')}</span>
                 </div>
               )}
@@ -781,7 +781,7 @@ export default function CheckoutPage() {
             {/* Loyalty Points Earning Badge */}
             <div className="p-2.5 rounded-2xl bg-[#F3EFFF] border border-[#D6CFFF] flex items-center gap-2 text-[11px] text-[#17151F]">
               <Sparkles className="w-3.5 h-3.5 text-[#7464B8] shrink-0" />
-              <span>You will earn <strong>{potentialPointsEarned} Ocean Points</strong> (₹{potentialPointsEarned} value) on this order!</span>
+              <span>You will earn <strong>{potentialPointsEarned} Zivana Points</strong> (₹{potentialPointsEarned} value) on this order!</span>
             </div>
 
             {/* 7-Day Easy Return Guarantee Badge */}

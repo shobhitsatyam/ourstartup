@@ -39,7 +39,7 @@ export default function Footer() {
       return;
     }
     setSubscribed(true);
-    addToast('Welcome to the Ocean VIP Circle! Check your email for code: FESTIVE500', 'success');
+    addToast('Welcome to the Zivana VIP Circle! Check your email for code: FESTIVE500', 'success');
   };
 
   return (
@@ -122,7 +122,7 @@ export default function Footer() {
         <div className="py-8 border-b border-white/10 md:border-none md:pb-0">
           <div className="max-w-md space-y-4">
             <Link to="/" className="inline-block">
-              <span className="font-serif text-2xl tracking-[0.25em] font-light text-white">OCEAN JEWEL</span>
+              <span className="font-serif text-2xl tracking-[0.25em] font-light text-white">ZIVANA JEWELS</span>
               <span className="block text-[9px] tracking-[0.45em] text-[#D6CFFF] uppercase font-semibold">Indian Luxury</span>
             </Link>
             <p className="text-xs text-white/60 leading-relaxed font-light">
@@ -133,7 +133,7 @@ export default function Footer() {
             <div className="pt-1">
               <p className="text-xs font-semibold tracking-wider uppercase text-[#D6CFFF] mb-2 flex items-center gap-1.5">
                 <Sparkles className="w-3.5 h-3.5" />
-                Join the Ocean VIP Club
+                Join the Zivana VIP Club
               </p>
               {subscribed ? (
                 <div className="flex items-center gap-2 text-xs text-[#D6CFFF] bg-[#2A2635] p-3 rounded-xl border border-[#D6CFFF]/30">
@@ -222,8 +222,8 @@ export default function Footer() {
                 <li><button onClick={() => setShowReturnPolicyModal(true)} className="block py-1 hover:text-white text-left cursor-pointer">7-Day Return Policy</button></li>
                 <li><Link to="/about" className="block py-1 hover:text-white">The Anti-Tarnish Guarantee</Link></li>
                 <li><Link to="/about" className="block py-1 hover:text-white">Jewellery Care Guide</Link></li>
-                <li><Link to="/account?tab=rewards" className="block py-1 hover:text-white">Ocean Points Rewards</Link></li>
-                <li><span className="block py-1 text-white/40">Email: concierge@oceanjewel.in</span></li>
+                <li><Link to="/account?tab=rewards" className="block py-1 hover:text-white">Zivana Points Rewards</Link></li>
+                <li><span className="block py-1 text-white/40">Email: jewelszivana@gmail.com</span></li>
                 <li><span className="block py-1 text-white/40">WhatsApp: +91 98765 43210</span></li>
               </ul>
             )}
@@ -267,8 +267,8 @@ export default function Footer() {
               <li><button onClick={() => setShowReturnPolicyModal(true)} className="hover:text-white transition-colors cursor-pointer text-left">7-Day Return & Exchange Policy</button></li>
               <li><Link to="/about" className="hover:text-white transition-colors">The Anti-Tarnish Guarantee</Link></li>
               <li><Link to="/about" className="hover:text-white transition-colors">Jewellery Care Guide</Link></li>
-              <li><Link to="/account?tab=rewards" className="hover:text-white transition-colors">Ocean Points Rewards</Link></li>
-              <li><span className="text-white/40">Email: concierge@oceanjewel.in</span></li>
+              <li><Link to="/account?tab=rewards" className="hover:text-white transition-colors">Zivana Points Rewards</Link></li>
+              <li><span className="text-white/40">Email: jewelszivana@gmail.com</span></li>
               <li><span className="text-white/40">WhatsApp: +91 98765 43210</span></li>
             </ul>
           </div>
@@ -277,7 +277,7 @@ export default function Footer() {
         {/* Bottom Bar with Indian Payment Badges and Copyright */}
         <div className="pt-6 sm:pt-8 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] sm:text-xs text-white/40 text-center sm:text-left">
           <div>
-            &copy; {new Date().getFullYear()} OCEAN JEWEL Inc. All Rights Reserved. Handcrafted in India.
+            &copy; {new Date().getFullYear()} ZIVANA JEWELS Inc. All Rights Reserved. Handcrafted in India.
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3 flex-wrap justify-center">
@@ -319,7 +319,7 @@ export default function Footer() {
 
             <div className="space-y-3 text-xs text-gray-700 leading-relaxed font-light">
               <p>
-                At <strong>Ocean Jewel</strong>, we take immense pride in the craftsmanship and longevity of every heirloom. If you are not completely satisfied with your purchase, we offer a hassle-free <strong>7-day return and exchange window</strong> from the date of delivery.
+                At <strong>Zivana Jewels</strong>, we take immense pride in the craftsmanship and longevity of every heirloom. If you are not completely satisfied with your purchase, we offer a hassle-free <strong>7-day return and exchange window</strong> from the date of delivery.
               </p>
               <div className="p-3 rounded-2xl bg-white border border-[#D6CFFF]/60 space-y-2">
                 <p>• <strong>Doorstep Reverse Pickup:</strong> BlueDart / Delhivery will arrange pickup directly from your address across 28 states & 8 UTs.</p>

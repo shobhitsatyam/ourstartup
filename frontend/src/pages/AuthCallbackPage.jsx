@@ -83,7 +83,7 @@ export default function AuthCallbackPage() {
           '';
         const googleId = supaUser.id;
 
-        // Synchronize with Ocean Jewel backend API
+        // Synchronize with Zivana Jewels backend API
         const result = await loginWithGoogle({ email, name, avatar, googleId });
 
         if (result?.success) {
@@ -181,7 +181,7 @@ export default function AuthCallbackPage() {
         className="w-full max-w-md bg-white/95 backdrop-blur-xl rounded-3xl p-8 sm:p-10 border border-[#D6CFFF]/60 shadow-[0_20px_50px_-15px_rgba(23,21,31,0.07)] text-center space-y-5"
       >
         <span className="text-[11px] font-bold uppercase tracking-[0.3em] text-[#7464B8]">
-          Ocean Jewel Client Portal
+          Zivana Jewels Client Portal
         </span>
 
         {errorMessage ? (

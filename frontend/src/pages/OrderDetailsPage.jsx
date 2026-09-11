@@ -291,7 +291,7 @@ export default function OrderDetailsPage() {
                 )}
                 {order.oceanPointsUsed > 0 && (
                   <div className="flex justify-between text-[#7464B8] font-medium">
-                    <span>Ocean Points Redeemed</span>
+                    <span>Zivana Points Redeemed</span>
                     <span>-₹{order.oceanPointsUsed.toLocaleString('en-IN')}</span>
                   </div>
                 )}

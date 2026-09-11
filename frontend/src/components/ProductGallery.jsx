@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight, Maximize2, X, ShieldCheck } from 'lucide-react';
 
-export default function ProductGallery({ images = [], name = 'Ocean Jewel Piece' }) {
+export default function ProductGallery({ images = [], name = 'Zivana Jewels Piece' }) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [fullscreenOpen, setFullscreenOpen] = useState(false);
 

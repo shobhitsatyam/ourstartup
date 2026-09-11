@@ -251,7 +251,7 @@ export default function CartDrawer() {
                     <div className="flex items-center gap-2">
                       <Sparkles className="w-4 h-4 text-[#7464B8]" />
                       <div>
-                        <span className="font-semibold text-gray-900">500 Ocean Points Available</span>
+                        <span className="font-semibold text-gray-900">500 Zivana Points Available</span>
                         <p className="text-[10px] text-gray-500">Redeem for flat ₹500 discount</p>
                       </div>
                     </div>
@@ -283,7 +283,7 @@ export default function CartDrawer() {
 
                   {pointsDiscount > 0 && (
                     <div className="flex justify-between text-[#7464B8] font-medium">
-                      <span>Ocean Points Redeemed</span>
+                      <span>Zivana Points Redeemed</span>
                       <span>-₹{pointsDiscount.toLocaleString('en-IN')}</span>
                     </div>
                   )}
@@ -299,7 +299,7 @@ export default function CartDrawer() {
                   </div>
 
                   <p className="text-[10px] text-gray-400 text-center pt-1">
-                    You will earn ~{potentialPointsEarned} Ocean Points from this purchase
+                    You will earn ~{potentialPointsEarned} Zivana Points from this purchase
                   </p>
                 </div>
 

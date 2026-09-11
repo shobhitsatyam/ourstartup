@@ -27,7 +27,7 @@ export default function MobileHeroCarousel() {
       eyebrow: b.eyebrow || (idx === 0 ? 'The Royal Anti-Tarnish Collection' : idx === 1 ? 'Festive & Royal Edit' : idx === 2 ? 'New Arrivals' : 'Bestsellers'),
       description: b.subtitle || b.description || 'Timeless pieces handcrafted with 18K Real Gold PVD coating.',
       image: b.image || initialHeroBanners[Math.min(idx, initialHeroBanners.length - 1)].image,
-      imageAlt: b.title || 'Ocean Jewel Luxury Jewellery',
+      imageAlt: b.title || 'Zivana Jewels Luxury Jewellery',
       primaryCta: {
         text: b.ctaText || b.primaryCta?.text || 'Explore Collection',
         link: b.destinationUrl || b.primaryCta?.link || '/shop',
@@ -115,7 +115,7 @@ export default function MobileHeroCarousel() {
       onMouseLeave={() => setIsPaused(false)}
       role="region"
       aria-roledescription="carousel"
-      aria-label="Ocean Jewel Promotional Banners"
+      aria-label="Zivana Jewels Promotional Banners"
     >
       {/* 1. CAROUSEL BANNER CONTAINER - Strict 16:10 Aspect Ratio, No horizontal overflow */}
       <div
@@ -170,7 +170,7 @@ export default function MobileHeroCarousel() {
               >
                 <img
                   src={currentBanner.image}
-                  alt={currentBanner.imageAlt || currentBanner.title || 'Ocean Jewel Luxury Jewellery'}
+                  alt={currentBanner.imageAlt || currentBanner.title || 'Zivana Jewels Luxury Jewellery'}
                   className="w-full h-full object-cover object-center pointer-events-none select-none"
                   loading="eager"
                   draggable={false}

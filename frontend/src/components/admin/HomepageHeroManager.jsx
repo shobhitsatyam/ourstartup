@@ -551,7 +551,7 @@ export default function HomepageHeroManager() {
                   <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/20 backdrop-blur-xs w-fit mb-1">
                     <Sparkles className="w-2.5 h-2.5 text-[#D6CFFF]" />
                     <span className="text-[8px] font-semibold text-white uppercase tracking-wider">
-                      Ocean Jewel Luxury
+                      Zivana Jewels Luxury
                     </span>
                   </div>
                   <h4 className="font-serif text-sm sm:text-base text-white font-light line-clamp-1">

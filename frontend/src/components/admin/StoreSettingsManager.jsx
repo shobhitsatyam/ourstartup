@@ -22,7 +22,7 @@ export default function StoreSettingsManager() {
   const [saved, setSaved] = useState(false);
 
   const [settings, setSettings] = useState({
-    storeName: 'Ocean Jewel — Indian Luxury',
+    storeName: 'Zivana Jewels — Indian Luxury',
     announcementText: 'Complimentary Express Delivery Across India on Orders Above ₹799 • Code: WELCOME10',
     welcomeCoupon: 'WELCOME10',
     freeShippingThreshold: 799,
@@ -30,9 +30,9 @@ export default function StoreSettingsManager() {
     codHandlingFee: 15,
     pointsPerRupee: 0.1, // 1 point per ₹10
     currencySymbol: '₹',
-    supportEmail: 'concierge@oceanjewel.in',
+    supportEmail: 'jewelszivana@gmail.com',
     supportPhone: '+91 98765 43210',
-    instagramHandle: '@oceanjewel.luxury',
+    instagramHandle: '@zivana.jewels',
     enableGstInvoice: true,
   });
 
@@ -222,7 +222,7 @@ export default function StoreSettingsManager() {
         <div className="bg-white p-6 rounded-2xl border border-[#D6CFFF]/50 shadow-xs space-y-4">
           <h3 className="text-sm font-semibold uppercase tracking-wider text-[#7464B8] pb-2 border-b border-[#D6CFFF]/20 flex items-center gap-2">
             <Award className="w-4 h-4" />
-            Ocean Points Loyalty Rewards
+            Zivana Points Loyalty Rewards
           </h3>
 
           <div>

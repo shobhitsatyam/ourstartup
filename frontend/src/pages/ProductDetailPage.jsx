@@ -224,7 +224,7 @@ export default function ProductDetailPage() {
       title: 'Anti-Tarnish Care Guide',
       content: (
         <p className="text-xs text-gray-600 font-light leading-relaxed">
-          Thanks to our 18K Gold PVD nano-molecular plating, your Ocean Jewel piece is completely safe from showers, swimming, and workout sweat. To maintain its sparkling luster for decades, gently wipe with a soft microfiber cloth and store in the provided velvet pouch when not in use.
+          Thanks to our 18K Gold PVD nano-molecular plating, your Zivana Jewels piece is completely safe from showers, swimming, and workout sweat. To maintain its sparkling luster for decades, gently wipe with a soft microfiber cloth and store in the provided velvet pouch when not in use.
         </p>
       ),
     },

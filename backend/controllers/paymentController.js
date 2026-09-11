@@ -24,7 +24,7 @@ export const createRazorpayOrder = async (req, res) => {
     const amountInPaise = Math.round(order.totalPrice * 100);
     const rzpOrderId = `order_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
 
-    const customerName = req.user?.name || order.shippingAddress?.fullName || 'Ocean Jewel Patron';
+    const customerName = req.user?.name || order.shippingAddress?.fullName || 'Zivana Jewels Patron';
     const customerEmail = req.user?.email || 'client@oceanjewel.com';
     const customerPhone = req.user?.phone || order.shippingAddress?.phone || '+91 9876543210';
 

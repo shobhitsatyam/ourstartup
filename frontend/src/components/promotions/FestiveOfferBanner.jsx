@@ -69,11 +69,11 @@ export default function FestiveOfferBanner({ data = festivePromotionData }) {
               to={storedConfig.destinationUrl || '/collections'}
               className="block group relative w-full aspect-[16/4] rounded-2xl lg:rounded-3xl overflow-hidden shadow-[0_10px_30px_rgba(23,21,31,0.06)] border border-[#D6CFFF]/40 transition-all duration-300 cursor-pointer"
               style={{ aspectRatio: '16 / 4' }}
-              title="Explore Ocean Jewel Festive Collections"
+              title="Explore Zivana Jewels Festive Collections"
             >
               <img
                 src={imageSrc}
-                alt="Ocean Jewel Festive Season Collection"
+                alt="Zivana Jewels Festive Season Collection"
                 className="w-full h-full object-cover select-none transition-transform duration-500 group-hover:scale-[1.01]"
                 style={{ width: '100%', aspectRatio: '16 / 4', objectFit: 'cover' }}
                 loading="eager"
@@ -100,7 +100,7 @@ export default function FestiveOfferBanner({ data = festivePromotionData }) {
               <div className="absolute inset-0 pointer-events-none select-none">
                 <img
                   src={imageSrc}
-                  alt="Ocean Jewel Teej Festive Collection"
+                  alt="Zivana Jewels Teej Festive Collection"
                   className="w-full h-full object-cover object-[80%_center] sm:object-[70%_center] md:object-right"
                   loading="eager"
                 />

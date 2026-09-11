@@ -56,7 +56,7 @@ export default function CustomerReviews() {
       product: 'Solitaire Eternity Band',
       rating: 5,
       tag: 'Zero Discoloration',
-      comment: 'Replaced my everyday silver band with Ocean Jewel’s eternity band. I do daily pottery work and gardening, yet the luster remains completely unaffected.',
+      comment: 'Replaced my everyday silver band with Zivana Jewels’ eternity band. I do daily pottery work and gardening, yet the luster remains completely unaffected.',
     },
     {
       name: 'Vikramaditya Joshi',

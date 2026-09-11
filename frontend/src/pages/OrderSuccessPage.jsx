@@ -181,7 +181,7 @@ export default function OrderSuccessPage() {
               )}
               {order?.oceanPointsUsed > 0 && (
                 <div className="flex justify-between text-purple-700 font-medium">
-                  <span>Ocean Points Applied</span>
+                  <span>Zivana Points Applied</span>
                   <span>-₹{order.oceanPointsUsed.toLocaleString('en-IN')}</span>
                 </div>
               )}
@@ -227,10 +227,10 @@ export default function OrderSuccessPage() {
               <div className="flex items-center gap-2.5">
                 <Sparkles className="w-4 h-4 text-[#D6CFFF] flex-shrink-0" />
                 <span>
-                  You earned <strong className="text-[#D6CFFF]">{oceanPoints} Ocean Points</strong> on this order.
+                  You earned <strong className="text-[#D6CFFF]">{oceanPoints} Zivana Points</strong> on this order.
                 </span>
               </div>
-              <span className="text-[10px] text-gray-300 uppercase tracking-widest hidden sm:inline">Ocean Club Loyalty</span>
+              <span className="text-[10px] text-gray-300 uppercase tracking-widest hidden sm:inline">Zivana Club Loyalty</span>
             </div>
           )}
 

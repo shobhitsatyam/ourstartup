@@ -22,37 +22,37 @@ export default function AboutPage() {
     {
       feature: 'Bonding Technology',
       traditional: 'Chemical dipping (Electroplating)',
-      oceanJewel: 'Vacuum PVD Molecular Deposition',
+      zivanaJewels: 'Vacuum PVD Molecular Deposition',
       highlight: true
     },
     {
       feature: 'Base Metal Core',
       traditional: 'Brass, Zinc alloy or Nickel',
-      oceanJewel: '316L Medical Grade Stainless Steel',
+      zivanaJewels: '316L Medical Grade Stainless Steel',
       highlight: true
     },
     {
       feature: 'Water & Sweat Contact',
       traditional: 'Tarnishes & oxidizes in 2-4 weeks',
-      oceanJewel: '100% Waterproof & Sweatproof',
+      zivanaJewels: '100% Waterproof & Sweatproof',
       highlight: false
     },
     {
       feature: 'Perfume & Lotion Resistance',
       traditional: 'Peels and turns skin green',
-      oceanJewel: 'Impervious to everyday cosmetics',
+      zivanaJewels: 'Impervious to everyday cosmetics',
       highlight: false
     },
     {
       feature: 'Skin Safety',
       traditional: 'Often causes allergies & rashes',
-      oceanJewel: '100% Hypoallergenic & Nickel-Free',
+      zivanaJewels: '100% Hypoallergenic & Nickel-Free',
       highlight: false
     },
     {
       feature: 'Cost & Everyday Utility',
       traditional: 'Fragile, locked away in bank lockers',
-      oceanJewel: 'High luxury everyday wearability',
+      zivanaJewels: 'High luxury everyday wearability',
       highlight: false
     }
   ];
@@ -63,14 +63,14 @@ export default function AboutPage() {
       <section className="max-w-4xl mx-auto px-4 text-center space-y-5">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#EAE6FD] text-[#7464B8] text-[11px] font-bold uppercase tracking-[0.25em]">
           <Sparkles className="w-3.5 h-3.5" />
-          <span>The Ocean Jewel Manifesto</span>
+          <span>The Zivana Jewels Manifesto</span>
         </div>
         <h1 className="font-serif text-3xl sm:text-5xl lg:text-6xl font-light text-[#17151F] leading-tight tracking-tight">
           WHERE SCIENCE MEETS <br />
           <span className="italic font-normal text-[#7464B8]">TIMELESS INDIAN LUXURY.</span>
         </h1>
         <p className="text-xs sm:text-base text-gray-600 font-light leading-relaxed max-w-2xl mx-auto">
-          For generations, Indian women were told fine jewellery belongs in bank lockers, while daily wear pieces tarnish within weeks. We founded Ocean Jewel to rewrite this story: heirloom aesthetics engineered with space-grade metallurgy.
+          For generations, Indian women were told fine jewellery belongs in bank lockers, while daily wear pieces tarnish within weeks. We founded Zivana Jewels to rewrite this story: heirloom aesthetics engineered with space-grade metallurgy.
         </p>
       </section>
 
@@ -148,10 +148,10 @@ export default function AboutPage() {
               </p>
             </div>
 
-            <div className="space-y-3 p-6 rounded-2xl bg-[#F8F7FF] border border-[#D6CFFF]/60">
+            <div className="space-[#F8F7FF] p-6 rounded-2xl bg-[#F8F7FF] border border-[#D6CFFF]/60">
               <div className="flex items-center gap-2 text-[#7464B8] font-semibold text-xs uppercase tracking-wider">
                 <Check className="w-4 h-4 text-[#7464B8]" />
-                <span>The Ocean Jewel Innovation</span>
+                <span>The Zivana Jewels Innovation</span>
               </div>
               <h3 className="font-serif text-base font-semibold text-gray-900">Molecular Vacuum Deposition</h3>
               <p>
@@ -167,7 +167,7 @@ export default function AboutPage() {
                 <tr className="border-b border-gray-200 text-gray-400 uppercase tracking-wider text-[10px]">
                   <th className="py-3 px-4">Feature</th>
                   <th className="py-3 px-4">Traditional Plated Jewellery</th>
-                  <th className="py-3 px-4 bg-[#F2EFFE] text-[#17151F] font-bold rounded-t-xl">Ocean Jewel Standard</th>
+                  <th className="py-3 px-4 bg-[#F2EFFE] text-[#17151F] font-bold rounded-t-xl">Zivana Jewels Standard</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -181,7 +181,7 @@ export default function AboutPage() {
                     <td className="py-3.5 px-4 font-semibold text-gray-900 bg-[#F8F7FF]">
                       <div className="flex items-center gap-1.5 text-[#17151F]">
                         <Check className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
-                        <span>{row.oceanJewel}</span>
+                        <span>{row.zivanaJewels || row.oceanJewel}</span>
                       </div>
                     </td>
                   </tr>
@@ -286,7 +286,7 @@ export default function AboutPage() {
               </div>
             </div>
             <p className="text-xs text-gray-300 font-light leading-relaxed">
-              If your Ocean Jewel piece does not match your expectations of luster and quality, return it within 7 days in its original packaging for an easy refund or exchange.
+              If your Zivana Jewels piece does not match your expectations of luster and quality, return it within 7 days in its original packaging for an easy refund or exchange.
             </p>
           </div>
         </div>

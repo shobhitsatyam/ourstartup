@@ -485,7 +485,7 @@ export default function AdminDashboardPage() {
           <div className="flex items-center gap-2.5">
             <Link to="/" className="flex items-center gap-2 group">
               <span className="font-serif text-xl sm:text-2xl font-light tracking-[0.2em] text-[#171522] group-hover:text-[#7464B8] transition-colors">
-                OCEAN JEWEL
+                ZIVANA JEWELS
               </span>
             </Link>
             <div className="hidden sm:block h-5 w-[1px] bg-[#D6CFFF]/60" />
@@ -598,7 +598,7 @@ export default function AdminDashboardPage() {
               <ShieldCheck className="w-3.5 h-3.5" />
               <span>Production Ready</span>
             </div>
-            <p className="text-[9px] text-[#6F6B78]">Ocean Jewel v2.4 CMS</p>
+            <p className="text-[9px] text-[#6F6B78]">Zivana Jewels v2.4 CMS</p>
           </div>
         </aside>
 
@@ -1231,7 +1231,7 @@ export default function AdminDashboardPage() {
                   Registered Patrons & VIP Club
                 </h1>
                 <p className="text-xs text-[#6F6B78] mt-0.5">
-                  Client profiles, lifetime order history, and accumulated Ocean Points balances.
+                  Client profiles, lifetime order history, and accumulated Zivana Points balances.
                 </p>
               </div>
 
@@ -1243,7 +1243,7 @@ export default function AdminDashboardPage() {
                         <th className="py-3.5 px-4">Patron</th>
                         <th className="py-3.5 px-4">Email</th>
                         <th className="py-3.5 px-4">Phone</th>
-                        <th className="py-3.5 px-4">Ocean Points</th>
+                        <th className="py-3.5 px-4">Zivana Points</th>
                         <th className="py-3.5 px-4">Tier</th>
                         <th className="py-3.5 px-4 text-right">Joined</th>
                       </tr>

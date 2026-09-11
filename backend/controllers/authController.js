@@ -44,7 +44,7 @@ export const registerUser = async (req, res) => {
         user: user._id,
         points: welcomeBonus,
         type: 'BONUS',
-        description: 'Welcome to Ocean Jewel! New Member Bonus',
+        description: 'Welcome to Zivana Jewels! New Member Bonus',
         balanceAfter: welcomeBonus,
       });
 
@@ -90,7 +90,7 @@ export const registerUser = async (req, res) => {
         user: newUser._id,
         points: welcomeBonus,
         type: 'BONUS',
-        description: 'Welcome to Ocean Jewel! New Member Bonus',
+        description: 'Welcome to Zivana Jewels! New Member Bonus',
         balanceAfter: welcomeBonus,
         createdAt: new Date().toISOString(),
       });
@@ -249,7 +249,7 @@ export const googleAuth = async (req, res) => {
           user: user._id,
           points: welcomeBonus,
           type: 'BONUS',
-          description: 'Welcome to Ocean Jewel! New Member Bonus',
+          description: 'Welcome to Zivana Jewels! New Member Bonus',
           balanceAfter: welcomeBonus,
         });
 
@@ -312,7 +312,7 @@ export const googleAuth = async (req, res) => {
           user: newUser._id,
           points: welcomeBonus,
           type: 'BONUS',
-          description: 'Welcome to Ocean Jewel! New Member Bonus',
+          description: 'Welcome to Zivana Jewels! New Member Bonus',
           balanceAfter: welcomeBonus,
           createdAt: new Date().toISOString(),
         });

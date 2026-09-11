@@ -67,7 +67,7 @@ export default function BrandStory() {
 
             <div className="space-y-4 text-white/70 font-light text-sm sm:text-base leading-relaxed">
               <p>
-                Ocean Jewel was born from a singular obsession: to create fine Indian jewellery that refuses to compromise between heirloom grandeur and everyday wearability.
+                Zivana Jewels was born from a singular obsession: to create fine Indian jewellery that refuses to compromise between heirloom grandeur and everyday wearability.
               </p>
               <p>
                 Traditional fashion jewellery turns black in months. Solid gold is too delicate for gym sessions and daily commutes. We engineered the perfect synthesis — 18K Real Gold molecularly fused with surgical steel.

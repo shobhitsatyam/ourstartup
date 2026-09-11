@@ -1,10 +1,10 @@
 /**
- * Ocean Jewel AI Jewellery Stylist & Concierge Controller
+ * Zivana Jewels AI Jewellery Stylist & Concierge Controller
  * Provides real-time intelligent recommendations, styling advice, and store assistance.
  */
 
-const SYSTEM_PROMPT = `You are the Ocean Jewel AI Jewellery Stylist & Concierge.
-Ocean Jewel is India's premier luxury anti-tarnish fine jewellery maison, creating 18K Gold PVD coated heirlooms that never turn green, black, or lose their champagne golden brilliance.
+const SYSTEM_PROMPT = `You are the Zivana Jewels AI Jewellery Stylist & Concierge.
+Zivana Jewels is India's premier luxury anti-tarnish fine jewellery maison, creating 18K Gold PVD coated heirlooms that never turn green, black, or lose their champagne golden brilliance.
 Key Collections:
 - Women: Solitaire & Eternity Rings, Heritage Kundan & Pearl Chandbalis, Tennis Bracelets, Waterproof Payal Anklets, Silk-Safe Saree Brooches.
 - Men: 18K Cuban & Byzantine Chains, Signet Rings, Kada Cuffs, Obsidian Studs, Full-Grain Leather Belts.
@@ -12,7 +12,7 @@ Policies:
 - Complimentary Express Delivery on orders above ₹799 (₹99 for orders below ₹799).
 - 7-Day Return Policy on all unworn items in original packaging.
 - Cash on Delivery (COD) available with ₹15 handling fee (non-refundable).
-- Support: WhatsApp (+91 98765 43210) & Email (concierge@oceanjewel.in).
+- Support: WhatsApp (+91 98765 43210) & Email (jewelszivana@gmail.com).
 Tone: Warm, regal, sophisticated, concise, and trustworthy.`;
 
 // Intelligent luxury response generator (offline resilient)
@@ -21,14 +21,14 @@ function generateExpertStylistResponse(userQuery) {
 
   if (query.includes('anti-tarnish') || query.includes('waterproof') || query.includes('shower') || query.includes('gym') || query.includes('sweat')) {
     return {
-      reply: 'All Ocean Jewel pieces are engineered with medical-grade 316L stainless steel and fused with real 18K Gold using vacuum Physical Vapor Deposition (PVD). Unlike traditional plating, our pieces are 100% waterproof, sweatproof, and perfume-resistant with zero discoloration.',
+      reply: 'All Zivana Jewels pieces are engineered with medical-grade 316L stainless steel and fused with real 18K Gold using vacuum Physical Vapor Deposition (PVD). Unlike traditional plating, our pieces are 100% waterproof, sweatproof, and perfume-resistant with zero discoloration.',
       suggestions: ['View Waterproof Anklets', 'Explore Men’s Chains', 'How to care for pieces?'],
     };
   }
 
   if (query.includes('return') || query.includes('exchange') || query.includes('refund') || query.includes('policy')) {
     return {
-      reply: 'We offer a seamless 7-Day Return & Replacement Policy from the date of delivery. If you are not completely enchanted with your jewellery, simply contact our concierge team at concierge@oceanjewel.in or WhatsApp to initiate a prompt return.',
+      reply: 'We offer a seamless 7-Day Return & Replacement Policy from the date of delivery. If you are not completely enchanted with your jewellery, simply contact our concierge team at jewelszivana@gmail.com or WhatsApp to initiate a prompt return.',
       suggestions: ['Initiate Return', 'Track My Order', 'Customer Support'],
     };
   }
@@ -62,7 +62,7 @@ function generateExpertStylistResponse(userQuery) {
   }
 
   return {
-    reply: 'Namaste! I am your Ocean Jewel Personal Stylist. Whether you are looking for timeless everyday anti-tarnish pieces, wedding heirlooms, or gift recommendations, I am delighted to assist you. What piece can I curate for you today?',
+    reply: 'Namaste! I am your Zivana Jewels Personal Stylist. Whether you are looking for timeless everyday anti-tarnish pieces, wedding heirlooms, or gift recommendations, I am delighted to assist you. What piece can I curate for you today?',
     suggestions: ['Anti-tarnish Guarantee', 'Free Delivery above ₹799', 'Curate Gift for Her', 'Men’s Bestsellers'],
   };
 }

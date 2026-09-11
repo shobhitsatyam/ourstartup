@@ -277,7 +277,7 @@ export default function AccountPage({ initialAuthMode }) {
             {/* Header / Branding */}
             <div className="text-center space-y-1">
               <span className="text-[9px] xs:text-[10px] sm:text-[10.5px] font-bold uppercase tracking-[0.25em] text-[#7464B8]">
-                Ocean Jewel Client Portal
+                Zivana Jewels Client Portal
               </span>
               <h1 className="font-serif text-xl xs:text-2xl sm:text-[26px] lg:text-[28px] font-light text-[#17151F] tracking-tight leading-tight">
                 {authMethod === 'otp'
@@ -290,8 +290,8 @@ export default function AccountPage({ initialAuthMode }) {
                 {authMethod === 'otp'
                   ? 'Sign in instantly using a one-time SMS verification code.'
                   : authMode === 'register'
-                  ? 'Join the Ocean Jewel inner circle & receive 50 welcome points.'
-                  : 'Access your orders, saved addresses, wishlist and Ocean Points.'}
+                  ? 'Join the Zivana Jewels inner circle & receive 50 welcome points.'
+                  : 'Access your orders, saved addresses, wishlist and Zivana Points.'}
               </p>
             </div>
 
@@ -555,7 +555,7 @@ export default function AccountPage({ initialAuthMode }) {
             <div className="pt-2 border-t border-gray-100 text-center text-[11px] sm:text-xs text-gray-500">
               {authMode === 'login' ? (
                 <p>
-                  New to Ocean Jewel?{' '}
+                  New to Zivana Jewels?{' '}
                   <button
                     type="button"
                     onClick={() => {
@@ -634,7 +634,7 @@ export default function AccountPage({ initialAuthMode }) {
         <div className="p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-[#17151F] via-[#2A2635] to-[#17151F] text-white border border-[#D6CFFF]/30 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-6">
           <div>
             <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#D6CFFF]">
-              Ocean Jewel Patron Profile
+              Zivana Jewels Patron Profile
             </span>
             <h1 className="font-serif text-2xl sm:text-3xl font-light mt-1">
               Namaste, {user.name}
@@ -651,7 +651,7 @@ export default function AccountPage({ initialAuthMode }) {
               <Sparkles className="w-4 h-4 text-[#D6CFFF]" />
               <div className="text-left">
                 <span className="text-[10px] text-white/60 block leading-tight">Reward Balance</span>
-                <span className="text-xs font-bold text-[#D6CFFF]">{user.oceanPoints || 0} Ocean Points (₹{user.oceanPoints || 0})</span>
+                <span className="text-xs font-bold text-[#D6CFFF]">{user.oceanPoints || 0} Zivana Points (₹{user.oceanPoints || 0})</span>
               </div>
             </div>
 
@@ -683,7 +683,7 @@ export default function AccountPage({ initialAuthMode }) {
             { id: 'orders', label: 'Orders & Tracking', icon: Package },
             { id: 'wishlist', label: 'Saved Wishlist', icon: Heart },
             { id: 'addresses', label: 'Saved Addresses', icon: MapPin },
-            { id: 'rewards', label: 'Ocean Points Rewards', icon: Award },
+            { id: 'rewards', label: 'Zivana Points Rewards', icon: Award },
           ].map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;

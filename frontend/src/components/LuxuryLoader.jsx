@@ -55,7 +55,7 @@ export default function LuxuryLoader({ onComplete }) {
             className="text-center tracking-[0.35em] text-white"
           >
             <h1 className="font-serif text-2xl sm:text-3xl font-light tracking-[0.3em] uppercase bg-gradient-to-r from-white via-[#D6CFFF] to-white bg-clip-text text-transparent">
-              Ocean Jewel
+              Zivana Jewels
             </h1>
             <p className="text-[10px] sm:text-xs text-[#D6CFFF]/70 uppercase tracking-[0.4em] mt-2 font-sans font-medium">
               Timeless Elegance &bull; Modern Indian Luxury

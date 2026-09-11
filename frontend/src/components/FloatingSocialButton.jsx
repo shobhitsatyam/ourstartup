@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Instagram, MessageSquare, Sparkles } from 'lucide-react';
 
-// Official Ocean Jewel Social Profile URL configuration
-export const OCEAN_JEWEL_INSTAGRAM_URL = 'https://www.instagram.com/oceanjewel.luxury';
+// Official Zivana Jewels Social Profile URL configuration
+export const ZIVANA_INSTAGRAM_URL = 'https://www.instagram.com/zivana.jewels';
+export const OCEAN_JEWEL_INSTAGRAM_URL = ZIVANA_INSTAGRAM_URL; // Backwards compatibility alias
 
 export default function FloatingSocialButton({ onOpenAIChat }) {
   const [hoveredBtn, setHoveredBtn] = useState(null); // 'instagram' | 'aichat' | null
@@ -21,7 +22,7 @@ export default function FloatingSocialButton({ onOpenAIChat }) {
         onMouseLeave={() => setHoveredBtn(null)}
       >
         <motion.a
-          href={OCEAN_JEWEL_INSTAGRAM_URL}
+          href={ZIVANA_INSTAGRAM_URL}
           target="_blank"
           rel="noopener noreferrer"
           initial={{ scale: 0, opacity: 0 }}
@@ -29,7 +30,7 @@ export default function FloatingSocialButton({ onOpenAIChat }) {
           whileHover={{ scale: 1.08 }}
           whileTap={{ scale: 0.95 }}
           transition={{ type: 'spring', stiffness: 350, damping: 22 }}
-          aria-label="Visit Ocean Jewel on Instagram"
+          aria-label="Visit Zivana Jewels on Instagram"
           className="relative flex items-center justify-center w-11 h-11 rounded-full bg-[#17151F] text-[#D6CFFF] hover:text-white hover:bg-[#7464B8] border border-[#D6CFFF]/40 shadow-[0_4px_16px_rgba(23,21,31,0.18)] hover:shadow-[0_8px_25px_rgba(116,100,184,0.35)] transition-colors duration-300 group focus:outline-none focus:ring-2 focus:ring-[#7464B8]/50 focus:ring-offset-2"
         >
           <Instagram className="w-5 h-5 transition-transform duration-300 group-hover:scale-110" />
@@ -48,7 +49,7 @@ export default function FloatingSocialButton({ onOpenAIChat }) {
             >
               <span className="w-1.5 h-1.5 rounded-full bg-[#D6CFFF] animate-pulse" />
               <span className="text-[10px] font-medium tracking-wide text-[#FAF9FF]">
-                @oceanjewel.luxury
+                @zivana.jewels
               </span>
             </motion.div>
           )}

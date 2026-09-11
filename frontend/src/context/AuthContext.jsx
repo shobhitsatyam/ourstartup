@@ -62,7 +62,7 @@ export const AuthProvider = ({ children }) => {
         const userData = res.data.data;
         setUser(userData);
         localStorage.setItem('ocean_user', JSON.stringify(userData));
-        addToast(`Welcome to Ocean Jewel, ${userData.name}! You earned 50 welcome points.`, 'success');
+        addToast(`Welcome to Zivana Jewels, ${userData.name}! You earned 50 welcome points.`, 'success');
         return { success: true, user: userData };
       }
     } catch (error) {
@@ -79,7 +79,7 @@ export const AuthProvider = ({ children }) => {
         const userData = res.data.data;
         setUser(userData);
         localStorage.setItem('ocean_user', JSON.stringify(userData));
-        addToast(`Welcome to Ocean Jewel, ${userData.name}!`, 'success');
+        addToast(`Welcome to Zivana Jewels, ${userData.name}!`, 'success');
         return { success: true, user: userData };
       }
     } catch (error) {

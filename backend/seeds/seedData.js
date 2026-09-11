@@ -523,7 +523,7 @@ export const seedDatabase = async () => {
   try {
     const adminEmail = process.env.ADMIN_EMAIL?.trim()?.toLowerCase();
     const adminPassword = process.env.ADMIN_PASSWORD;
-    const adminName = process.env.ADMIN_NAME?.trim() || 'Ocean Jewel Admin';
+    const adminName = process.env.ADMIN_NAME?.trim() || 'Zivana Jewels Admin';
 
     if (!adminEmail || !adminPassword) {
       console.error(`
@@ -669,7 +669,7 @@ export const seedDatabase = async () => {
         },
         {
           status: 'Processing',
-          note: 'Passed Ocean Jewel 12-point quality inspection & gift wrapped.',
+          note: 'Passed Zivana Jewels 12-point quality inspection & gift wrapped.',
           timestamp: new Date(Date.now() - 1.5 * 24 * 60 * 60 * 1000),
         },
         {
@@ -686,7 +686,7 @@ export const seedDatabase = async () => {
       },
     });
 
-    console.log('✅ Ocean Jewel Database seeded successfully with luxury collection!');
+    console.log('✅ Zivana Jewels Database seeded successfully with luxury collection!');
     process.exit(0);
   } catch (error) {
     console.error('❌ Error seeding database:', error);

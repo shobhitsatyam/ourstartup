@@ -114,11 +114,11 @@ export default function Hero() {
                     <Link
                       to={destination}
                       className="block w-full h-full cursor-pointer focus:outline-hidden"
-                      title={slide.title || `Explore Ocean Jewel Collection — Slide ${index + 1}`}
+                      title={slide.title || `Explore Zivana Jewels Collection — Slide ${index + 1}`}
                     >
                       <img
                         src={slide.image}
-                        alt={slide.title || `Ocean Jewel Luxury Collection Slide ${index + 1}`}
+                        alt={slide.title || `Zivana Jewels Luxury Collection Slide ${index + 1}`}
                         className="w-full h-full object-cover object-center select-none transition-transform duration-1000 ease-out group-hover:scale-[1.01]"
                         loading={index === 0 ? 'eager' : 'lazy'}
                         fetchPriority={index === 0 ? 'high' : 'auto'}

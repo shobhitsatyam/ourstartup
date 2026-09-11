@@ -10,7 +10,7 @@ export default function HomepagePermanentOfferManager() {
     active: true,
     eyebrow: 'A LITTLE EXTRA, JUST FOR YOU',
     title: '10% OFF YOUR FIRST ORDER',
-    description: 'Begin your Ocean Jewel journey with a little something extra.',
+    description: 'Begin your Zivana Jewels journey with a little something extra.',
     couponCode: 'WELCOME10',
     discountAmount: 10,
     ctaText: 'SHOP NOW',

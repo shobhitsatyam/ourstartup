@@ -169,7 +169,7 @@ export default function HomePage({ onOpenSearch }) {
                 NEW ARRIVALS
               </h2>
               <p className="text-[11px] sm:text-xs text-gray-500 font-light mt-1">
-                Discover what's newly designed at Ocean Jewel.
+                Discover what's newly designed at Zivana Jewels.
               </p>
               <div className="w-10 h-0.5 bg-[#D6CFFF] mx-auto mt-2" />
 

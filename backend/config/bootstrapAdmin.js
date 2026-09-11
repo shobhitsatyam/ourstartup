@@ -15,7 +15,7 @@ export const bootstrapAdmin = async () => {
   try {
     const adminEmail = process.env.ADMIN_EMAIL?.trim()?.toLowerCase();
     const adminPassword = process.env.ADMIN_PASSWORD;
-    const adminName = process.env.ADMIN_NAME?.trim() || 'Ocean Jewel Admin';
+    const adminName = process.env.ADMIN_NAME?.trim() || 'Zivana Jewels Admin';
 
     if (!adminEmail || !adminPassword) {
       return;

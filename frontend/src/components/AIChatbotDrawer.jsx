@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Send, Sparkles } from 'lucide-react';
 
 const INITIAL_SUGGESTIONS = [
-  'Are Ocean Jewel pieces waterproof?',
+  'Are Zivana Jewels pieces waterproof?',
   'Gift recommendations under ₹2,500',
   'How do I care for 18K PVD gold?',
   'What is your 7-Day Return Policy?',
@@ -14,7 +14,7 @@ export default function AIChatbotDrawer({ isOpen, onClose }) {
     {
       id: 'welcome',
       sender: 'bot',
-      text: 'Namaste! Welcome to Ocean Jewel Concierge. I am your personal jewellery stylist. How may I assist your style journey today?',
+      text: 'Namaste! Welcome to Zivana Jewels Concierge. I am your personal jewellery stylist. How may I assist your style journey today?',
       suggestions: INITIAL_SUGGESTIONS,
       timestamp: new Date(),
     },
@@ -82,7 +82,7 @@ export default function AIChatbotDrawer({ isOpen, onClose }) {
           {
             id: `bot_${Date.now()}`,
             sender: 'bot',
-            text: 'I am delighted to help with your jewellery inquiry. All Ocean Jewel pieces feature anti-tarnish 18K PVD Gold fused to medical-grade 316L stainless steel, backed by our 7-Day Easy Return Policy.',
+            text: 'I am delighted to help with your jewellery inquiry. All Zivana Jewels pieces feature anti-tarnish 18K PVD Gold fused to medical-grade 316L stainless steel, backed by our 7-Day Easy Return Policy.',
             suggestions: INITIAL_SUGGESTIONS,
             timestamp: new Date(),
           },
@@ -141,7 +141,7 @@ export default function AIChatbotDrawer({ isOpen, onClose }) {
                   </div>
                   <div>
                     <h3 className="text-sm font-semibold text-[#17151F] tracking-wide font-serif">
-                      Ocean Jewel Concierge
+                      Zivana Jewels Concierge
                     </h3>
                     <p className="text-[11px] text-[#7464B8] font-medium flex items-center gap-1">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block animate-pulse" />
@@ -248,7 +248,7 @@ export default function AIChatbotDrawer({ isOpen, onClose }) {
                   </button>
                 </form>
                 <p className="text-[10px] text-center text-slate-400 mt-2">
-                  Ocean Jewel Luxury Styling & Waterproof Care Guarantee
+                  Zivana Jewels Luxury Styling & Waterproof Care Guarantee
                 </p>
               </div>
             </motion.aside>

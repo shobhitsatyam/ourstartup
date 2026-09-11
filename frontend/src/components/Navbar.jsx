@@ -184,7 +184,7 @@ export default function Navbar({ onOpenSearch }) {
 
                 {/* Line 2: Prominent Brand Typography */}
                 <span className="font-serif text-[14.5px] xs:text-[16.5px] sm:text-2xl font-normal tracking-[0.14em] xs:tracking-[0.18em] sm:tracking-[0.22em] text-[#17151F] leading-tight group-hover:text-[#7464B8] transition-colors my-0.5 truncate">
-                  OCEAN JEWEL
+                  ZIVANA JEWELS
                 </span>
 
                 {/* Line 3: Luxury Tagline */}
@@ -288,8 +288,8 @@ export default function Navbar({ onOpenSearch }) {
               <Link
                 to="/account?tab=rewards"
                 className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-2xl bg-gradient-to-br from-[#17151F] to-[#2A2635] text-[#D6CFFF] hover:text-white active:scale-95 transition-all flex items-center justify-center shadow-xs relative border border-[#D6CFFF]/30"
-                aria-label="Ocean Points Rewards"
-                title="Ocean Points Rewards"
+                aria-label="Zivana Points Rewards"
+                title="Zivana Points Rewards"
               >
                 <Award className="w-5 h-5 stroke-[2] text-[#D6CFFF]" />
                 {isAuthenticated && (
@@ -317,7 +317,7 @@ export default function Navbar({ onOpenSearch }) {
             <div className="flex items-center">
               <Link to="/" className="flex flex-col items-center group">
                 <span className="font-serif text-[20px] xl:text-[22px] font-light tracking-[0.22em] text-[#17151F] group-hover:text-[#7464B8] transition-colors leading-tight">
-                  OCEAN JEWEL
+                  ZIVANA JEWELS
                 </span>
                 <span className="text-[7.5px] xl:text-[8px] tracking-[0.42em] uppercase font-semibold text-[#7464B8]">
                   Indian Luxury
@@ -507,7 +507,7 @@ export default function Navbar({ onOpenSearch }) {
                             <p className="text-[10px] text-gray-500 truncate">{user.email}</p>
                             <div className="mt-1 flex items-center gap-1 text-[10px] text-[#7464B8] font-bold">
                               <Sparkles className="w-3 h-3" />
-                              <span>{user.oceanPoints || 0} Ocean Points</span>
+                              <span>{user.oceanPoints || 0} Zivana Points</span>
                             </div>
                           </div>
 
@@ -524,7 +524,7 @@ export default function Navbar({ onOpenSearch }) {
                             className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-[#FAF9FF] text-[#17151F] font-normal"
                           >
                             <Award className="w-3.5 h-3.5 text-[#7464B8]" />
-                            Ocean Points (₹{(user.oceanPoints || 0)} Value)
+                            Zivana Points (₹{(user.oceanPoints || 0)} Value)
                           </Link>
 
                           {isAdmin && (
@@ -611,7 +611,7 @@ export default function Navbar({ onOpenSearch }) {
                 <div className="flex items-center justify-between pb-4 border-b border-[#D6CFFF]/40">
                   <Link to="/" onClick={() => setMobileMenuOpen(false)} className="flex flex-col">
                     <span className="font-serif text-xl tracking-[0.2em] font-light text-[#17151F]">
-                      OCEAN JEWEL
+                      ZIVANA JEWELS
                     </span>
                     <span className="text-[8px] tracking-[0.3em] uppercase font-semibold text-[#7464B8]">
                       Indian Luxury
@@ -844,7 +844,7 @@ export default function Navbar({ onOpenSearch }) {
                         onClick={() => setMobileMenuOpen(false)}
                         className="py-2.5 text-center text-[11px] font-semibold uppercase tracking-wider bg-[#FAF9FF] border border-[#D6CFFF]/60 text-[#7464B8] rounded-xl hover:bg-[#F3EFFF] transition-colors"
                       >
-                        Ocean Points
+                        Zivana Points
                       </Link>
                     </div>
 

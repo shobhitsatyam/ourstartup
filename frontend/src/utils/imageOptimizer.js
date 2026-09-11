@@ -1,5 +1,5 @@
 /**
- * Image Optimization Utility for Ocean Jewel
+ * Image Optimization Utility for Zivana Jewels
  *
  * Provides responsive thumbnail URLs with auto-format (WebP/AVIF) and quality compression,
  * preventing heavy full-resolution image downloads for small product card thumbnails.

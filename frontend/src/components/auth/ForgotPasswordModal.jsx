@@ -85,7 +85,7 @@ export default function ForgotPasswordModal({ isOpen, onClose }) {
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4 text-xs">
               <p className="text-xs text-gray-500 font-light leading-relaxed">
-                Enter the email address registered with your Ocean Jewel account. We will send you a verified link to choose a new password.
+                Enter the email address registered with your Zivana Jewels account. We will send you a verified link to choose a new password.
               </p>
 
               <div className="space-y-1.5">

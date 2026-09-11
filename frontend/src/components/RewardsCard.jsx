@@ -23,7 +23,7 @@ export default function RewardsCard({ rewardsData }) {
           <div>
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 text-[#D6CFFF] text-[10px] font-bold tracking-widest uppercase mb-2">
               <Sparkles className="w-3.5 h-3.5" />
-              <span>Ocean Royalty Program</span>
+              <span>Zivana Royalty Program</span>
             </div>
             <h3 className="font-serif text-3xl sm:text-4xl font-light tracking-wide text-white">
               {points.toLocaleString('en-IN')} <span className="text-xl font-sans text-[#D6CFFF]">Points</span>
@@ -72,7 +72,7 @@ export default function RewardsCard({ rewardsData }) {
           </div>
           <h4 className="text-xs font-bold text-gray-900">Earn On Every Spend</h4>
           <p className="text-[11px] text-gray-500 mt-1 leading-relaxed">
-            Get 1 Ocean Point for every ₹100 spent across all fine jewellery.
+            Get 1 Zivana Point for every ₹100 spent across all fine jewellery.
           </p>
         </div>
 
@@ -102,7 +102,7 @@ export default function RewardsCard({ rewardsData }) {
         <div className="p-6 rounded-3xl bg-white border border-[#D6CFFF]/40 shadow-sm space-y-4">
           <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-gray-800">
             <History className="w-4 h-4 text-[#7464B8]" />
-            <span>Ocean Points Activity Ledger</span>
+            <span>Zivana Points Activity Ledger</span>
           </div>
 
           <div className="divide-y divide-gray-100">
