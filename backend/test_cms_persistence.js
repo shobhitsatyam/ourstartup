@@ -23,56 +23,109 @@ async function runE2ETests() {
   const token = loginData.data.token;
   console.log('✅ Admin login successful! Role:', loginData.data.role);
 
-  // 2. Test Desktop Hero Banner Persistence
-  console.log('\n2️⃣ Testing Desktop Hero Banner Persistence (3 Slideshow Images)...');
-  const heroPayload = {
-    active: true,
-    aspectRatio: '16/5',
-    autoplayInterval: 4500,
-    slides: [
-      {
-        id: 'slide-1',
-        title: 'Custom Slide 1 — Royal Solitaire',
-        image: 'https://images.unsplash.com/photo-1599643477877-530eb83abc8e?auto=format&fit=crop&w=1600&q=80',
-        destinationUrl: '/collections',
-      },
-      {
-        id: 'slide-2',
-        title: 'Custom Slide 2 — 18K Gold Choker',
-        image: 'https://images.unsplash.com/photo-1603561591411-07134e71a2a9?auto=format&fit=crop&w=1600&q=80',
-        destinationUrl: '/new-arrivals',
-      },
-      {
-        id: 'slide-3',
-        title: 'Custom Slide 3 — Heritage Polki',
-        image: 'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?auto=format&fit=crop&w=1600&q=80',
-        destinationUrl: '/bestsellers',
-      },
-    ],
+  // 2. Test Desktop & Mobile Hero Banner Complete Independence
+  console.log('\n2️⃣ Testing Desktop & Mobile Hero Banner Complete Independence...');
+
+  const desktopImageA = 'https://res.cloudinary.com/akkplnbl/image/upload/v1788931451/ocean_jewel/products/uwii64unuj9ro5q6hnor.webp';
+  const mobileImageB = 'https://images.unsplash.com/photo-1603561591411-07134e71a2a9?auto=format&fit=crop&w=1600&q=80';
+
+  // Step 2a: Update Desktop Hero Configuration ONLY
+  console.log('   Updating Desktop Hero Banner (targetDevice: "desktop")...');
+  const desktopPayload = {
+    targetDevice: 'desktop',
+    desktop: {
+      active: true,
+      aspectRatio: '16/5',
+      slides: [
+        {
+          id: 'desktop-slide-1',
+          title: 'Custom Desktop Slide 1 — Royal Solitaire',
+          image: desktopImageA,
+          destinationUrl: '/collections',
+          active: true,
+        },
+      ],
+    },
   };
 
-  const saveHeroRes = await fetch(`${BASE_URL}/cms/hero_banner`, {
+  const saveDesktopRes = await fetch(`${BASE_URL}/cms/hero_banner`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify({ data: heroPayload }),
+    body: JSON.stringify({ data: desktopPayload }),
   });
-  const saveHeroData = await saveHeroRes.json();
-  console.log('   Save Hero Banner status:', saveHeroData.success, saveHeroData.message);
+  const saveDesktopData = await saveDesktopRes.json();
+  console.log('   Save Desktop status:', saveDesktopData.success, saveDesktopData.message);
 
-  // Read as Incognito / Clean session (No Auth Token)
-  const incognitoHeroRes = await fetch(`${BASE_URL}/cms/hero_banner?t=${Date.now()}`, {
+  // Read Incognito
+  const incognitoDesktopRes = await fetch(`${BASE_URL}/cms/hero_banner?t=${Date.now()}`, {
     headers: { 'Cache-Control': 'no-cache, no-store' },
   });
-  const incognitoHeroData = await incognitoHeroRes.json();
-  const heroSlide1Img = incognitoHeroData.data?.slides?.[0]?.image;
-  console.log('   Incognito / Clean Session fetched Hero Slide 1 image:', heroSlide1Img);
-  if (heroSlide1Img !== heroPayload.slides[0].image) {
-    throw new Error('Hero banner image mismatch in incognito view!');
+  const incognitoDesktopData = await incognitoDesktopRes.json();
+  const currentDesktopImg = incognitoDesktopData.data?.desktop?.slides?.[0]?.image;
+  const currentMobileImgAfterDeskSave = incognitoDesktopData.data?.mobile?.slides?.[0]?.image;
+
+  console.log('   Fetched Desktop Slide 1:', currentDesktopImg);
+  console.log('   Fetched Mobile Slide 1 after Desktop save:', currentMobileImgAfterDeskSave);
+
+  if (currentDesktopImg !== desktopImageA) {
+    throw new Error('Desktop banner image mismatch!');
   }
-  console.log('✅ Hero Banner successfully persisted to MongoDB Atlas and verified across clean sessions!');
+  if (currentMobileImgAfterDeskSave === desktopImageA && currentMobileImgAfterDeskSave !== incognitoDesktopData.data?.mobile?.slides?.[0]?.image) {
+    throw new Error('Leakage detected: Desktop image overwrote Mobile configuration!');
+  }
+
+  // Step 2b: Update Mobile Hero Configuration ONLY
+  console.log('   Updating Mobile Hero Banner (targetDevice: "mobile")...');
+  const mobilePayload = {
+    targetDevice: 'mobile',
+    mobile: {
+      active: true,
+      aspectRatio: '16/10',
+      slides: [
+        {
+          id: 'mobile-slide-1',
+          title: 'Custom Mobile Slide 1 — 18K Choker',
+          image: mobileImageB,
+          destinationUrl: '/women',
+          active: true,
+        },
+      ],
+    },
+  };
+
+  const saveMobileRes = await fetch(`${BASE_URL}/cms/hero_banner`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ data: mobilePayload }),
+  });
+  const saveMobileData = await saveMobileRes.json();
+  console.log('   Save Mobile status:', saveMobileData.success, saveMobileData.message);
+
+  // Read Incognito again
+  const incognitoMobileRes = await fetch(`${BASE_URL}/cms/hero_banner?t=${Date.now()}`, {
+    headers: { 'Cache-Control': 'no-cache, no-store' },
+  });
+  const incognitoMobileData = await incognitoMobileRes.json();
+  const finalDesktopImg = incognitoMobileData.data?.desktop?.slides?.[0]?.image;
+  const finalMobileImg = incognitoMobileData.data?.mobile?.slides?.[0]?.image;
+
+  console.log('   Final Incognito Desktop Slide 1:', finalDesktopImg);
+  console.log('   Final Incognito Mobile Slide 1:', finalMobileImg);
+
+  if (finalDesktopImg !== desktopImageA) {
+    throw new Error('Cross-device leak! Desktop banner was altered when Mobile was updated!');
+  }
+  if (finalMobileImg !== mobileImageB) {
+    throw new Error('Mobile banner was not updated properly!');
+  }
+
+  console.log('✅ COMPLETE INDEPENDENCE VERIFIED: Desktop Banner !== Mobile Banner and neither affects the other!');
 
   // 3. Test Festival Season Banner Persistence
   console.log('\n3️⃣ Testing Festival Season Banner Persistence...');

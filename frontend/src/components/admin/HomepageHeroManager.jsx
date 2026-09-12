@@ -27,7 +27,8 @@ import {
   saveHeroConfigApi,
   resetHeroConfigApi,
   HERO_UPDATE_EVENT,
-  DEFAULT_HERO_SLIDES,
+  DEFAULT_DESKTOP_SLIDES,
+  DEFAULT_MOBILE_SLIDES,
   DEFAULT_HERO_CONFIG,
 } from '../../utils/heroBannerStorage';
 
@@ -36,6 +37,7 @@ export default function HomepageHeroManager() {
   const [saved, setSaved] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [heroForm, setHeroForm] = useState(() => getHeroConfig());
+  const [selectedDevice, setSelectedDevice] = useState('desktop'); // 'desktop' | 'mobile'
   const [activeSlideTab, setActiveSlideTab] = useState(0);
   const [previewSlideIndex, setPreviewSlideIndex] = useState(0);
   const [previewMode, setPreviewMode] = useState('desktop'); // 'desktop' (16:5) | 'mobile' (16:10)
@@ -70,9 +72,33 @@ export default function HomepageHeroManager() {
     };
   }, []);
 
-  const slides = heroForm.slides && heroForm.slides.length > 0
-    ? heroForm.slides
-    : DEFAULT_HERO_SLIDES;
+  // Independent configuration per device
+  const currentDeviceConfig = heroForm[selectedDevice] || {
+    active: true,
+    aspectRatio: selectedDevice === 'desktop' ? '16/5' : '16/10',
+    slides: selectedDevice === 'desktop' ? DEFAULT_DESKTOP_SLIDES : DEFAULT_MOBILE_SLIDES,
+  };
+
+  const slides = (Array.isArray(currentDeviceConfig.slides) && currentDeviceConfig.slides.length > 0)
+    ? currentDeviceConfig.slides
+    : (selectedDevice === 'desktop' ? DEFAULT_DESKTOP_SLIDES : DEFAULT_MOBILE_SLIDES);
+
+  const safeActiveSlideTab = Math.min(activeSlideTab, Math.max(0, slides.length - 1));
+  const safePreviewSlideIndex = Math.min(previewSlideIndex, Math.max(0, slides.length - 1));
+
+  const handleSelectDevice = async (device) => {
+    setSelectedDevice(device);
+    setPreviewMode(device);
+    setActiveSlideTab(0);
+    setPreviewSlideIndex(0);
+    // Refresh latest independent config from backend source of truth on device switch
+    try {
+      const live = await fetchHeroConfig();
+      if (live) {
+        setHeroForm(live);
+      }
+    } catch (_) {}
+  };
 
   const handleUpdateSlide = (index, field, value) => {
     const newSlides = [...slides];
@@ -82,7 +108,10 @@ export default function HomepageHeroManager() {
     };
     setHeroForm({
       ...heroForm,
-      slides: newSlides,
+      [selectedDevice]: {
+        ...currentDeviceConfig,
+        slides: newSlides,
+      },
     });
   };
 
@@ -93,42 +122,65 @@ export default function HomepageHeroManager() {
     const temp = newSlides[index];
     newSlides[index] = newSlides[targetIdx];
     newSlides[targetIdx] = temp;
-    setHeroForm({ ...heroForm, slides: newSlides });
+    setHeroForm({
+      ...heroForm,
+      [selectedDevice]: {
+        ...currentDeviceConfig,
+        slides: newSlides,
+      },
+    });
     setActiveSlideTab(targetIdx);
     setPreviewSlideIndex(targetIdx);
   };
 
   const handleRemoveSlide = (index) => {
+    const deviceLabel = selectedDevice === 'desktop' ? 'Desktop' : 'Mobile / Tablet';
     if (slides.length <= 1) {
-      addToast('At least one hero banner is required.', 'warning');
+      addToast(`At least one ${deviceLabel} hero banner is required.`, 'warning');
       return;
     }
-    if (window.confirm(`Are you sure you want to remove Banner ${index + 1}?`)) {
+    if (window.confirm(`Are you sure you want to remove ${deviceLabel} Banner ${index + 1}?`)) {
       const newSlides = slides.filter((_, idx) => idx !== index);
-      setHeroForm({ ...heroForm, slides: newSlides });
+      setHeroForm({
+        ...heroForm,
+        [selectedDevice]: {
+          ...currentDeviceConfig,
+          slides: newSlides,
+        },
+      });
       const newTab = Math.max(0, index - 1);
       setActiveSlideTab(newTab);
       setPreviewSlideIndex(newTab);
-      addToast(`Banner ${index + 1} removed. Remember to Save Changes.`, 'info');
+      addToast(`${deviceLabel} Banner ${index + 1} removed. Remember to Save Changes.`, 'info');
     }
   };
 
   const handleAddSlide = () => {
     const newSlideNumber = slides.length + 1;
+    const defaultAsset = selectedDevice === 'desktop'
+      ? DEFAULT_DESKTOP_SLIDES[Math.min(newSlideNumber - 1, DEFAULT_DESKTOP_SLIDES.length - 1)].image
+      : DEFAULT_MOBILE_SLIDES[Math.min(newSlideNumber - 1, DEFAULT_MOBILE_SLIDES.length - 1)].image;
+
     const newSlide = {
-      id: `slide-${Date.now()}`,
+      id: `${selectedDevice}-slide-${Date.now()}`,
       title: `NEW COLLECTION EDIT ${newSlideNumber}`,
       subtitle: 'Handcrafted luxury pieces with 18K Gold PVD coating',
       ctaText: 'Explore Collection',
-      image: DEFAULT_HERO_SLIDES[0].image,
+      image: defaultAsset,
       destinationUrl: '/collections',
       active: true,
     };
     const newSlides = [...slides, newSlide];
-    setHeroForm({ ...heroForm, slides: newSlides });
+    setHeroForm({
+      ...heroForm,
+      [selectedDevice]: {
+        ...currentDeviceConfig,
+        slides: newSlides,
+      },
+    });
     setActiveSlideTab(newSlides.length - 1);
     setPreviewSlideIndex(newSlides.length - 1);
-    addToast(`New Banner ${newSlideNumber} added.`, 'success');
+    addToast(`New ${selectedDevice === 'desktop' ? 'Desktop' : 'Mobile'} Banner ${newSlideNumber} added.`, 'success');
   };
 
   const handleSave = async (e) => {
@@ -137,7 +189,7 @@ export default function HomepageHeroManager() {
 
     for (let i = 0; i < slides.length; i++) {
       if (!slides[i]?.image) {
-        addToast(`Please upload or select an image for Banner ${i + 1}`, 'error');
+        addToast(`Please upload or select an image for ${selectedDevice === 'desktop' ? 'Desktop' : 'Mobile'} Banner ${i + 1}`, 'error');
         setActiveSlideTab(i);
         return;
       }
@@ -145,12 +197,22 @@ export default function HomepageHeroManager() {
 
     try {
       setIsSaving(true);
-      await saveHeroConfigApi({
-        ...heroForm,
-        slides,
-      });
+      const res = await saveHeroConfigApi(
+        {
+          ...heroForm,
+          [selectedDevice]: {
+            ...currentDeviceConfig,
+            slides,
+          },
+        },
+        selectedDevice
+      );
+      if (res?.data) {
+        setHeroForm(res.data);
+      }
       setSaved(true);
-      addToast(`Hero banners saved to MongoDB Atlas! All ${slides.length} banners updated live globally.`, 'success');
+      const deviceLabel = selectedDevice === 'desktop' ? 'Desktop (16:5)' : 'Mobile / Tablet (16:10)';
+      addToast(`${deviceLabel} banners saved to MongoDB Atlas! Updated live globally.`, 'success');
       setTimeout(() => setSaved(false), 3000);
     } catch (err) {
       console.error('Save hero banner error:', err);
@@ -162,16 +224,28 @@ export default function HomepageHeroManager() {
   };
 
   const handleReset = async () => {
-    if (window.confirm('Reset all hero banners to original 4 brand defaults across the live store?')) {
+    const deviceLabel = selectedDevice === 'desktop' ? 'Desktop' : 'Mobile / Tablet';
+    if (window.confirm(`Reset ${deviceLabel} banners to default brand images? Other device configuration will NOT be affected.`)) {
+      const defaultSlides = selectedDevice === 'desktop' ? DEFAULT_DESKTOP_SLIDES : DEFAULT_MOBILE_SLIDES;
+      const updatedForm = {
+        ...heroForm,
+        [selectedDevice]: {
+          ...currentDeviceConfig,
+          slides: defaultSlides,
+        },
+      };
+      setHeroForm(updatedForm);
+      setActiveSlideTab(0);
+      setPreviewSlideIndex(0);
       try {
         setIsSaving(true);
-        await resetHeroConfigApi();
-        setHeroForm(DEFAULT_HERO_CONFIG);
-        setPreviewSlideIndex(0);
-        setActiveSlideTab(0);
-        addToast('Hero banners reset to 4 brand defaults globally', 'info');
+        const res = await saveHeroConfigApi(updatedForm, selectedDevice);
+        if (res?.data) {
+          setHeroForm(res.data);
+        }
+        addToast(`${deviceLabel} banners reset to defaults and saved to MongoDB Atlas`, 'info');
       } catch (err) {
-        addToast('Failed to reset hero configuration', 'error');
+        addToast('Failed to save reset configuration', 'error');
       } finally {
         setIsSaving(false);
       }
@@ -187,38 +261,38 @@ export default function HomepageHeroManager() {
     { label: 'Men Collection (/men)', url: '/men' },
   ];
 
-  const currentSlide = slides[activeSlideTab] || slides[0] || DEFAULT_HERO_SLIDES[0];
-  const previewSlide = slides[previewSlideIndex] || slides[0] || DEFAULT_HERO_SLIDES[0];
+  const currentSlide = slides[safeActiveSlideTab] || slides[0] || (selectedDevice === 'desktop' ? DEFAULT_DESKTOP_SLIDES[0] : DEFAULT_MOBILE_SLIDES[0]);
+  const previewSlide = slides[safePreviewSlideIndex] || slides[0] || (selectedDevice === 'desktop' ? DEFAULT_DESKTOP_SLIDES[0] : DEFAULT_MOBILE_SLIDES[0]);
 
   return (
     <div className="space-y-6">
-      {/* Top Header & Status Bar */}
+      {/* Top Header & Global Status Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-[#D6CFFF]/30">
         <div>
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-bold text-[#7464B8] uppercase tracking-wider bg-[#F3EFFF] px-2.5 py-0.5 rounded-full border border-[#D6CFFF]/60">
-              Homepage Hero & Mobile Banners ({slides.length} Banners)
+              Independent Hero Banner CMS
             </span>
           </div>
           <h2 className="font-serif text-2xl text-[#171522] font-light mt-1">
             Homepage Hero Banner Management
           </h2>
           <p className="text-xs text-[#6F6B78] mt-0.5">
-            Manage all 4 hero banners: upload images, set 16:10 mobile & 16:5 desktop view, edit titles, CTAs, destination links, reorder, and save globally to MongoDB Atlas.
+            Desktop and Mobile/Tablet hero banners are completely independent. Modifications to Desktop do not alter Mobile, and vice versa.
           </p>
         </div>
 
         <div className="flex items-center gap-3">
-          {/* Global Status Switch */}
+          {/* Global Hero Enabled Switch */}
           <label className="flex items-center gap-2 cursor-pointer bg-white px-3.5 py-2 rounded-xl border border-[#D6CFFF]/60 shadow-xs hover:border-[#7464B8] transition-colors">
             <input
               type="checkbox"
-              checked={heroForm.active}
+              checked={heroForm.active !== false}
               onChange={(e) => setHeroForm({ ...heroForm, active: e.target.checked })}
               className="rounded text-[#7464B8] focus:ring-[#7464B8] w-4 h-4 accent-[#7464B8]"
             />
             <span className="text-xs font-semibold text-[#171522]">
-              {heroForm.active ? 'Hero: Active' : 'Hero: Inactive'}
+              {heroForm.active !== false ? 'Hero Section: Active' : 'Hero Section: Inactive'}
             </span>
           </label>
 
@@ -227,7 +301,7 @@ export default function HomepageHeroManager() {
             type="button"
             onClick={handleReset}
             disabled={isSaving}
-            title="Reset to default brand images"
+            title={`Reset ${selectedDevice === 'desktop' ? 'Desktop' : 'Mobile'} banners to default brand images`}
             className="p-2 rounded-xl text-gray-400 hover:text-[#171522] hover:bg-white border border-transparent hover:border-[#D6CFFF]/60 transition-all disabled:opacity-50"
           >
             <RotateCcw className="w-4 h-4" />
@@ -252,13 +326,86 @@ export default function HomepageHeroManager() {
         </div>
       </div>
 
+      {/* Prominent Device Configuration Selector */}
+      <div className="bg-white p-3 sm:p-4 rounded-2xl border border-[#D6CFFF]/60 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs font-bold uppercase tracking-wider text-[#171522] shrink-0">
+            Active Configuration:
+          </span>
+          <div className="inline-flex p-1 rounded-xl bg-[#FAF9FF] border border-[#D6CFFF]/60">
+            <button
+              type="button"
+              onClick={() => handleSelectDevice('desktop')}
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                selectedDevice === 'desktop'
+                  ? 'bg-[#171522] text-white shadow-xs'
+                  : 'text-gray-600 hover:text-[#171522]'
+              }`}
+            >
+              <Monitor className="w-3.5 h-3.5" />
+              <span>Desktop (16:5)</span>
+              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-white/20 text-white font-mono">
+                {heroForm.desktop?.slides?.length || 0}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleSelectDevice('mobile')}
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                selectedDevice === 'mobile'
+                  ? 'bg-[#171522] text-white shadow-xs'
+                  : 'text-gray-600 hover:text-[#171522]'
+              }`}
+            >
+              <Smartphone className="w-3.5 h-3.5" />
+              <span>Mobile / Tablet (16:10)</span>
+              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-white/20 text-white font-mono">
+                {heroForm.mobile?.slides?.length || 0}
+              </span>
+            </button>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          {/* Device Active Toggle */}
+          <label className="flex items-center gap-1.5 text-xs text-gray-700 font-medium cursor-pointer">
+            <input
+              type="checkbox"
+              checked={currentDeviceConfig.active !== false}
+              onChange={(e) => {
+                setHeroForm({
+                  ...heroForm,
+                  [selectedDevice]: {
+                    ...currentDeviceConfig,
+                    active: e.target.checked,
+                  },
+                });
+              }}
+              className="rounded text-[#7464B8] w-3.5 h-3.5 accent-[#7464B8]"
+            />
+            <span className="text-xs font-semibold text-[#171522]">
+              {selectedDevice === 'desktop' ? 'Desktop Banners Enabled' : 'Mobile / Tablet Banners Enabled'}
+            </span>
+          </label>
+
+          <span className={`text-[10.5px] px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider border ${
+            selectedDevice === 'desktop'
+              ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
+              : 'bg-purple-50 text-purple-700 border-purple-200'
+          }`}>
+            Editing {selectedDevice === 'desktop' ? 'Desktop Only' : 'Mobile / Tablet Only'}
+          </span>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Column: Multi-Banner Controls */}
+        {/* Left Column: Multi-Banner Controls for Selected Device */}
         <div className="lg:col-span-7 space-y-6">
           {/* Banner Selector Tabs with Add & Reorder */}
           <div className="bg-white p-2 rounded-2xl border border-[#D6CFFF]/60 shadow-xs flex flex-wrap items-center gap-2">
             {slides.map((slide, idx) => {
-              const isSelected = activeSlideTab === idx;
+              const isSelected = safeActiveSlideTab === idx;
               return (
                 <button
                   key={slide.id || idx}
@@ -280,7 +427,7 @@ export default function HomepageHeroManager() {
                   >
                     {idx + 1}
                   </span>
-                  <span>Banner {idx + 1}</span>
+                  <span>{selectedDevice === 'desktop' ? 'Desktop' : 'Mobile'} {idx + 1}</span>
                   {slide.active === false && (
                     <span className="text-[9px] uppercase px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300">
                       Off
@@ -300,7 +447,7 @@ export default function HomepageHeroManager() {
               className="py-2 px-3 rounded-xl text-xs font-semibold bg-[#F3EFFF] text-[#7464B8] hover:bg-[#e7e1fa] border border-[#D6CFFF]/60 transition-all flex items-center gap-1.5"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span>Add Banner</span>
+              <span>Add {selectedDevice === 'desktop' ? 'Desktop' : 'Mobile'} Banner</span>
             </button>
           </div>
 
@@ -309,10 +456,10 @@ export default function HomepageHeroManager() {
             <div className="flex items-center justify-between pb-3 border-b border-[#D6CFFF]/20">
               <div className="flex items-center gap-2">
                 <span className="w-7 h-7 rounded-lg bg-[#7464B8]/10 text-[#7464B8] font-mono text-xs font-bold flex items-center justify-center">
-                  {activeSlideTab + 1}
+                  {safeActiveSlideTab + 1}
                 </span>
                 <h3 className="text-sm font-bold uppercase tracking-wider text-[#171522]">
-                  BANNER {activeSlideTab + 1} CONFIGURATION
+                  {selectedDevice === 'desktop' ? 'DESKTOP' : 'MOBILE / TABLET'} BANNER {safeActiveSlideTab + 1} CONFIGURATION
                 </h3>
               </div>
 
@@ -322,7 +469,7 @@ export default function HomepageHeroManager() {
                   <input
                     type="checkbox"
                     checked={currentSlide.active !== false}
-                    onChange={(e) => handleUpdateSlide(activeSlideTab, 'active', e.target.checked)}
+                    onChange={(e) => handleUpdateSlide(safeActiveSlideTab, 'active', e.target.checked)}
                     className="rounded text-[#7464B8] w-3.5 h-3.5 accent-[#7464B8]"
                   />
                   <span>Active</span>
@@ -331,10 +478,10 @@ export default function HomepageHeroManager() {
                 {/* Move Left / Up */}
                 <button
                   type="button"
-                  onClick={() => handleMoveSlide(activeSlideTab, -1)}
-                  disabled={activeSlideTab === 0}
+                  onClick={() => handleMoveSlide(safeActiveSlideTab, -1)}
+                  disabled={safeActiveSlideTab === 0}
                   title="Move banner earlier in sequence"
-                  className="p-1.5 rounded-lg border border-[#D6CFFF]/60 hover:bg-slate-100 disabled:opacity-30"
+                  className="p-1.5 rounded-lg border border-[#D6CFFF]/60 hover:bg-slate-100 disabled:opacity-30 cursor-pointer"
                 >
                   <ArrowLeft className="w-3.5 h-3.5 text-gray-600" />
                 </button>
@@ -342,10 +489,10 @@ export default function HomepageHeroManager() {
                 {/* Move Right / Down */}
                 <button
                   type="button"
-                  onClick={() => handleMoveSlide(activeSlideTab, 1)}
-                  disabled={activeSlideTab === slides.length - 1}
+                  onClick={() => handleMoveSlide(safeActiveSlideTab, 1)}
+                  disabled={safeActiveSlideTab === slides.length - 1}
                   title="Move banner later in sequence"
-                  className="p-1.5 rounded-lg border border-[#D6CFFF]/60 hover:bg-slate-100 disabled:opacity-30"
+                  className="p-1.5 rounded-lg border border-[#D6CFFF]/60 hover:bg-slate-100 disabled:opacity-30 cursor-pointer"
                 >
                   <ArrowRight className="w-3.5 h-3.5 text-gray-600" />
                 </button>
@@ -354,9 +501,9 @@ export default function HomepageHeroManager() {
                 {slides.length > 1 && (
                   <button
                     type="button"
-                    onClick={() => handleRemoveSlide(activeSlideTab)}
-                    title="Delete banner"
-                    className="p-1.5 rounded-lg border border-red-200 text-red-500 hover:bg-red-50 transition-colors"
+                    onClick={() => handleRemoveSlide(safeActiveSlideTab)}
+                    title={`Delete ${selectedDevice === 'desktop' ? 'Desktop' : 'Mobile'} banner`}
+                    className="p-1.5 rounded-lg border border-red-200 text-red-500 hover:bg-red-50 transition-colors cursor-pointer"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
@@ -366,14 +513,14 @@ export default function HomepageHeroManager() {
 
             {/* Cloudinary Drag & Drop Uploader */}
             <DragDropImageUpload
-              label={`Banner ${activeSlideTab + 1} Image (Cloudinary Persisted)`}
+              label={`${selectedDevice === 'desktop' ? 'Desktop (16:5)' : 'Mobile / Tablet (16:10)'} Banner ${safeActiveSlideTab + 1} Image (Cloudinary Persisted)`}
               value={currentSlide.image}
               onChange={(val) => {
-                handleUpdateSlide(activeSlideTab, 'image', val);
-                setPreviewSlideIndex(activeSlideTab);
+                handleUpdateSlide(safeActiveSlideTab, 'image', val);
+                setPreviewSlideIndex(safeActiveSlideTab);
               }}
-              aspectRatio="aspect-[16/10]"
-              helperText="Uploads directly to Cloudinary and saves globally to MongoDB Atlas. Works across all devices."
+              aspectRatio={selectedDevice === 'desktop' ? 'aspect-[16/5]' : 'aspect-[16/10]'}
+              helperText={`Uploads directly to Cloudinary and saves strictly to ${selectedDevice === 'desktop' ? 'Desktop' : 'Mobile / Tablet'} configuration.`}
             />
 
             {/* Banner Title */}
@@ -384,7 +531,7 @@ export default function HomepageHeroManager() {
               <input
                 type="text"
                 value={currentSlide.title || ''}
-                onChange={(e) => handleUpdateSlide(activeSlideTab, 'title', e.target.value)}
+                onChange={(e) => handleUpdateSlide(safeActiveSlideTab, 'title', e.target.value)}
                 placeholder="e.g. THE ROYAL ANTI-TARNISH COLLECTION"
                 className="w-full px-3.5 py-2.5 rounded-xl text-xs bg-[#FAF9FF] border border-[#D6CFFF]/60 focus:border-[#7464B8] outline-hidden text-[#171522]"
               />
@@ -398,7 +545,7 @@ export default function HomepageHeroManager() {
               <input
                 type="text"
                 value={currentSlide.subtitle || ''}
-                onChange={(e) => handleUpdateSlide(activeSlideTab, 'subtitle', e.target.value)}
+                onChange={(e) => handleUpdateSlide(safeActiveSlideTab, 'subtitle', e.target.value)}
                 placeholder="e.g. Handcrafted with 18K Real Gold PVD coating & lifetime tarnish warranty"
                 className="w-full px-3.5 py-2.5 rounded-xl text-xs bg-[#FAF9FF] border border-[#D6CFFF]/60 focus:border-[#7464B8] outline-hidden text-[#171522]"
               />
@@ -413,7 +560,7 @@ export default function HomepageHeroManager() {
                 <input
                   type="text"
                   value={currentSlide.ctaText || ''}
-                  onChange={(e) => handleUpdateSlide(activeSlideTab, 'ctaText', e.target.value)}
+                  onChange={(e) => handleUpdateSlide(safeActiveSlideTab, 'ctaText', e.target.value)}
                   placeholder="e.g. Shop Women"
                   className="w-full px-3.5 py-2.5 rounded-xl text-xs bg-[#FAF9FF] border border-[#D6CFFF]/60 focus:border-[#7464B8] outline-hidden text-[#171522]"
                 />
@@ -427,7 +574,7 @@ export default function HomepageHeroManager() {
                   <input
                     type="text"
                     value={currentSlide.destinationUrl || ''}
-                    onChange={(e) => handleUpdateSlide(activeSlideTab, 'destinationUrl', e.target.value)}
+                    onChange={(e) => handleUpdateSlide(safeActiveSlideTab, 'destinationUrl', e.target.value)}
                     placeholder="/collections or /women or /bestsellers"
                     className="w-full pl-8 pr-3 py-2.5 rounded-xl text-xs bg-[#FAF9FF] border border-[#D6CFFF]/60 focus:border-[#7464B8] outline-hidden text-[#171522] font-mono"
                   />
@@ -443,8 +590,8 @@ export default function HomepageHeroManager() {
                 <button
                   key={dest.url}
                   type="button"
-                  onClick={() => handleUpdateSlide(activeSlideTab, 'destinationUrl', dest.url)}
-                  className={`px-2.5 py-1 rounded-lg text-[10.5px] font-medium border transition-all ${
+                  onClick={() => handleUpdateSlide(safeActiveSlideTab, 'destinationUrl', dest.url)}
+                  className={`px-2.5 py-1 rounded-lg text-[10.5px] font-medium border transition-all cursor-pointer ${
                     currentSlide.destinationUrl === dest.url
                       ? 'bg-[#171522] text-white border-[#171522]'
                       : 'bg-[#FAF9FF] text-gray-600 border-[#D6CFFF]/50 hover:border-[#7464B8]'
@@ -456,11 +603,11 @@ export default function HomepageHeroManager() {
             </div>
           </div>
 
-          {/* Quick Slides Overview Bar */}
+          {/* Quick Slides Overview Bar for Selected Device */}
           <div className="bg-white p-4 rounded-2xl border border-[#D6CFFF]/50 shadow-xs space-y-2.5">
             <h4 className="text-xs font-bold uppercase tracking-wider text-[#171522] flex items-center gap-1.5">
               <Layers2 className="w-3.5 h-3.5 text-[#7464B8]" />
-              Configured Banners Sequence ({slides.length} Total)
+              {selectedDevice === 'desktop' ? 'Desktop' : 'Mobile / Tablet'} Configured Sequence ({slides.length} Total)
             </h4>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
               {slides.map((s, idx) => (
@@ -471,12 +618,14 @@ export default function HomepageHeroManager() {
                     setPreviewSlideIndex(idx);
                   }}
                   className={`p-2 rounded-xl border cursor-pointer transition-all ${
-                    activeSlideTab === idx
+                    safeActiveSlideTab === idx
                       ? 'border-[#7464B8] bg-[#F3EFFF]/50 ring-1 ring-[#7464B8]'
                       : 'border-[#D6CFFF]/60 bg-[#FAF9FF] hover:border-[#7464B8]/60'
                   }`}
                 >
-                  <div className="aspect-[16/10] rounded-lg overflow-hidden bg-[#120F1D] mb-1.5 relative">
+                  <div className={`rounded-lg overflow-hidden bg-[#120F1D] mb-1.5 relative ${
+                    selectedDevice === 'desktop' ? 'aspect-[16/5]' : 'aspect-[16/10]'
+                  }`}>
                     <img src={s.image} alt={`Banner ${idx + 1}`} className="w-full h-full object-cover object-[center_35%]" />
                     {s.active === false && (
                       <span className="absolute top-1 right-1 text-[8px] uppercase px-1 py-0.2 rounded bg-red-600 text-white font-bold">
@@ -485,7 +634,7 @@ export default function HomepageHeroManager() {
                     )}
                   </div>
                   <div className="flex items-center justify-between text-[10px]">
-                    <span className="font-bold text-[#171522]">Banner {idx + 1}</span>
+                    <span className="font-bold text-[#171522]">{selectedDevice === 'desktop' ? 'Desk' : 'Mob'} {idx + 1}</span>
                     <span className="font-mono text-gray-500 truncate max-w-[70px]">{s.destinationUrl}</span>
                   </div>
                 </div>
@@ -502,8 +651,11 @@ export default function HomepageHeroManager() {
               <div className="flex items-center gap-1 bg-[#FAF9FF] p-1 rounded-xl border border-[#D6CFFF]/50">
                 <button
                   type="button"
-                  onClick={() => setPreviewMode('desktop')}
-                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all ${
+                  onClick={() => {
+                    setPreviewMode('desktop');
+                    if (selectedDevice !== 'desktop') setSelectedDevice('desktop');
+                  }}
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all cursor-pointer ${
                     previewMode === 'desktop'
                       ? 'bg-[#171522] text-white shadow-2xs'
                       : 'text-gray-600 hover:text-[#171522]'
@@ -514,8 +666,11 @@ export default function HomepageHeroManager() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setPreviewMode('mobile')}
-                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all ${
+                  onClick={() => {
+                    setPreviewMode('mobile');
+                    if (selectedDevice !== 'mobile') setSelectedDevice('mobile');
+                  }}
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all cursor-pointer ${
                     previewMode === 'mobile'
                       ? 'bg-[#171522] text-white shadow-2xs'
                       : 'text-gray-600 hover:text-[#171522]'
@@ -528,7 +683,7 @@ export default function HomepageHeroManager() {
 
               <div className="flex items-center gap-1">
                 <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">
-                  Banner {previewSlideIndex + 1} of {slides.length}
+                  {selectedDevice === 'desktop' ? 'Desktop' : 'Mobile'} {safePreviewSlideIndex + 1} of {slides.length}
                 </span>
               </div>
             </div>
@@ -576,20 +731,24 @@ export default function HomepageHeroManager() {
               )}
 
               {/* Navigation Arrows */}
-              <button
-                type="button"
-                onClick={() => setPreviewSlideIndex((prev) => (prev - 1 + slides.length) % slides.length)}
-                className="absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/40 hover:bg-black/70 text-white flex items-center justify-center backdrop-blur-xs border border-white/20"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              <button
-                type="button"
-                onClick={() => setPreviewSlideIndex((prev) => (prev + 1) % slides.length)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/40 hover:bg-black/70 text-white flex items-center justify-center backdrop-blur-xs border border-white/20"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
+              {slides.length > 1 && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setPreviewSlideIndex((prev) => (prev - 1 + slides.length) % slides.length)}
+                    className="absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/40 hover:bg-black/70 text-white flex items-center justify-center backdrop-blur-xs border border-white/20 cursor-pointer"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPreviewSlideIndex((prev) => (prev + 1) % slides.length)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/40 hover:bg-black/70 text-white flex items-center justify-center backdrop-blur-xs border border-white/20 cursor-pointer"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </>
+              )}
             </div>
 
             <div className="flex items-center justify-between text-[11px] text-gray-500 pt-1">

@@ -2,13 +2,33 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { initialHeroBanners } from './promotions/heroBannersData';
-import { getHeroConfig, HERO_UPDATE_EVENT } from '../utils/heroBannerStorage';
+import { getHeroConfig, fetchHeroConfig, HERO_UPDATE_EVENT, DEFAULT_MOBILE_SLIDES } from '../utils/heroBannerStorage';
 
 export default function MobileHeroCarousel() {
   const [heroConfig, setHeroConfig] = useState(() => getHeroConfig());
 
+  // Fetch live CMS configuration from MongoDB Atlas on mount (for clean/incognito mobile sessions)
   useEffect(() => {
-    const handleUpdate = () => setHeroConfig(getHeroConfig());
+    let isMounted = true;
+    fetchHeroConfig().then((liveConfig) => {
+      if (isMounted && liveConfig) {
+        setHeroConfig(liveConfig);
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // Listen for live updates broadcast across tabs and admin saves
+  useEffect(() => {
+    const handleUpdate = (e) => {
+      if (e?.detail) {
+        setHeroConfig(e.detail);
+      } else {
+        setHeroConfig(getHeroConfig());
+      }
+    };
     window.addEventListener(HERO_UPDATE_EVENT, handleUpdate);
     window.addEventListener('storage', handleUpdate);
     return () => {
@@ -17,9 +37,21 @@ export default function MobileHeroCarousel() {
     };
   }, []);
 
-  const banners = (heroConfig.slides && heroConfig.slides.length > 0
-    ? heroConfig.slides
-    : initialHeroBanners)
+  const mobileConfig = heroConfig.mobile || {
+    active: true,
+    aspectRatio: '16/10',
+    slides: DEFAULT_MOBILE_SLIDES,
+  };
+  const isMobileActive = heroConfig.active !== false && mobileConfig.active !== false;
+
+  // STRICT MOBILE RESOLUTION: NEVER FALLBACK TO DESKTOP CONFIGURATION
+  const rawMobileSlides = (mobileConfig.slides && mobileConfig.slides.length > 0)
+    ? mobileConfig.slides
+    : (mobileConfig.banners && mobileConfig.banners.length > 0
+        ? mobileConfig.banners
+        : DEFAULT_MOBILE_SLIDES);
+
+  const banners = rawMobileSlides
     .filter((b) => b.active !== false)
     .map((b, idx) => ({
       id: b.id || `banner-${idx}`,
@@ -105,6 +137,10 @@ export default function MobileHeroCarousel() {
       opacity: 0.85,
     }),
   };
+
+  if (!isMobileActive || banners.length === 0) {
+    return null;
+  }
 
   const currentBanner = banners[currentIndex] || banners[0];
 

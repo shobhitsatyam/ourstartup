@@ -40,9 +40,20 @@ export default function Hero() {
     };
   }, []);
 
-  const slides = heroConfig.slides && heroConfig.slides.length > 0
-    ? heroConfig.slides
-    : DEFAULT_HERO_SLIDES;
+  const desktopConfig = heroConfig.desktop || {
+    active: true,
+    aspectRatio: '16/5',
+    slides: DEFAULT_DESKTOP_SLIDES,
+  };
+  const rawDesktopSlides = (desktopConfig.slides && desktopConfig.slides.length > 0)
+    ? desktopConfig.slides
+    : (desktopConfig.banners && desktopConfig.banners.length > 0
+        ? desktopConfig.banners
+        : (Array.isArray(heroConfig.slides) && !heroConfig.desktop ? heroConfig.slides : DEFAULT_DESKTOP_SLIDES));
+
+  const slides = rawDesktopSlides.filter((s) => s.active !== false);
+
+  const isDesktopActive = heroConfig.active !== false && desktopConfig.active !== false;
 
   // Auto-play slideshow timer (every 4.5 seconds, paused on hover)
   useEffect(() => {
@@ -86,7 +97,7 @@ export default function Hero() {
       {/* DESKTOP HERO BANNER (1025px+) — 16:5 3-IMAGE SLIDESHOW                    */}
       {/* High-end luxury presentation: 16:5 ratio, smooth crossfade, clickable links */}
       {/* ========================================================================= */}
-      {heroConfig.active !== false && (
+      {isDesktopActive && slides.length > 0 && (
         <div className="hidden min-[1025px]:block">
           <section
             className="group relative w-full bg-[#120F1D] border-b border-[#D6CFFF]/30 overflow-hidden select-none"
