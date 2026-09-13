@@ -6,6 +6,7 @@ import Order from '../models/Order.js';
 import RewardTransaction from '../models/RewardTransaction.js';
 import { isMongoConnected } from '../config/db.js';
 import { mockStore } from '../config/mockStore.js';
+import { verifyFirebaseToken } from '../config/firebaseAdmin.js';
 
 const generateToken = (id) => {
   if (!process.env.JWT_SECRET) {
@@ -182,17 +183,37 @@ export const loginUser = async (req, res) => {
 
 export const googleAuth = async (req, res) => {
   try {
-    const { email, name, avatar, googleId } = req.body;
+    let { email, name, avatar, googleId, idToken } = req.body;
+
+    // Cryptographically verify Firebase ID token if provided
+    if (idToken) {
+      try {
+        const decoded = await verifyFirebaseToken(idToken);
+        if (decoded && decoded.email) {
+          email = decoded.email;
+          googleId = decoded.uid;
+          name = decoded.name || name;
+          avatar = decoded.picture || avatar;
+        }
+      } catch (tokenErr) {
+        console.warn('[Google Auth] Token verification notice:', tokenErr.message);
+      }
+    }
 
     if (!email) {
-      return res.status(400).json({ success: false, message: 'Google email is required' });
+      return res.status(400).json({
+        success: false,
+        message: 'Google authentication failed: Email address was not provided by Google. Please try again.',
+      });
     }
 
     const normalizedEmail = email.toLowerCase().trim();
     const adminEmail = (process.env.ADMIN_EMAIL || '').toLowerCase().trim();
 
     if (isMongoConnected) {
-      let user = await User.findOne({ email: normalizedEmail });
+      let user = await User.findOne({
+        $or: [{ firebaseUid: googleId }, { email: normalizedEmail }],
+      });
 
       if (user) {
         // User exists -> Log into existing account
@@ -203,6 +224,10 @@ export const googleAuth = async (req, res) => {
         }
         if (!user.googleId && googleId) {
           user.googleId = googleId;
+          updated = true;
+        }
+        if (!user.firebaseUid && googleId) {
+          user.firebaseUid = googleId;
           updated = true;
         }
         if (adminEmail && normalizedEmail === adminEmail && user.role !== 'admin') {
@@ -239,6 +264,7 @@ export const googleAuth = async (req, res) => {
           email: normalizedEmail,
           avatar: avatar || '',
           googleId: googleId || '',
+          firebaseUid: googleId || '',
           authProvider: 'google',
           oceanPoints: welcomeBonus,
           role,
@@ -272,10 +298,13 @@ export const googleAuth = async (req, res) => {
       }
     } else {
       // MockStore fallback
-      let user = mockStore.users.find((u) => u.email.toLowerCase() === normalizedEmail);
+      let user = mockStore.users.find(
+        (u) => u.firebaseUid === googleId || u.email.toLowerCase() === normalizedEmail
+      );
 
       if (user) {
         if (!user.avatar && avatar) user.avatar = avatar;
+        if (!user.firebaseUid && googleId) user.firebaseUid = googleId;
         if (adminEmail && normalizedEmail === adminEmail) user.role = 'admin';
         const token = generateToken(user._id);
         return res.json({
@@ -300,6 +329,8 @@ export const googleAuth = async (req, res) => {
           email: normalizedEmail,
           phone: '',
           avatar: avatar || '',
+          googleId: googleId || '',
+          firebaseUid: googleId || '',
           authProvider: 'google',
           role,
           oceanPoints: welcomeBonus,
@@ -335,6 +366,180 @@ export const googleAuth = async (req, res) => {
     }
   } catch (error) {
     console.error('Google Auth Controller Error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const firebaseSync = async (req, res) => {
+  try {
+    const { idToken, name: clientName, phone: clientPhone } = req.body;
+
+    if (!idToken) {
+      return res.status(400).json({ success: false, message: 'Firebase ID token is required' });
+    }
+
+    let verifiedUid = '';
+    let verifiedEmail = '';
+    let verifiedName = '';
+    let verifiedPicture = '';
+
+    try {
+      const decoded = await verifyFirebaseToken(idToken);
+      verifiedUid = decoded.uid;
+      verifiedEmail = (decoded.email || '').toLowerCase().trim();
+      verifiedName = decoded.name || '';
+      verifiedPicture = decoded.picture || '';
+    } catch (tokenErr) {
+      console.warn('[Firebase Auth Sync] Token verification failed:', tokenErr.message);
+      return res.status(401).json({ success: false, message: 'Invalid or expired Firebase authentication token' });
+    }
+
+    if (!verifiedEmail) {
+      return res.status(400).json({ success: false, message: 'Verified email is required for customer account' });
+    }
+
+    const adminEmail = (process.env.ADMIN_EMAIL || '').toLowerCase().trim();
+
+    if (isMongoConnected) {
+      let user = await User.findOne({
+        $or: [{ firebaseUid: verifiedUid }, { email: verifiedEmail }],
+      });
+
+      if (user) {
+        let updated = false;
+        if (!user.firebaseUid) {
+          user.firebaseUid = verifiedUid;
+          updated = true;
+        }
+        if (!user.avatar && verifiedPicture) {
+          user.avatar = verifiedPicture;
+          updated = true;
+        }
+        if (!user.name && (verifiedName || clientName)) {
+          user.name = verifiedName || clientName;
+          updated = true;
+        }
+        if (clientPhone && !user.phone) {
+          user.phone = clientPhone;
+          updated = true;
+        }
+        if (adminEmail && verifiedEmail === adminEmail && user.role !== 'admin') {
+          user.role = 'admin';
+          updated = true;
+        }
+        if (updated) {
+          await user.save();
+        }
+
+        const token = generateToken(user._id);
+        return res.json({
+          success: true,
+          data: {
+            _id: user._id,
+            name: user.name,
+            email: user.email,
+            phone: user.phone || '',
+            role: user.role,
+            oceanPoints: user.oceanPoints,
+            avatar: user.avatar || '',
+            token,
+          },
+          message: `Welcome back, ${user.name}!`,
+        });
+      } else {
+        const welcomeBonus = 50;
+        const role = adminEmail && verifiedEmail === adminEmail ? 'admin' : 'user';
+
+        user = await User.create({
+          name: verifiedName || clientName || verifiedEmail.split('@')[0],
+          email: verifiedEmail,
+          phone: clientPhone || '',
+          avatar: verifiedPicture || '',
+          firebaseUid: verifiedUid,
+          authProvider: 'firebase',
+          oceanPoints: welcomeBonus,
+          role,
+          isVerified: true,
+        });
+
+        await RewardTransaction.create({
+          user: user._id,
+          points: welcomeBonus,
+          type: 'BONUS',
+          description: 'Welcome to Zivana Jewels! New Member Bonus',
+          balanceAfter: welcomeBonus,
+        });
+
+        const token = generateToken(user._id);
+        return res.status(201).json({
+          success: true,
+          data: {
+            _id: user._id,
+            name: user.name,
+            email: user.email,
+            phone: user.phone || '',
+            role: user.role,
+            oceanPoints: user.oceanPoints,
+            avatar: user.avatar || '',
+            token,
+          },
+          message: 'Account created successfully! You received 50 Ocean Points as a welcome gift.',
+        });
+      }
+    } else {
+      let user = mockStore.users.find(
+        (u) => u.firebaseUid === verifiedUid || u.email.toLowerCase() === verifiedEmail
+      );
+      if (user) {
+        if (!user.firebaseUid) user.firebaseUid = verifiedUid;
+        if (!user.avatar && verifiedPicture) user.avatar = verifiedPicture;
+        const token = generateToken(user._id);
+        return res.json({
+          success: true,
+          data: {
+            _id: user._id,
+            name: user.name,
+            email: user.email,
+            phone: user.phone || '',
+            role: user.role,
+            oceanPoints: user.oceanPoints,
+            avatar: user.avatar || '',
+            token,
+          },
+          message: `Welcome back, ${user.name}!`,
+        });
+      } else {
+        const welcomeBonus = 50;
+        const role = adminEmail && verifiedEmail === adminEmail ? 'admin' : 'user';
+        const newUser = {
+          _id: `user_${Date.now()}`,
+          name: verifiedName || clientName || verifiedEmail.split('@')[0],
+          email: verifiedEmail,
+          phone: clientPhone || '',
+          firebaseUid: verifiedUid,
+          role,
+          oceanPoints: welcomeBonus,
+          createdAt: new Date().toISOString(),
+        };
+        mockStore.users.push(newUser);
+        const token = generateToken(newUser._id);
+        return res.status(201).json({
+          success: true,
+          data: {
+            _id: newUser._id,
+            name: newUser.name,
+            email: newUser.email,
+            phone: newUser.phone,
+            role: newUser.role,
+            oceanPoints: newUser.oceanPoints,
+            token,
+          },
+          message: 'Account created successfully! You received 50 Ocean Points as a welcome gift.',
+        });
+      }
+    }
+  } catch (error) {
+    console.error('Firebase sync error:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 };

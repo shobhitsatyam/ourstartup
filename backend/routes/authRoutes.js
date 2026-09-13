@@ -3,6 +3,7 @@ import {
   registerUser,
   loginUser,
   googleAuth,
+  firebaseSync,
   getMe,
   updateProfile,
   getUserAddresses,
@@ -17,6 +18,7 @@ const router = express.Router();
 router.post('/register', registerUser);
 router.post('/login', loginUser);
 router.post('/google', googleAuth);
+router.post('/firebase-sync', firebaseSync);
 router.get('/me', protect, getMe);
 router.put('/profile', protect, updateProfile);
 

@@ -1,176 +1,28 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate, useSearchParams, Link } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Loader2, AlertCircle, Sparkles, ArrowLeft, RefreshCw } from 'lucide-react';
-import { supabase, isSupabaseConfigured } from '../lib/supabase';
-import { useAuth } from '../context/AuthContext';
-import { useToast } from '../context/ToastContext';
+import { Sparkles, Loader2 } from 'lucide-react';
 
 export default function AuthCallbackPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { loginWithGoogle } = useAuth();
-  const { addToast } = useToast();
-  const [errorMessage, setErrorMessage] = useState('');
-  const [errorDetails, setErrorDetails] = useState('');
 
   useEffect(() => {
-    let isMounted = true;
-    let resolved = false;
+    // Cleanly redirect any traffic to /account or the saved redirect destination
+    const savedRedirect = sessionStorage.getItem('ocean_oauth_redirect');
+    sessionStorage.removeItem('ocean_oauth_redirect');
+    const redirectParam = savedRedirect || searchParams.get('redirect');
+    const destination =
+      redirectParam && redirectParam.startsWith('/') && !redirectParam.startsWith('//')
+        ? redirectParam
+        : '/account';
 
-    const handleCallback = async () => {
-      // 1. Extract params from both query string and hash fragment
-      const queryParams = new URLSearchParams(window.location.search);
-      const hashString = window.location.hash.startsWith('#')
-        ? window.location.hash.slice(1)
-        : window.location.hash;
-      const hashParams = new URLSearchParams(hashString);
+    const timer = setTimeout(() => {
+      navigate(destination, { replace: true });
+    }, 400);
 
-      const oauthError = queryParams.get('error') || hashParams.get('error');
-      const errorDescription = queryParams.get('error_description') || hashParams.get('error_description');
-      const errorCode = queryParams.get('error_code') || hashParams.get('error_code');
-
-      // Check for OAuth error returned by provider / Supabase
-      if (oauthError) {
-        console.error('Google OAuth callback error received:', { oauthError, errorCode, errorDescription });
-        const decodedDesc = errorDescription
-          ? decodeURIComponent(errorDescription.replace(/\+/g, ' '))
-          : '';
-
-        let friendlyMsg = decodedDesc;
-        if (!friendlyMsg) {
-          if (errorCode === 'unexpected_failure' || oauthError === 'server_error') {
-            friendlyMsg =
-              'Google OAuth provider exchange encountered an issue with Supabase configuration. Please check that Google Cloud OAuth credentials and authorized domains are configured in your Supabase project.';
-          } else {
-            friendlyMsg = 'Google authentication could not be completed. Please sign in with your email & password.';
-          }
-        }
-
-        const detailsList = [];
-        if (errorCode) detailsList.push(`Code: ${errorCode}`);
-        if (oauthError) detailsList.push(`Error: ${oauthError}`);
-        if (decodedDesc && decodedDesc !== friendlyMsg) detailsList.push(`Details: ${decodedDesc}`);
-
-        if (isMounted) {
-          setErrorMessage(friendlyMsg);
-          setErrorDetails(detailsList.join(' | '));
-        }
-        addToast(friendlyMsg, 'error');
-        return;
-      }
-
-      if (!isSupabaseConfigured) {
-        const msg = 'Supabase environment credentials are not configured.';
-        if (isMounted) setErrorMessage(msg);
-        addToast(msg, 'error');
-        return;
-      }
-
-      const processSessionUser = async (supaUser) => {
-        if (resolved) return;
-        resolved = true;
-
-        const email = supaUser.email;
-        const name =
-          supaUser.user_metadata?.full_name ||
-          supaUser.user_metadata?.name ||
-          email?.split('@')[0] ||
-          'Valued Patron';
-        const avatar =
-          supaUser.user_metadata?.avatar_url ||
-          supaUser.user_metadata?.picture ||
-          '';
-        const googleId = supaUser.id;
-
-        // Synchronize with Zivana Jewels backend API
-        const result = await loginWithGoogle({ email, name, avatar, googleId });
-
-        if (result?.success) {
-          const savedRedirect = sessionStorage.getItem('ocean_oauth_redirect');
-          sessionStorage.removeItem('ocean_oauth_redirect');
-          const redirectParam = savedRedirect || queryParams.get('redirect') || hashParams.get('redirect');
-          const destination =
-            redirectParam && redirectParam.startsWith('/') && !redirectParam.startsWith('//')
-              ? redirectParam
-              : '/account';
-          navigate(destination, { replace: true });
-        } else {
-          const errorMsg = result?.message || 'Failed to synchronize user account with server.';
-          if (isMounted) setErrorMessage(errorMsg);
-        }
-      };
-
-      try {
-        // 1. Check if session was already detected or processed by Supabase client (detectSessionInUrl)
-        const { data: initialSessionData } = await supabase.auth.getSession();
-        if (initialSessionData?.session?.user) {
-          await processSessionUser(initialSessionData.session.user);
-          return;
-        }
-
-        // 2. PKCE Authorization Code Exchange (if authCode is present)
-        const authCode = queryParams.get('code') || hashParams.get('code');
-        if (authCode) {
-          try {
-            const { data: exchangeData, error: exchangeError } =
-              await supabase.auth.exchangeCodeForSession(authCode);
-            if (!exchangeError && exchangeData?.session?.user) {
-              await processSessionUser(exchangeData.session.user);
-              return;
-            } else if (exchangeError) {
-              console.warn('PKCE exchangeCodeForSession notice:', exchangeError.message);
-              // Re-check session in case detectSessionInUrl completed it concurrently
-              const { data: recheckSession } = await supabase.auth.getSession();
-              if (recheckSession?.session?.user) {
-                await processSessionUser(recheckSession.session.user);
-                return;
-              }
-            }
-          } catch (codeErr) {
-            console.warn('Code exchange attempt caught:', codeErr);
-          }
-        }
-
-        // 3. Fallback check for session
-        const { data: { session: fallbackSession } } = await supabase.auth.getSession();
-        if (fallbackSession?.user) {
-          await processSessionUser(fallbackSession.user);
-          return;
-        }
-
-        // 4. Subscribe to auth state change events
-        const { data: authListener } = supabase.auth.onAuthStateChange(async (event, authSession) => {
-          if (
-            (event === 'SIGNED_IN' || event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED') &&
-            authSession?.user
-          ) {
-            authListener?.subscription?.unsubscribe();
-            await processSessionUser(authSession.user);
-          }
-        });
-
-        // 5. Timeout safety fallback after 8 seconds
-        setTimeout(() => {
-          if (isMounted && !resolved) {
-            authListener?.subscription?.unsubscribe();
-            setErrorMessage('Authentication session timed out. Please return to the login portal and try again.');
-          }
-        }, 8000);
-      } catch (err) {
-        console.error('OAuth Callback Processing Error:', err);
-        const msg = err.message || 'Failed to complete Google authentication.';
-        if (isMounted) setErrorMessage(msg);
-        addToast(msg, 'error');
-      }
-    };
-
-    handleCallback();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [searchParams, navigate, loginWithGoogle, addToast]);
+    return () => clearTimeout(timer);
+  }, [navigate, searchParams]);
 
   return (
     <div className="min-h-[calc(100vh-80px)] bg-[#FAF9FF] py-16 flex items-center justify-center px-4">
@@ -183,61 +35,26 @@ export default function AuthCallbackPage() {
         <span className="text-[11px] font-bold uppercase tracking-[0.3em] text-[#7464B8]">
           Zivana Jewels Client Portal
         </span>
-
-        {errorMessage ? (
-          <div className="space-y-4 py-2">
-            <div className="w-12 h-12 rounded-full bg-rose-50 border border-rose-200 text-rose-600 mx-auto flex items-center justify-center">
-              <AlertCircle className="w-6 h-6" />
-            </div>
-            <h2 className="font-serif text-2xl font-light text-[#17151F]">
-              Authentication Issue
-            </h2>
-            <p className="text-xs text-rose-700 bg-rose-50/80 p-3 rounded-xl border border-rose-200/60 font-medium leading-relaxed">
-              {errorMessage}
-            </p>
-            {errorDetails && (
-              <p className="text-[11px] text-gray-400 font-mono">
-                {errorDetails}
-              </p>
-            )}
-            <div className="pt-2 flex flex-col sm:flex-row gap-3 justify-center">
-              <button
-                onClick={() => navigate('/account', { replace: true })}
-                className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-[#17151F] text-white text-xs font-medium hover:bg-[#2A2635] transition-colors shadow-sm"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                <span>Return to Sign In</span>
-              </button>
-              <button
-                onClick={() => window.location.reload()}
-                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-[#D6CFFF] text-[#17151F] text-xs font-medium hover:bg-[#FAF9FF] transition-colors"
-              >
-                <RefreshCw className="w-3.5 h-3.5" />
-                <span>Retry</span>
-              </button>
+        <div className="space-y-4 py-4">
+          <div className="relative w-14 h-14 mx-auto flex items-center justify-center">
+            <div className="absolute inset-0 rounded-full border-2 border-[#D6CFFF]/40 animate-ping" />
+            <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-[#17151F] to-[#2A2635] flex items-center justify-center text-[#D6CFFF] shadow-md">
+              <Sparkles className="w-5 h-5 text-[#D6CFFF] animate-pulse" />
             </div>
           </div>
-        ) : (
-          <div className="space-y-4 py-4">
-            <div className="relative w-14 h-14 mx-auto flex items-center justify-center">
-              <div className="absolute inset-0 rounded-full border-2 border-[#D6CFFF]/40 animate-ping" />
-              <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-[#17151F] to-[#2A2635] flex items-center justify-center text-[#D6CFFF] shadow-md">
-                <Sparkles className="w-5 h-5 text-[#D6CFFF] animate-pulse" />
-              </div>
-            </div>
-            <h2 className="font-serif text-2xl font-light text-[#17151F]">
-              Connecting to Google
-            </h2>
-            <p className="text-xs text-gray-500 font-light leading-relaxed max-w-xs mx-auto">
-              Finalizing your secure patron session. You will be redirected momentarily...
-            </p>
-            <div className="flex items-center justify-center gap-2 pt-2 text-[#7464B8] text-xs font-semibold">
-              <Loader2 className="w-4 h-4 animate-spin text-[#7464B8]" />
-              <span>Verifying credentials</span>
-            </div>
+          <h2 className="font-serif text-2xl font-light text-[#17151F]">
+            Directing to Patron Portal
+          </h2>
+          <p className="text-xs text-gray-500 font-light leading-relaxed max-w-xs mx-auto">
+            Please wait while we transfer you to your account...
+          </p>
+          <div className="flex items-center justify-center gap-2 pt-2 text-[#7464B8] text-xs font-semibold">
+            <Loader2 className="w-4 h-4 animate-spin text-[#7464B8]" />
+            <span>Redirecting</span>
           </div>
-        )}
+        </div>
       </motion.div>
     </div>
   );
 }
+

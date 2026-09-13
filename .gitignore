@@ -11,6 +11,10 @@ node_modules
 .env.development.local
 .env.test.local
 .env.production.local
+*serviceAccount*.json
+*firebase*.json
+*.pem
+*.key
 
 # Production build
 dist

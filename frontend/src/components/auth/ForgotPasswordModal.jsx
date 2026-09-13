@@ -1,27 +1,47 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Mail, CheckCircle2, Loader2, ArrowRight } from 'lucide-react';
+import { sendPasswordResetEmail } from 'firebase/auth';
+import { auth, isFirebaseConfigured } from '../../lib/firebase';
 
 export default function ForgotPasswordModal({ isOpen, onClose }) {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!email) return;
+    if (!email.trim()) return;
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
+    setErrorMsg('');
+
+    try {
+      if (isFirebaseConfigured && auth) {
+        await sendPasswordResetEmail(auth, email.trim());
+      }
       setSent(true);
-    }, 800);
+    } catch (err) {
+      console.error('Password reset error:', err);
+      if (err.code === 'auth/user-not-found') {
+        // Industry best practice: avoid user enumeration by indicating link is sent
+        setSent(true);
+      } else if (err.code === 'auth/invalid-email') {
+        setErrorMsg('Please provide a valid email address.');
+      } else {
+        setErrorMsg(err.message || 'Unable to send password reset email. Please try again.');
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleClose = () => {
     setSent(false);
     setEmail('');
+    setErrorMsg('');
     onClose();
   };
 
@@ -104,6 +124,12 @@ export default function ForgotPasswordModal({ isOpen, onClose }) {
                   <Mail className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                 </div>
               </div>
+
+              {errorMsg && (
+                <p className="text-xs text-rose-600 bg-rose-50 p-2.5 rounded-xl border border-rose-200 font-medium">
+                  {errorMsg}
+                </p>
+              )}
 
               <button
                 type="submit"

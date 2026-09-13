@@ -37,7 +37,8 @@ import AuthDivider from '../components/auth/AuthDivider';
 import PasswordInput from '../components/auth/PasswordInput';
 import MobileOTPSection from '../components/auth/MobileOTPSection';
 import ForgotPasswordModal from '../components/auth/ForgotPasswordModal';
-import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { signInWithPopup, signInWithRedirect, getRedirectResult } from 'firebase/auth';
+import { auth, googleProvider, isFirebaseConfigured } from '../lib/firebase';
 
 export default function AccountPage({ initialAuthMode }) {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -92,15 +93,39 @@ export default function AccountPage({ initialAuthMode }) {
   });
 
   // Rewards State
-  // If the user was redirected back to /account directly with OAuth code, token, or error, route to /auth/callback
+  // Handle redirect result if user returned from mobile signInWithRedirect
   useEffect(() => {
-    const hasOAuthCode = searchParams.get('code');
-    const hasOAuthError = searchParams.get('error');
-    const hasHashAuth = window.location.hash.includes('access_token=') || window.location.hash.includes('error=');
-    if (hasOAuthCode || hasOAuthError || hasHashAuth) {
-      navigate(`/auth/callback${window.location.search}${window.location.hash}`, { replace: true });
+    if (isFirebaseConfigured && auth) {
+      getRedirectResult(auth)
+        .then(async (result) => {
+          if (result && result.user) {
+            setGoogleLoading(true);
+            const idToken = await result.user.getIdToken();
+            const res = await loginWithGoogle({
+              email: result.user.email,
+              name: result.user.displayName || result.user.email?.split('@')[0] || 'Valued Patron',
+              avatar: result.user.photoURL || '',
+              googleId: result.user.uid,
+              idToken,
+            });
+            setGoogleLoading(false);
+            if (res?.success) {
+              const redirectParam = searchParams.get('redirect');
+              if (redirectParam) {
+                navigate(redirectParam);
+              }
+            }
+          }
+        })
+        .catch((err) => {
+          console.error('Firebase redirect auth error:', err);
+          setGoogleLoading(false);
+          if (err.code !== 'auth/popup-closed-by-user' && err.code !== 'auth/cancelled-popup-request') {
+            setAuthError(err.message || 'Google sign-in could not be completed.');
+          }
+        });
     }
-  }, [searchParams, navigate]);
+  }, [searchParams, navigate, loginWithGoogle]);
 
   useEffect(() => {
     if (user) {
@@ -187,47 +212,102 @@ export default function AccountPage({ initialAuthMode }) {
   };
 
   const handleGoogleAuth = async () => {
+    if (googleLoading) return;
     setGoogleLoading(true);
     setAuthError('');
 
-    if (!isSupabaseConfigured) {
+    if (!isFirebaseConfigured) {
       setGoogleLoading(false);
-      setAuthError('Supabase is not configured yet. Please provide VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in frontend/.env.');
+      setAuthError('Firebase Authentication is pending configuration. Please provide VITE_FIREBASE_API_KEY in frontend/.env.');
       return;
     }
 
     try {
-      // Preserve intended redirect in sessionStorage so redirectTo is always a clean whitelist URL
-      const redirectParam = searchParams.get('redirect');
-      if (redirectParam && redirectParam.startsWith('/') && !redirectParam.startsWith('//')) {
-        sessionStorage.setItem('ocean_oauth_redirect', redirectParam);
-      } else {
-        sessionStorage.removeItem('ocean_oauth_redirect');
+      let userCredential = null;
+      try {
+        userCredential = await signInWithPopup(auth, googleProvider);
+      } catch (popupErr) {
+        if (popupErr.code === 'auth/popup-blocked') {
+          await signInWithRedirect(auth, googleProvider);
+          return;
+        }
+        throw popupErr;
       }
 
-      // Dynamically use current origin (supports localhost and Vercel domain)
-      const origin =
-        typeof window !== 'undefined' && window.location.origin
-          ? window.location.origin.replace(/\/+$/, '')
-          : 'https://ourstartup-woad.vercel.app';
-      const redirectTo = `${origin}/auth/callback`;
+      const fbUser = userCredential.user;
+      if (!fbUser) {
+        setGoogleLoading(false);
+        setAuthError('Google sign-in could not be completed. No user information was returned.');
+        return;
+      }
 
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo,
-        },
+      console.log('[Firebase Auth] Result received: User authenticated', {
+        userExists: !!fbUser,
+        uidExists: !!fbUser.uid,
+        emailExists: !!fbUser.email,
       });
 
-      if (error) {
-        throw error;
+      const idToken = await fbUser.getIdToken();
+      console.log('[Firebase Auth] ID token obtained:', !!idToken);
+
+      const res = await loginWithGoogle({
+        email: fbUser.email,
+        name: fbUser.displayName || fbUser.email?.split('@')[0] || 'Valued Patron',
+        avatar: fbUser.photoURL || '',
+        googleId: fbUser.uid,
+        idToken,
+      });
+
+      setGoogleLoading(false);
+      if (res?.success) {
+        const redirectParam = searchParams.get('redirect');
+        if (redirectParam) {
+          navigate(redirectParam);
+        }
+      } else {
+        setAuthError(res?.message || 'Google authentication sync failed. Please try again.');
+      }
+    } catch (err) {
+      console.error('Firebase Google Auth Error:', err);
+      setGoogleLoading(false);
+
+      if (
+        err.code === 'auth/popup-closed-by-user' ||
+        err.code === 'auth/cancelled-popup-request'
+      ) {
+        return;
       }
 
-      // Browser will redirect to Google's sign-in screen
-    } catch (err) {
-      console.error('Supabase Google OAuth Error:', err);
-      setGoogleLoading(false);
-      setAuthError(err.message || 'Unable to continue with Google. Please try again.');
+      if (err.code === 'auth/popup-blocked') {
+        setAuthError('The Google sign-in window was blocked by your browser. Please allow popups for this site and try again.');
+        return;
+      }
+
+      if (err.code === 'auth/account-exists-with-different-credential') {
+        setAuthError('An account already exists with this email address using a different sign-in method. Please sign in using your email and password.');
+        return;
+      }
+
+      if (err.code === 'auth/unauthorized-domain') {
+        setAuthError('This domain is not authorized in Firebase. Please ensure ourstartup-woad.vercel.app and your production domain are added to Authorized Domains in Firebase Console.');
+        return;
+      }
+
+      if (err.code === 'auth/network-request-failed') {
+        setAuthError('Network connection issue. Please check your internet connection and try again.');
+        return;
+      }
+
+      if (
+        err.code === 'auth/configuration-not-found' ||
+        err.code === 'auth/invalid-api-key' ||
+        err.code === 'auth/app-not-authorized'
+      ) {
+        setAuthError('Firebase Authentication configuration error. Please ensure Google provider is enabled in your Firebase Console.');
+        return;
+      }
+
+      setAuthError('Unable to complete Google sign-in. Please try again or use your email and password.');
     }
   };
 
@@ -329,7 +409,7 @@ export default function AccountPage({ initialAuthMode }) {
                   setAuthError('');
                 }}
                 onComplete={(otpData) => {
-                  addToast('Mobile OTP verification structure ready for Supabase', 'info');
+                  addToast('Mobile OTP verification is currently in development.', 'info');
                 }}
               />
             ) : (

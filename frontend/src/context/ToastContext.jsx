@@ -7,20 +7,26 @@ const ToastContext = createContext();
 export const ToastProvider = ({ children }) => {
   const [toasts, setToasts] = useState([]);
 
-  const addToast = useCallback((message, type = 'success', duration = 4000) => {
-    const id = Date.now() + Math.random().toString(36).substring(2, 5);
-    setToasts((prev) => [...prev, { id, message, type }]);
-
-    if (duration > 0) {
-      setTimeout(() => {
-        removeToast(id);
-      }, duration);
-    }
-  }, []);
-
   const removeToast = useCallback((id) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
+
+  const addToast = useCallback((message, type = 'success', duration = 4000) => {
+    if (!message) return;
+    setToasts((prev) => {
+      // Prevent duplicate stacked notifications of the same message and type
+      const isDuplicate = prev.some((t) => t.message === message && t.type === type);
+      if (isDuplicate) return prev;
+
+      const id = Date.now() + Math.random().toString(36).substring(2, 5);
+      if (duration > 0) {
+        setTimeout(() => {
+          removeToast(id);
+        }, duration);
+      }
+      return [...prev, { id, message, type }];
+    });
+  }, [removeToast]);
 
   return (
     <ToastContext.Provider value={{ addToast, removeToast }}>

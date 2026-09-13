@@ -36,7 +36,7 @@ export default function MobileOTPSection({ onBackToEmail, onComplete }) {
     setError('');
     setLoading(true);
 
-    // UI state preparation: In actual Supabase integration, supabase.auth.signInWithOtp({ phone }) is called here.
+    // UI state preparation for phone OTP verification
     setTimeout(() => {
       setLoading(false);
       setStep('otp');
@@ -102,7 +102,7 @@ export default function MobileOTPSection({ onBackToEmail, onComplete }) {
     setLoading(true);
     setError('');
 
-    // In future Supabase Phone OTP: supabase.auth.verifyOtp({ phone, token, type: 'sms' })
+    // Phone OTP verification flow
     // Structure is ready; invoke callback
     setTimeout(() => {
       setLoading(false);
