@@ -21,6 +21,7 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import SmartCouponSuggestion from '../components/cart/SmartCouponSuggestion';
 import api from '../services/api';
+import { launchCashfreeCheckout } from '../services/cashfree';
 
 export default function CheckoutPage() {
   const {
@@ -63,8 +64,8 @@ export default function CheckoutPage() {
   const [pincodeLookupLoading, setPincodeLookupLoading] = useState(false);
   const [pincodeSuccessMsg, setPincodeSuccessMsg] = useState('');
 
-  // Payment Method
-  const [paymentMethod, setPaymentMethod] = useState('razorpay'); // 'razorpay' or 'cod'
+  // Payment Method: 'upi' | 'card' | 'cod'
+  const [paymentMethod, setPaymentMethod] = useState('upi');
   const [isProcessing, setIsProcessing] = useState(false);
 
   // COD Handling Fee is ₹15 extra (Non-refundable)
@@ -208,7 +209,7 @@ export default function CheckoutPage() {
           size: item.size,
         })),
         shippingAddress: finalAddress,
-        paymentMethod: paymentMethod === 'cod' ? 'cod' : 'razorpay',
+        paymentMethod: paymentMethod === 'cod' ? 'cod' : 'cashfree',
         couponCode: appliedCoupon?.code || '',
         redeemOceanPoints: redeemOceanPoints,
       };
@@ -220,24 +221,15 @@ export default function CheckoutPage() {
 
       const createdOrder = orderRes.data.data;
 
-      // 2. If Razorpay / Online Payment: Initiate Razorpay Verification Architecture
-      if (paymentMethod === 'razorpay') {
-        const rzpRes = await api.post('/payments/razorpay-order', { orderId: createdOrder._id });
-        if (rzpRes.data?.success) {
-          // Interactive Simulated Razorpay Verification
-          const verifyRes = await api.post('/payments/verify', {
-            orderId: createdOrder._id,
-            razorpay_order_id: rzpRes.data.data.razorpayOrderId,
-            razorpay_payment_id: `pay_${Date.now()}`,
-            razorpay_signature: 'simulated_success',
-          });
-
-          if (verifyRes.data?.success) {
-            clearCart();
-            addToast('Payment verified successfully!', 'success');
-            navigate(`/order-success?orderId=${createdOrder._id}`);
-            return;
-          }
+      // 2. If Online Payment (UPI or Card): Initiate Cashfree Hosted Web Checkout
+      if (paymentMethod !== 'cod') {
+        const cfRes = await api.post('/payment/cashfree/create-order', { orderId: createdOrder._id });
+        if (cfRes.data?.success && cfRes.data?.data?.payment_session_id) {
+          addToast('Opening secure payment portal...', 'info');
+          await launchCashfreeCheckout(cfRes.data.data.payment_session_id, '_self');
+          return;
+        } else {
+          throw new Error(cfRes.data?.message || 'Failed to initialize payment session.');
         }
       }
 
@@ -624,10 +616,10 @@ export default function CheckoutPage() {
                 </h3>
 
                 <div className="space-y-3 text-xs">
-                  {/* Razorpay Online */}
+                  {/* Option 1: UPI */}
                   <label
                     className={`flex items-start justify-between p-4 rounded-2xl border-2 cursor-pointer transition-all ${
-                      paymentMethod === 'razorpay'
+                      paymentMethod === 'upi'
                         ? 'border-[#17151F] bg-[#F3EFFF]/50 shadow-sm'
                         : 'border-gray-100 hover:border-gray-300'
                     }`}
@@ -636,23 +628,41 @@ export default function CheckoutPage() {
                       <input
                         type="radio"
                         name="paymentMethod"
-                        checked={paymentMethod === 'razorpay'}
-                        onChange={() => setPaymentMethod('razorpay')}
+                        checked={paymentMethod === 'upi'}
+                        onChange={() => setPaymentMethod('upi')}
                         className="mt-0.5 accent-[#17151F]"
                       />
                       <div>
-                        <div className="flex items-center gap-2">
-                          <p className="font-bold text-gray-900 text-sm">Online Payment via Razorpay</p>
-                          <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-[#D6CFFF] text-[#17151F]">
-                            RECOMMENDED
-                          </span>
-                        </div>
-                        <p className="text-gray-500 mt-0.5">UPI (Google Pay, PhonePe, Paytm), Credit/Debit Cards, NetBanking</p>
+                        <p className="font-bold text-gray-900 text-sm">UPI</p>
+                        <p className="text-gray-500 mt-0.5">Google Pay • PhonePe • Paytm</p>
                       </div>
                     </div>
                   </label>
 
-                  {/* Cash on Delivery */}
+                  {/* Option 2: Credit / Debit Card */}
+                  <label
+                    className={`flex items-start justify-between p-4 rounded-2xl border-2 cursor-pointer transition-all ${
+                      paymentMethod === 'card'
+                        ? 'border-[#17151F] bg-[#F3EFFF]/50 shadow-sm'
+                        : 'border-gray-100 hover:border-gray-300'
+                    }`}
+                  >
+                    <div className="flex gap-3">
+                      <input
+                        type="radio"
+                        name="paymentMethod"
+                        checked={paymentMethod === 'card'}
+                        onChange={() => setPaymentMethod('card')}
+                        className="mt-0.5 accent-[#17151F]"
+                      />
+                      <div>
+                        <p className="font-bold text-gray-900 text-sm">Credit / Debit Card</p>
+                        <p className="text-gray-500 mt-0.5">Visa • Mastercard • RuPay</p>
+                      </div>
+                    </div>
+                  </label>
+
+                  {/* Option 3: Cash on Delivery */}
                   <label
                     className={`flex items-start justify-between p-4 rounded-2xl border-2 cursor-pointer transition-all ${
                       paymentMethod === 'cod'
@@ -686,7 +696,7 @@ export default function CheckoutPage() {
 
                 <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 flex items-center gap-2">
                   <Lock className="w-4 h-4 shrink-0 text-emerald-700" />
-                  <span>256-Bit Encrypted Bank-Grade Checkout. Razorpay Verified.</span>
+                  <span>256-Bit Encrypted Bank-Grade Checkout. 100% Safe & Secure.</span>
                 </div>
 
                 <div className="flex gap-2.5 sm:gap-3 pt-2">

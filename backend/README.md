@@ -18,11 +18,14 @@ This guide details the secure environment setup, database initialization, and ad
    - `ADMIN_NAME`: Display name for the primary administrator (e.g., `Ocean Jewel Admin`).
    - `ADMIN_EMAIL`: Secure email address for the administrator account.
    - `ADMIN_PASSWORD`: Strong password for the administrator account.
-   - `RAZORPAY_KEY_ID`: Razorpay public API key ID.
-   - `RAZORPAY_KEY_SECRET`: Razorpay private API secret key.
-   - `SHIPROCKET_EMAIL`: Shiprocket integration account email.
-   - `SHIPROCKET_PASSWORD`: Shiprocket integration account password.
-   - `FRONTEND_URL`: URL of the frontend client (default: `http://localhost:5173`).
+   - `FRONTEND_URL`: URL of the frontend client (e.g., `https://ourstartup-woad.vercel.app` or `http://localhost:5173`).
+   - `BACKEND_URL`: URL of the backend API server (e.g., `https://ourstartup.onrender.com` or `http://localhost:5000`).
+   - `CASHFREE_APP_ID`: Cashfree Payment Gateway App ID / Client ID (Sandbox for testing).
+   - `CASHFREE_SECRET_KEY`: Cashfree Payment Gateway Secret Key (Sandbox for testing).
+   - `CASHFREE_ENV`: Cashfree environment mode (`sandbox` or `production`).
+   - `CASHFREE_API_VERSION`: Cashfree PG API version (default: `2023-08-01`).
+   - `RAZORPAY_KEY_ID`: (Legacy / Deprecated) Razorpay key ID.
+   - `RAZORPAY_KEY_SECRET`: (Legacy / Deprecated) Razorpay secret key.
 
 > [!CAUTION]
 > Never commit `.env` or production passwords to version control. The `.gitignore` file is configured to exclude all `.env*` files with the exception of `.env.example`.

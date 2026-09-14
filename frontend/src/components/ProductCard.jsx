@@ -163,8 +163,8 @@ export default function ProductCard({ product, onQuickView, priority = false }) 
         </div>
 
         {/* Pricing & Mobile Quick Add */}
-        <div className="mt-1.5 sm:mt-2 pt-1.5 sm:pt-2 border-t border-[#D6CFFF]/30 flex items-center justify-between">
-          <div className="flex items-baseline gap-1 sm:gap-1.5 flex-wrap">
+        <div className="mt-1.5 sm:mt-2 pt-1.5 sm:pt-2 border-t border-[#D6CFFF]/30 flex items-center justify-between gap-1.5">
+          <div className="flex items-baseline gap-1 sm:gap-1.5 flex-wrap min-w-0">
             <span className="font-semibold text-xs sm:text-base text-[#17151F]">
               ₹{product.price.toLocaleString('en-IN')}
             </span>
@@ -174,7 +174,7 @@ export default function ProductCard({ product, onQuickView, priority = false }) 
               </span>
             )}
             {effectiveDiscount > 0 && (
-              <span className="text-[9px] sm:text-[10px] font-bold text-rose-600">
+              <span className="text-[9px] sm:text-[10px] font-bold text-rose-600 shrink-0">
                 {effectiveDiscount}% OFF
               </span>
             )}
@@ -183,7 +183,7 @@ export default function ProductCard({ product, onQuickView, priority = false }) 
           {/* Mobile Direct Add Button */}
           <button
             onClick={handleAddToCart}
-            className="lg:hidden p-1.5 bg-[#17151F] text-white rounded-lg shadow active:scale-95 transition-transform"
+            className="lg:hidden p-1.5 bg-[#17151F] text-white rounded-lg shadow active:scale-95 transition-transform shrink-0"
             aria-label="Add to cart"
           >
             <ShoppingBag className="w-3.5 h-3.5 text-[#D6CFFF]" />

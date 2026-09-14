@@ -155,12 +155,18 @@ export const createOrder = async (req, res) => {
       const oceanPointsEarned = Math.floor(payableAmount / 100);
       const orderId = generateOrderId();
 
+      const isOnlinePayment = (paymentMethod || 'cashfree') !== 'cod';
+      const initialStatus = isOnlinePayment ? 'Pending' : 'Confirmed';
+      const initialTimelineNote = isOnlinePayment
+        ? 'Order initialized. Awaiting Cashfree online payment verification.'
+        : 'COD Order placed and confirmed at Zivana Jewels.';
+
       const order = new Order({
         orderId,
         user: req.user?._id || null,
         orderItems: verifiedOrderItems,
         shippingAddress,
-        paymentMethod: paymentMethod || 'razorpay',
+        paymentMethod: paymentMethod || 'cashfree',
         itemsPrice,
         taxPrice: 0,
         shippingPrice,
@@ -171,9 +177,9 @@ export const createOrder = async (req, res) => {
         oceanPointsEarned,
         totalPrice: payableAmount,
         isPaid: false,
-        orderStatus: 'Confirmed',
+        orderStatus: initialStatus,
         statusTimeline: [
-          { status: 'Confirmed', note: 'Order placed and confirmed at Zivana Jewels.', timestamp: new Date() },
+          { status: initialStatus, note: initialTimelineNote, timestamp: new Date() },
         ],
         shipmentTracking: {
           courier: 'BlueDart Luxury Express',
@@ -282,13 +288,19 @@ export const createOrder = async (req, res) => {
       const oceanPointsEarned = Math.floor(payableAmount / 100);
       const orderId = generateOrderId();
 
+      const isOnlineMock = (paymentMethod || 'cashfree') !== 'cod';
+      const mockInitialStatus = isOnlineMock ? 'Pending' : 'Confirmed';
+      const mockTimelineNote = isOnlineMock
+        ? 'Order initialized. Awaiting Cashfree online payment verification.'
+        : 'COD Order placed and confirmed at Zivana Jewels.';
+
       const newOrder = {
         _id: `ord_${Date.now()}`,
         orderId,
         user: req.user?._id || 'guest',
         orderItems: verifiedOrderItems,
         shippingAddress,
-        paymentMethod: paymentMethod || 'razorpay',
+        paymentMethod: paymentMethod || 'cashfree',
         itemsPrice,
         taxPrice: 0,
         shippingPrice,
@@ -299,9 +311,9 @@ export const createOrder = async (req, res) => {
         oceanPointsEarned,
         totalPrice: payableAmount,
         isPaid: false,
-        orderStatus: 'Confirmed',
+        orderStatus: mockInitialStatus,
         statusTimeline: [
-          { status: 'Confirmed', note: 'Order placed and confirmed at Zivana Jewels.', timestamp: new Date().toISOString() },
+          { status: mockInitialStatus, note: mockTimelineNote, timestamp: new Date().toISOString() },
         ],
         shipmentTracking: {
           courier: 'BlueDart Luxury Express',

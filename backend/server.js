@@ -63,7 +63,12 @@ app.use(cors({
   origin: '*',
   credentials: true,
 }));
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({
+  limit: '10mb',
+  verify: (req, res, buf) => {
+    req.rawBody = buf ? buf.toString() : '';
+  },
+}));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Health check / API status
@@ -81,6 +86,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/orders', orderRoutes);
+app.use('/api/payment', paymentRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/coupons', couponRoutes);
 app.use('/api/rewards', rewardRoutes);

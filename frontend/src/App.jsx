@@ -21,6 +21,7 @@ import AccountPage from './pages/AccountPage';
 import AuthCallbackPage from './pages/AuthCallbackPage';
 import WishlistPage from './pages/WishlistPage';
 import AboutPage from './pages/AboutPage';
+import CashfreeCallbackPage from './pages/CashfreeCallbackPage';
 import AdminDashboardPage from './pages/AdminDashboardPage';
 import NotFoundPage from './pages/NotFoundPage';
 
@@ -78,6 +79,9 @@ export default function App() {
           <Route path="/checkout" element={<CheckoutPage />} />
           <Route path="/payment" element={<CheckoutPage />} />
           <Route path="/order-success" element={<OrderSuccessPage />} />
+          <Route path="/payment/cashfree/callback" element={<OrderSuccessPage />} />
+          <Route path="/payment-success" element={<OrderSuccessPage />} />
+          <Route path="/checkout/success" element={<OrderSuccessPage />} />
           <Route
             path="/orders/:id"
             element={
