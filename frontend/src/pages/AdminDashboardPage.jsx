@@ -65,6 +65,7 @@ export default function AdminDashboardPage() {
   const [metrics, setMetrics] = useState(null);
   const [products, setProducts] = useState([]);
   const [orders, setOrders] = useState([]);
+  const [payments, setPayments] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [coupons, setCoupons] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -73,11 +74,16 @@ export default function AdminDashboardPage() {
   // Search & Filter State
   const [productSearch, setProductSearch] = useState('');
   const [productCategoryFilter, setProductCategoryFilter] = useState('all');
+  const [orderTab, setOrderTab] = useState('all');
   const [orderStatusFilter, setOrderStatusFilter] = useState('all');
+  const [paymentFilter, setPaymentFilter] = useState('all');
+  const [paymentSearch, setPaymentSearch] = useState('');
 
   // Modals & Details State
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [showOrderModal, setShowOrderModal] = useState(false);
+  const [selectedPayment, setSelectedPayment] = useState(null);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [openCategories, setOpenCategories] = useState({});
   const [checklist, setChecklist] = useState({
     box: true,
@@ -162,12 +168,13 @@ export default function AdminDashboardPage() {
   const fetchAllAdminData = async () => {
     setSyncing(true);
     try {
-      const [metRes, prodRes, ordRes, custRes, coupRes] = await Promise.all([
+      const [metRes, prodRes, ordRes, custRes, coupRes, payRes] = await Promise.all([
         api.get('/admin/metrics').catch(() => ({ data: { success: false } })),
         api.get('/admin/products').catch(() => ({ data: { success: false } })),
         api.get('/admin/orders').catch(() => ({ data: { success: false } })),
         api.get('/admin/customers').catch(() => ({ data: { success: false } })),
         api.get('/admin/coupons').catch(() => ({ data: { success: false } })),
+        api.get('/admin/payments').catch(() => ({ data: { success: false } })),
       ]);
 
       if (metRes.data?.success) setMetrics(metRes.data.data);
@@ -175,6 +182,7 @@ export default function AdminDashboardPage() {
       if (ordRes.data?.success) setOrders(ordRes.data.data || []);
       if (custRes.data?.success) setCustomers(custRes.data.data || []);
       if (coupRes.data?.success) setCoupons(coupRes.data.data || []);
+      if (payRes.data?.success) setPayments(payRes.data.data || []);
     } catch (e) {
       console.error('Error fetching admin data:', e);
       addToast('Synced admin state with offline cache', 'info');
@@ -403,9 +411,18 @@ export default function AdminDashboardPage() {
     }));
   };
 
-  // Helper to reliably check if an order is valid & active for revenue
-  const isOrderActive = (o) => {
+  // Helper to distinguish genuine ecommerce orders from uncompleted failed payment attempts
+  const isGenuineOrder = (o) => {
     if (!o) return false;
+    const payStatus = String(o.paymentResult?.status || o.paymentStatus || '').trim().toUpperCase();
+    // If an online order has failed payment and was never captured/paid, it's a payment attempt, not a genuine fulfillable order
+    if (payStatus === 'FAILED' && !o.isPaid) return false;
+    return true;
+  };
+
+  // Helper to check if an order is valid for revenue (paid online or active COD, excluding cancelled/refunded)
+  const isOrderActive = (o) => {
+    if (!o || !isGenuineOrder(o)) return false;
     const s = String(o.orderStatus || o.status || '').trim().toLowerCase();
     if (s === 'cancelled' || s === 'canceled' || s === 'refunded' || s === 'returned') {
       return false;
@@ -414,19 +431,177 @@ export default function AdminDashboardPage() {
     if (payStatus === 'refunded' || payStatus === 'failed') {
       return false;
     }
-    return true;
+    const method = String(o.paymentMethod || '').trim().toLowerCase();
+    // Online orders require payment capture for revenue; COD orders count unless cancelled
+    return o.isPaid || method === 'cod';
   };
 
-  // Filtered Orders
-  const filteredOrders = orders.filter((o) => {
-    if (orderStatusFilter === 'all') return true;
-    const current = String(o.orderStatus || o.status || '').trim().toLowerCase();
-    const filter = orderStatusFilter.trim().toLowerCase();
-    if (filter === 'cancelled' && (current === 'cancelled' || current === 'canceled')) return true;
-    return current === filter;
-  });
+  // Genuine Orders list (excluding standalone failed payment attempts)
+  const genuineOrders = useMemo(() => {
+    return orders.filter(isGenuineOrder);
+  }, [orders]);
 
-  // Derived Sales Revenue from actual non-cancelled orders
+  // Tab counts for genuine orders
+  const orderTabCounts = useMemo(() => {
+    return {
+      all: genuineOrders.length,
+      paid: genuineOrders.filter((o) => o.isPaid && o.paymentMethod !== 'cod').length,
+      cod: genuineOrders.filter((o) => o.paymentMethod === 'cod').length,
+      pending: genuineOrders.filter((o) => {
+        const s = String(o.orderStatus || o.status || '').trim().toLowerCase();
+        return !o.isPaid && o.paymentMethod !== 'cod' && !['cancelled', 'canceled', 'refunded'].includes(s);
+      }).length,
+      cancelled: genuineOrders.filter((o) => {
+        const s = String(o.orderStatus || o.status || '').trim().toLowerCase();
+        return s === 'cancelled' || s === 'canceled';
+      }).length,
+      refunded: genuineOrders.filter((o) => {
+        const s = String(o.orderStatus || o.status || '').trim().toLowerCase();
+        const paySt = String(o.paymentResult?.status || '').trim().toUpperCase();
+        return s === 'refunded' || paySt === 'REFUNDED';
+      }).length,
+    };
+  }, [genuineOrders]);
+
+  // Filtered Orders based on active tab and status filter
+  const filteredOrders = useMemo(() => {
+    let list = genuineOrders;
+
+    if (orderTab === 'paid') {
+      list = list.filter((o) => o.isPaid && o.paymentMethod !== 'cod');
+    } else if (orderTab === 'cod') {
+      list = list.filter((o) => o.paymentMethod === 'cod');
+    } else if (orderTab === 'pending') {
+      list = list.filter((o) => {
+        const s = String(o.orderStatus || o.status || '').trim().toLowerCase();
+        return !o.isPaid && o.paymentMethod !== 'cod' && !['cancelled', 'canceled', 'refunded'].includes(s);
+      });
+    } else if (orderTab === 'cancelled') {
+      list = list.filter((o) => {
+        const s = String(o.orderStatus || o.status || '').trim().toLowerCase();
+        return s === 'cancelled' || s === 'canceled';
+      });
+    } else if (orderTab === 'refunded') {
+      list = list.filter((o) => {
+        const s = String(o.orderStatus || o.status || '').trim().toLowerCase();
+        const paySt = String(o.paymentResult?.status || '').trim().toUpperCase();
+        return s === 'refunded' || paySt === 'REFUNDED';
+      });
+    }
+
+    if (orderStatusFilter !== 'all') {
+      const filter = orderStatusFilter.trim().toLowerCase();
+      list = list.filter((o) => {
+        const current = String(o.orderStatus || o.status || '').trim().toLowerCase();
+        if (filter === 'cancelled') return current === 'cancelled' || current === 'canceled';
+        return current === filter;
+      });
+    }
+
+    return list;
+  }, [genuineOrders, orderTab, orderStatusFilter]);
+
+  // Filtered Payments list for Payments section
+  const filteredPayments = useMemo(() => {
+    let list = payments;
+    if (paymentFilter !== 'all') {
+      list = list.filter((p) => p.status?.toLowerCase() === paymentFilter.toLowerCase());
+    }
+    if (paymentSearch && paymentSearch.trim()) {
+      const q = paymentSearch.trim().toLowerCase();
+      list = list.filter(
+        (p) =>
+          (p.paymentId && p.paymentId.toLowerCase().includes(q)) ||
+          (p.razorpayOrderId && p.razorpayOrderId.toLowerCase().includes(q)) ||
+          (p.orderId && p.orderId.toLowerCase().includes(q)) ||
+          (p.customerName && p.customerName.toLowerCase().includes(q)) ||
+          (p.customerEmail && p.customerEmail.toLowerCase().includes(q))
+      );
+    }
+    return list;
+  }, [payments, paymentFilter, paymentSearch]);
+
+  const paymentTabCounts = useMemo(() => {
+    return {
+      all: payments.length,
+      captured: payments.filter((p) => p.status === 'captured').length,
+      failed: payments.filter((p) => p.status === 'failed').length,
+      refunded: payments.filter((p) => p.status === 'refunded').length,
+    };
+  }, [payments]);
+
+  // Helpers for table badges
+  const getPaymentMethodBadge = (order) => {
+    const method = String(order.paymentMethod || '').trim().toLowerCase();
+    if (method === 'cod') {
+      return {
+        label: 'COD',
+        detail: 'Cash on Delivery',
+        classes: 'bg-amber-50 text-amber-800 border-amber-200',
+      };
+    }
+    if (method === 'cashfree') {
+      return {
+        label: 'Cashfree',
+        detail: 'Historical Gateway',
+        classes: 'bg-blue-50 text-blue-700 border-blue-200',
+      };
+    }
+    if (method === 'upi') {
+      return {
+        label: 'Razorpay UPI',
+        detail: 'UPI Instant',
+        classes: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+      };
+    }
+    if (method === 'card') {
+      return {
+        label: 'Razorpay Card',
+        detail: 'Debit / Credit',
+        classes: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+      };
+    }
+    return {
+      label: 'Razorpay',
+      detail: 'Prepaid Online',
+      classes: 'bg-purple-50 text-purple-700 border-purple-200',
+    };
+  };
+
+  const getPaymentStatusBadge = (order) => {
+    const s = String(order.orderStatus || order.status || '').trim().toLowerCase();
+    const paySt = String(order.paymentResult?.status || '').trim().toUpperCase();
+    if (s === 'refunded' || paySt === 'REFUNDED') {
+      return {
+        label: 'Refunded',
+        classes: 'bg-purple-50 text-purple-700 border-purple-200',
+      };
+    }
+    if (order.isPaid) {
+      return {
+        label: 'Paid',
+        classes: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+      };
+    }
+    if (order.paymentMethod === 'cod') {
+      return {
+        label: 'Pending (COD)',
+        classes: 'bg-blue-50 text-blue-700 border-blue-200',
+      };
+    }
+    if (paySt === 'FAILED') {
+      return {
+        label: 'Failed',
+        classes: 'bg-rose-50 text-rose-700 border-rose-200',
+      };
+    }
+    return {
+      label: 'Pending',
+      classes: 'bg-amber-50 text-amber-700 border-amber-200',
+    };
+  };
+
+  // Derived Sales Revenue from actual non-cancelled genuine orders
   const derivedSalesRevenue = useMemo(() => {
     if (orders && orders.length > 0) {
       return orders.reduce((sum, o) => {
@@ -460,7 +635,8 @@ export default function AdminDashboardPage() {
     { id: 'overview', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'products', label: 'Products', icon: Package, badge: products.length || 24 },
     { id: 'categories', label: 'Categories', icon: Layers },
-    { id: 'orders', label: 'Orders', icon: ShoppingBag, badge: orders.length || 12 },
+    { id: 'orders', label: 'Orders', icon: ShoppingBag, badge: genuineOrders.length || undefined },
+    { id: 'payments', label: 'Payments', icon: CreditCard, badge: payments.length || undefined },
     { id: 'customers', label: 'Customers', icon: Users },
     { id: 'coupons', label: 'Coupons', icon: Tag },
     { id: 'homepage', label: 'Homepage & CMS', icon: Sparkles },
@@ -1111,7 +1287,7 @@ export default function AdminDashboardPage() {
                     Client Orders Management
                   </h1>
                   <p className="text-xs text-[#6F6B78] mt-0.5">
-                    Track shipments, confirm express deliveries, and update courier statuses.
+                    Track genuine ecommerce orders, confirm express dispatches, and monitor fulfillment.
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -1128,6 +1304,42 @@ export default function AdminDashboardPage() {
                 </div>
               </div>
 
+              {/* TOP TABS: Clean filtering for genuine ecommerce orders */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+                {[
+                  { id: 'all', label: 'All Orders', count: orderTabCounts.all },
+                  { id: 'paid', label: 'Paid / Prepaid', count: orderTabCounts.paid },
+                  { id: 'cod', label: 'COD', count: orderTabCounts.cod },
+                  { id: 'pending', label: 'Pending Payment', count: orderTabCounts.pending },
+                  { id: 'cancelled', label: 'Cancelled', count: orderTabCounts.cancelled },
+                  { id: 'refunded', label: 'Refunded', count: orderTabCounts.refunded },
+                ].map((t) => {
+                  const isActive = orderTab === t.id;
+                  return (
+                    <button
+                      key={t.id}
+                      onClick={() => setOrderTab(t.id)}
+                      className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+                        isActive
+                          ? 'bg-[#7464B8] text-white shadow-xs'
+                          : 'bg-white text-[#171522] border border-[#D6CFFF]/60 hover:bg-[#FAF9FF] hover:border-[#7464B8]'
+                      }`}
+                    >
+                      <span>{t.label}</span>
+                      <span
+                        className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                          isActive
+                            ? 'bg-white/20 text-white'
+                            : 'bg-[#FAF9FF] text-[#7464B8] border border-[#D6CFFF]/60'
+                        }`}
+                      >
+                        {t.count}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
               {/* Orders Table in Light Theme */}
               <div className="bg-white rounded-2xl border border-[#D6CFFF]/50 shadow-xs overflow-hidden">
                 <div className="overflow-x-auto">
@@ -1139,83 +1351,295 @@ export default function AdminDashboardPage() {
                         <th className="py-3.5 px-4">Customer & Address</th>
                         <th className="py-3.5 px-4">Items</th>
                         <th className="py-3.5 px-4">Total</th>
-                        <th className="py-3.5 px-4">Status</th>
+                        <th className="py-3.5 px-4">Payment Method</th>
+                        <th className="py-3.5 px-4">Payment Status</th>
+                        <th className="py-3.5 px-4">Order Status</th>
                         <th className="py-3.5 px-4 text-center">Inspect</th>
                         <th className="py-3.5 px-4 text-right">Update Status</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[#D6CFFF]/20">
-                      {filteredOrders.map((order) => (
-                        <tr key={order._id || order.id} className="hover:bg-[#FAF9FF]/60 transition-colors">
-                          <td className="py-3.5 px-4 font-mono font-bold text-[#171522]">
-                            #{order.orderNumber || (order._id || order.id).slice(-6).toUpperCase()}
-                          </td>
-                          <td className="py-3.5 px-4 text-gray-500 text-[11px]">
-                            {order.createdAt ? new Date(order.createdAt).toLocaleDateString('en-IN') : 'Today'}
-                          </td>
-                          <td className="py-3.5 px-4">
-                            <p className="font-semibold text-[#171522]">{order.shippingAddress?.fullName || 'Patron'}</p>
-                            <p className="text-[10px] text-gray-500">{order.shippingAddress?.city || 'Delhi'}, {order.shippingAddress?.postalCode || '110001'}</p>
-                          </td>
-                          <td className="py-3.5 px-4 text-gray-600">
-                            {order.items?.length || order.orderItems?.length || 1} item(s)
-                          </td>
-                          <td className="py-3.5 px-4 font-semibold text-[#171522]">
-                            ₹{(Number(order.totalPrice) || Number(order.totalAmount) || 2499).toLocaleString('en-IN')}
-                          </td>
-                          <td className="py-3.5 px-4">
-                            {(() => {
-                              const rawStatus = order.orderStatus || order.status || 'Processing';
-                              const s = rawStatus.toLowerCase();
-                              const isCancelled = s === 'cancelled' || s === 'canceled' || s === 'refunded' || s === 'returned';
-                              const isDelivered = s === 'delivered';
-                              const isShipped = s === 'shipped' || s === 'out for delivery' || s === 'in transit';
-                              return (
-                                <span
-                                  className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider ${
-                                    isCancelled
-                                      ? 'bg-rose-50 text-rose-700 border border-rose-200'
-                                      : isDelivered
-                                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                      : isShipped
-                                      ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                                      : 'bg-amber-50 text-amber-700 border border-amber-200'
-                                  }`}
-                                >
-                                  {rawStatus}
-                                </span>
-                              );
-                            })()}
-                          </td>
-                          <td className="py-3.5 px-4 text-center">
-                            <button
-                              onClick={() => {
-                                setSelectedOrder(order);
-                                setShowOrderModal(true);
-                              }}
-                              className="px-3 py-1 rounded-lg text-xs font-semibold bg-[#FAF9FF] border border-[#D6CFFF] text-[#7464B8] hover:bg-[#7464B8] hover:text-white transition-all shadow-xs"
-                            >
-                              Details
-                            </button>
-                          </td>
-                          <td className="py-3.5 px-4 text-right">
-                            {(() => {
-                              const currentStatus = String(order.orderStatus || order.status || 'Processing');
-                              return (
-                                <select
-                                  value={currentStatus}
-                                  onChange={(e) => handleUpdateOrderStatus(order._id || order.id, e.target.value)}
-                                  className="px-2.5 py-1 rounded-lg text-[11px] bg-[#FAF9FF] border border-[#D6CFFF] text-[#171522] focus:border-[#7464B8] outline-hidden font-medium"
-                                >
-                                  {ALL_ORDER_STATUSES.map((st) => (
-                                    <option key={st} value={st}>{st}</option>
-                                  ))}
-                                </select>
-                              );
-                            })()}
+                      {filteredOrders.length === 0 ? (
+                        <tr>
+                          <td colSpan="10" className="py-12 text-center text-gray-400">
+                            <ShoppingBag className="w-8 h-8 text-[#D6CFFF] mx-auto mb-2 opacity-60" />
+                            <p className="font-semibold text-gray-600">No genuine orders found</p>
+                            <p className="text-[11px] mt-0.5">No orders match the selected tab or status filter.</p>
                           </td>
                         </tr>
-                      ))}
+                      ) : (
+                        filteredOrders.map((order) => {
+                          const payMethod = getPaymentMethodBadge(order);
+                          const payStatus = getPaymentStatusBadge(order);
+
+                          return (
+                            <tr key={order._id || order.id} className="hover:bg-[#FAF9FF]/60 transition-colors">
+                              <td className="py-3.5 px-4 font-mono font-bold text-[#171522]">
+                                #{order.orderNumber || (order.orderId || order._id || order.id).slice(-8).toUpperCase()}
+                              </td>
+                              <td className="py-3.5 px-4 text-gray-500 text-[11px]">
+                                {order.createdAt ? new Date(order.createdAt).toLocaleDateString('en-IN') : 'Today'}
+                              </td>
+                              <td className="py-3.5 px-4">
+                                <p className="font-semibold text-[#171522]">{order.shippingAddress?.fullName || 'Patron'}</p>
+                                <p className="text-[10px] text-gray-500">{order.shippingAddress?.city || 'Delhi'}, {order.shippingAddress?.postalCode || order.shippingAddress?.pincode || '110001'}</p>
+                              </td>
+                              <td className="py-3.5 px-4 text-gray-600">
+                                {order.items?.length || order.orderItems?.length || 1} item(s)
+                              </td>
+                              <td className="py-3.5 px-4 font-semibold text-[#171522]">
+                                ₹{(Number(order.totalPrice) || Number(order.totalAmount) || 2499).toLocaleString('en-IN')}
+                              </td>
+                              <td className="py-3.5 px-4">
+                                <span
+                                  className={`inline-flex flex-col text-[10px] px-2 py-0.5 rounded-lg font-medium border ${payMethod.classes}`}
+                                  title={payMethod.detail}
+                                >
+                                  <strong className="font-semibold">{payMethod.label}</strong>
+                                </span>
+                              </td>
+                              <td className="py-3.5 px-4">
+                                <span
+                                  className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${payStatus.classes}`}
+                                >
+                                  <span className="w-1.5 h-1.5 rounded-full bg-current" />
+                                  {payStatus.label}
+                                </span>
+                              </td>
+                              <td className="py-3.5 px-4">
+                                {(() => {
+                                  const rawStatus = order.orderStatus || order.status || 'Processing';
+                                  const s = rawStatus.toLowerCase();
+                                  const isCancelled = s === 'cancelled' || s === 'canceled' || s === 'refunded' || s === 'returned';
+                                  const isDelivered = s === 'delivered';
+                                  const isShipped = s === 'shipped' || s === 'out for delivery' || s === 'in transit';
+                                  return (
+                                    <span
+                                      className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider ${
+                                        isCancelled
+                                          ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                                          : isDelivered
+                                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                          : isShipped
+                                          ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                                          : 'bg-amber-50 text-amber-700 border border-amber-200'
+                                      }`}
+                                    >
+                                      {rawStatus}
+                                    </span>
+                                  );
+                                })()}
+                              </td>
+                              <td className="py-3.5 px-4 text-center">
+                                <button
+                                  onClick={() => {
+                                    setSelectedOrder(order);
+                                    setShowOrderModal(true);
+                                  }}
+                                  className="px-3 py-1 rounded-lg text-xs font-semibold bg-[#FAF9FF] border border-[#D6CFFF] text-[#7464B8] hover:bg-[#7464B8] hover:text-white transition-all shadow-xs"
+                                >
+                                  Details
+                                </button>
+                              </td>
+                              <td className="py-3.5 px-4 text-right">
+                                {(() => {
+                                  const currentStatus = String(order.orderStatus || order.status || 'Processing');
+                                  return (
+                                    <select
+                                      value={currentStatus}
+                                      onChange={(e) => handleUpdateOrderStatus(order._id || order.id, e.target.value)}
+                                      className="px-2.5 py-1 rounded-lg text-[11px] bg-[#FAF9FF] border border-[#D6CFFF] text-[#171522] focus:border-[#7464B8] outline-hidden font-medium"
+                                    >
+                                      {ALL_ORDER_STATUSES.map((st) => (
+                                        <option key={st} value={st}>{st}</option>
+                                      ))}
+                                    </select>
+                                  );
+                                })()}
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 5: PAYMENTS & GATEWAY ATTEMPTS MONITORING */}
+          {activeTab === 'payments' && (
+            <div className="space-y-6">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-[#D6CFFF]/30">
+                <div>
+                  <h1 className="font-serif text-2xl sm:text-3xl text-[#171522] font-light tracking-tight flex items-center gap-2.5">
+                    <span>Payment Attempts & Gateway Transactions</span>
+                    <span className="text-xs px-2.5 py-0.5 rounded-full bg-[#FAF9FF] text-[#7464B8] border border-[#D6CFFF] font-sans font-bold">
+                      Audit & Diagnostics
+                    </span>
+                  </h1>
+                  <p className="text-xs text-[#6F6B78] mt-0.5">
+                    Live gateway diagnostics, captured payments, failure reasons, and bank clearance verification.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <div className="relative">
+                    <Search className="w-3.5 h-3.5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      placeholder="Search Payment ID, Order ID..."
+                      value={paymentSearch}
+                      onChange={(e) => setPaymentSearch(e.target.value)}
+                      className="pl-8 pr-3.5 py-2 rounded-xl text-xs bg-white border border-[#D6CFFF] focus:border-[#7464B8] outline-hidden text-[#171522] shadow-xs w-64"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* TOP TABS: Filter payment attempts */}
+              <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
+                {[
+                  { id: 'all', label: 'All Payments', count: paymentTabCounts.all },
+                  { id: 'captured', label: 'Captured', count: paymentTabCounts.captured },
+                  { id: 'failed', label: 'Failed', count: paymentTabCounts.failed },
+                  { id: 'refunded', label: 'Refunded', count: paymentTabCounts.refunded },
+                ].map((t) => {
+                  const isActive = paymentFilter === t.id;
+                  return (
+                    <button
+                      key={t.id}
+                      onClick={() => setPaymentFilter(t.id)}
+                      className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+                        isActive
+                          ? 'bg-[#7464B8] text-white shadow-xs'
+                          : 'bg-white text-[#171522] border border-[#D6CFFF]/60 hover:bg-[#FAF9FF] hover:border-[#7464B8]'
+                      }`}
+                    >
+                      <span>{t.label}</span>
+                      <span
+                        className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                          isActive
+                            ? 'bg-white/20 text-white'
+                            : 'bg-[#FAF9FF] text-[#7464B8] border border-[#D6CFFF]/60'
+                        }`}
+                      >
+                        {t.count}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Payments Table */}
+              <div className="bg-white rounded-2xl border border-[#D6CFFF]/50 shadow-xs overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-[#FAF9FF] text-[#171522] font-semibold border-b border-[#D6CFFF]/30 uppercase tracking-wider text-[10px]">
+                      <tr>
+                        <th className="py-3.5 px-4">Payment ID</th>
+                        <th className="py-3.5 px-4">Gateway & Method</th>
+                        <th className="py-3.5 px-4">Related Order</th>
+                        <th className="py-3.5 px-4">Customer</th>
+                        <th className="py-3.5 px-4">Amount</th>
+                        <th className="py-3.5 px-4">Status</th>
+                        <th className="py-3.5 px-4">Gateway Diagnostics</th>
+                        <th className="py-3.5 px-4">Date & Time</th>
+                        <th className="py-3.5 px-4 text-center">Inspect</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#D6CFFF]/20">
+                      {filteredPayments.length === 0 ? (
+                        <tr>
+                          <td colSpan="9" className="py-12 text-center text-gray-400">
+                            <CreditCard className="w-8 h-8 text-[#D6CFFF] mx-auto mb-2 opacity-60" />
+                            <p className="font-semibold text-gray-600">No payment records found</p>
+                            <p className="text-[11px] mt-0.5">No gateway transactions match the selected filter criteria.</p>
+                          </td>
+                        </tr>
+                      ) : (
+                        filteredPayments.map((p) => {
+                          const isCaptured = p.status === 'captured';
+                          const isFailed = p.status === 'failed';
+                          const isRefunded = p.status === 'refunded';
+
+                          return (
+                            <tr key={p._id || p.paymentId} className="hover:bg-[#FAF9FF]/60 transition-colors">
+                              <td className="py-3.5 px-4 font-mono font-bold text-[#171522]">
+                                {p.paymentId || 'N/A'}
+                              </td>
+                              <td className="py-3.5 px-4">
+                                <span className="inline-flex items-center gap-1.5 font-medium text-[#171522]">
+                                  <CreditCard className="w-3.5 h-3.5 text-[#7464B8]" />
+                                  <span>{p.paymentMethod || 'Razorpay Online'}</span>
+                                </span>
+                              </td>
+                              <td className="py-3.5 px-4">
+                                <span className="font-mono text-[11px] font-bold text-[#7464B8] bg-[#FAF9FF] px-2 py-0.5 rounded-md border border-[#D6CFFF]/60">
+                                  #{p.orderId || 'N/A'}
+                                </span>
+                              </td>
+                              <td className="py-3.5 px-4">
+                                <p className="font-semibold text-[#171522]">{p.customerName || 'Zivana Patron'}</p>
+                                <p className="text-[10px] text-gray-500">{p.customerEmail || p.customerPhone || '—'}</p>
+                              </td>
+                              <td className="py-3.5 px-4 font-semibold text-[#171522]">
+                                ₹{(Number(p.amount) || 0).toLocaleString('en-IN')}
+                              </td>
+                              <td className="py-3.5 px-4">
+                                <span
+                                  className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
+                                    isCaptured
+                                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                      : isFailed
+                                      ? 'bg-rose-50 text-rose-700 border-rose-200'
+                                      : isRefunded
+                                      ? 'bg-purple-50 text-purple-700 border-purple-200'
+                                      : 'bg-amber-50 text-amber-700 border-amber-200'
+                                  }`}
+                                >
+                                  <span className="w-1.5 h-1.5 rounded-full bg-current" />
+                                  {p.status || 'Pending'}
+                                </span>
+                              </td>
+                              <td className="py-3.5 px-4 max-w-xs">
+                                {isFailed ? (
+                                  <div className="flex items-start gap-1.5 text-[11px] text-rose-700 bg-rose-50/70 p-1.5 rounded-lg border border-rose-200/80">
+                                    <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                                    <div className="truncate">
+                                      {p.errorCode && <strong className="font-mono text-[10px] block text-rose-800">{p.errorCode}</strong>}
+                                      <span className="truncate block" title={p.failureReason}>
+                                        {p.failureReason || 'Declined or cancelled'}
+                                      </span>
+                                    </div>
+                                  </div>
+                                ) : isCaptured ? (
+                                  <div className="text-[11px] text-emerald-700 font-medium">
+                                    <span>Captured via Razorpay Live</span>
+                                  </div>
+                                ) : (
+                                  <span className="text-gray-400 text-[11px]">In clearance</span>
+                                )}
+                              </td>
+                              <td className="py-3.5 px-4 text-gray-500 text-[11px]">
+                                {p.createdAt ? new Date(p.createdAt).toLocaleString('en-IN') : 'Just now'}
+                              </td>
+                              <td className="py-3.5 px-4 text-center">
+                                <button
+                                  onClick={() => {
+                                    setSelectedPayment(p);
+                                    setShowPaymentModal(true);
+                                  }}
+                                  className="px-3 py-1 rounded-lg text-xs font-semibold bg-[#FAF9FF] border border-[#D6CFFF] text-[#7464B8] hover:bg-[#7464B8] hover:text-white transition-all shadow-xs"
+                                >
+                                  Inspect
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -2236,6 +2660,131 @@ export default function AdminDashboardPage() {
                 className="px-5 py-2.5 rounded-xl text-xs font-semibold bg-[#171522] text-white hover:bg-[#2A2635] transition-all"
               >
                 Close Details
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: PAYMENT ATTEMPT INSPECTION & GATEWAY DIAGNOSTICS */}
+      {showPaymentModal && selectedPayment && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 backdrop-blur-xs overflow-y-auto">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-xl w-full border border-[#D6CFFF]/60 shadow-2xl space-y-5 my-8 max-h-[90vh] overflow-y-auto">
+            {/* Header */}
+            <div className="flex items-center justify-between pb-4 border-b border-[#D6CFFF]/30">
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-[#7464B8]">
+                  Gateway Transaction Diagnostics
+                </span>
+                <h3 className="font-serif text-2xl text-[#171522] font-light mt-0.5">
+                  Payment Attempt
+                </h3>
+              </div>
+              <button
+                onClick={() => setShowPaymentModal(false)}
+                className="p-2 rounded-xl text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-all"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Status & Amount Hero */}
+            <div className="p-4 rounded-2xl bg-[#FAF9FF] border border-[#D6CFFF]/40 flex items-center justify-between">
+              <div>
+                <span className="text-[10px] uppercase tracking-wider text-gray-400 block font-medium">Payable Amount</span>
+                <span className="text-2xl font-serif font-light text-[#171522]">
+                  ₹{(Number(selectedPayment.amount) || 0).toLocaleString('en-IN')}
+                </span>
+              </div>
+              <div className="text-right">
+                <span className="text-[10px] uppercase tracking-wider text-gray-400 block font-medium">Gateway State</span>
+                <span
+                  className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border mt-1 ${
+                    selectedPayment.status === 'captured'
+                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                      : selectedPayment.status === 'failed'
+                      ? 'bg-rose-50 text-rose-700 border-rose-200'
+                      : selectedPayment.status === 'refunded'
+                      ? 'bg-purple-50 text-purple-700 border-purple-200'
+                      : 'bg-amber-50 text-amber-700 border-amber-200'
+                  }`}
+                >
+                  <span className="w-2 h-2 rounded-full bg-current" />
+                  {selectedPayment.status || 'Pending'}
+                </span>
+              </div>
+            </div>
+
+            {/* Failure diagnostics banner if failed */}
+            {selectedPayment.status === 'failed' && (
+              <div className="p-3.5 rounded-2xl bg-rose-50/90 border border-rose-200 text-rose-800 space-y-1">
+                <div className="flex items-center gap-2 font-bold text-xs">
+                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                  <span>Transaction Failure Reason</span>
+                </div>
+                {selectedPayment.errorCode && (
+                  <p className="text-[11px] font-mono text-rose-900 bg-white/70 px-2 py-0.5 rounded inline-block">
+                    Code: {selectedPayment.errorCode}
+                  </p>
+                )}
+                <p className="text-xs text-rose-700 font-light mt-1">
+                  {selectedPayment.failureReason || 'Declined or cancelled before capture.'}
+                </p>
+              </div>
+            )}
+
+            {/* Key Information Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+              <div className="p-3 rounded-xl bg-[#FAF9FF] border border-[#D6CFFF]/30 space-y-1">
+                <span className="text-gray-400 text-[10px] uppercase tracking-wider block font-semibold">Payment ID</span>
+                <p className="font-mono text-[11px] font-bold text-[#171522] select-all break-all">
+                  {selectedPayment.paymentId || 'N/A'}
+                </p>
+              </div>
+
+              <div className="p-3 rounded-xl bg-[#FAF9FF] border border-[#D6CFFF]/30 space-y-1">
+                <span className="text-gray-400 text-[10px] uppercase tracking-wider block font-semibold">Related Order ID</span>
+                <p className="font-mono text-[11px] font-bold text-[#7464B8]">
+                  #{selectedPayment.orderId || 'N/A'}
+                </p>
+              </div>
+
+              <div className="p-3 rounded-xl bg-[#FAF9FF] border border-[#D6CFFF]/30 space-y-1">
+                <span className="text-gray-400 text-[10px] uppercase tracking-wider block font-semibold">Gateway & Method</span>
+                <p className="font-medium text-[#171522]">
+                  {selectedPayment.paymentMethod || 'Razorpay Online'}
+                </p>
+              </div>
+
+              <div className="p-3 rounded-xl bg-[#FAF9FF] border border-[#D6CFFF]/30 space-y-1">
+                <span className="text-gray-400 text-[10px] uppercase tracking-wider block font-semibold">Razorpay Order ID</span>
+                <p className="font-mono text-[11px] text-gray-700 select-all break-all">
+                  {selectedPayment.razorpayOrderId || 'N/A'}
+                </p>
+              </div>
+
+              <div className="p-3 rounded-xl bg-[#FAF9FF] border border-[#D6CFFF]/30 space-y-1 sm:col-span-2">
+                <span className="text-gray-400 text-[10px] uppercase tracking-wider block font-semibold">Customer Details</span>
+                <p className="font-semibold text-[#171522]">{selectedPayment.customerName || 'Zivana Patron'}</p>
+                <p className="text-[11px] text-gray-500">{selectedPayment.customerEmail || '—'} {selectedPayment.customerPhone ? `• ${selectedPayment.customerPhone}` : ''}</p>
+              </div>
+
+              <div className="p-3 rounded-xl bg-[#FAF9FF] border border-[#D6CFFF]/30 space-y-1 sm:col-span-2">
+                <span className="text-gray-400 text-[10px] uppercase tracking-wider block font-semibold">Timestamp</span>
+                <p className="text-[11px] text-gray-700">
+                  {selectedPayment.createdAt ? new Date(selectedPayment.createdAt).toLocaleString('en-IN') : 'N/A'}
+                </p>
+              </div>
+            </div>
+
+            {/* Modal Actions */}
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-gray-100">
+              <button
+                type="button"
+                onClick={() => setShowPaymentModal(false)}
+                className="px-5 py-2.5 rounded-xl text-xs font-semibold bg-[#171522] text-white hover:bg-[#2A2635] transition-all"
+              >
+                Close Diagnostics
               </button>
             </div>
           </div>

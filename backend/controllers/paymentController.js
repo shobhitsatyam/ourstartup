@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import Order from '../models/Order.js';
 import User from '../models/User.js';
 import RewardTransaction from '../models/RewardTransaction.js';
+import PaymentAttempt from '../models/PaymentAttempt.js';
 import { isMongoConnected } from '../config/db.js';
 import { mockStore } from '../config/mockStore.js';
 import {
@@ -266,6 +267,37 @@ const applySuccessfulPayment = async (order, paymentDetails) => {
   if (isMongoConnected) {
     await order.save();
 
+    // Upsert PaymentAttempt record for audit and admin payments management
+    const attemptPaymentId = isRazorpay
+      ? (paymentDetails.razorpay_payment_id || `rzp_pay_${Date.now()}`)
+      : (paymentDetails.cf_payment_id || `cf_pay_${Date.now()}`);
+
+    try {
+      await PaymentAttempt.findOneAndUpdate(
+        { paymentId: attemptPaymentId },
+        {
+          paymentId: attemptPaymentId,
+          razorpayOrderId: paymentDetails.razorpay_order_id || order.razorpayOrderId || '',
+          gateway: isRazorpay ? 'razorpay' : 'cashfree',
+          order: order._id,
+          orderId: order.orderId,
+          customerName: order.shippingAddress?.fullName || 'Zivana Patron',
+          customerEmail: order.shippingAddress?.email || '',
+          customerPhone: order.shippingAddress?.phone || '',
+          amount: Number(order.totalPrice) || 0,
+          currency: 'INR',
+          paymentMethod: isRazorpay ? (paymentDetails.payment_method || 'Razorpay Online') : 'Cashfree Online',
+          status: 'captured',
+          errorCode: '',
+          failureReason: '',
+          rawResponse: paymentDetails.raw_response || paymentDetails,
+        },
+        { upsert: true, new: true }
+      );
+    } catch (paErr) {
+      console.warn('[PaymentAttempt] Non-critical: failed to log payment attempt:', paErr.message);
+    }
+
     // Award ocean points if eligible
     if (order.oceanPointsEarned > 0 && order.user && mongoose.Types.ObjectId.isValid(order.user)) {
       const user = await User.findById(order.user);
@@ -283,6 +315,27 @@ const applySuccessfulPayment = async (order, paymentDetails) => {
       }
     }
   } else {
+    const attemptPaymentId = isRazorpay
+      ? (paymentDetails.razorpay_payment_id || `rzp_pay_${Date.now()}`)
+      : (paymentDetails.cf_payment_id || `cf_pay_${Date.now()}`);
+    mockStore.paymentAttempts.push({
+      _id: `pa_${Date.now()}`,
+      paymentId: attemptPaymentId,
+      razorpayOrderId: paymentDetails.razorpay_order_id || order.razorpayOrderId || '',
+      gateway: isRazorpay ? 'razorpay' : 'cashfree',
+      order: order._id,
+      orderId: order.orderId,
+      customerName: order.shippingAddress?.fullName || 'Zivana Patron',
+      customerEmail: order.shippingAddress?.email || '',
+      customerPhone: order.shippingAddress?.phone || '',
+      amount: Number(order.totalPrice) || 0,
+      currency: 'INR',
+      paymentMethod: isRazorpay ? (paymentDetails.payment_method || 'Razorpay Online') : 'Cashfree Online',
+      status: 'captured',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+
     if (order.oceanPointsEarned > 0 && order.user) {
       const user = mockStore.users.find((u) => u._id?.toString() === order.user?.toString());
       if (user) {
@@ -921,6 +974,61 @@ export const razorpayWebhook = async (req, res) => {
         console.log(`[Razorpay Webhook] Recorded payment failure for Order ${order.orderId}`);
       }
 
+      // Upsert failed PaymentAttempt record for audit and admin diagnostics
+      const failedPaymentId = paymentEntity?.id || `rzp_fail_${Date.now()}`;
+      const failReason = paymentEntity?.error_description || paymentEntity?.error_reason || 'Payment failed via Razorpay.';
+      const failCode = paymentEntity?.error_code || paymentEntity?.error_source || '';
+      const failAmount = paymentEntity?.amount ? Number(paymentEntity.amount) / 100 : (order?.totalPrice || 0);
+
+      try {
+        if (isMongoConnected) {
+          await PaymentAttempt.findOneAndUpdate(
+            { paymentId: failedPaymentId },
+            {
+              paymentId: failedPaymentId,
+              razorpayOrderId: rzpOrderId || order?.razorpayOrderId || '',
+              gateway: 'razorpay',
+              order: order?._id,
+              orderId: order?.orderId || customOrderId || 'N/A',
+              customerName: order?.shippingAddress?.fullName || paymentEntity?.notes?.customerName || paymentEntity?.email || 'Zivana Patron',
+              customerEmail: paymentEntity?.email || order?.shippingAddress?.email || '',
+              customerPhone: paymentEntity?.contact || order?.shippingAddress?.phone || '',
+              amount: failAmount,
+              currency: paymentEntity?.currency || 'INR',
+              paymentMethod: paymentEntity?.method ? `Razorpay ${paymentEntity.method.toUpperCase()}` : 'Razorpay Online',
+              status: 'failed',
+              errorCode: failCode,
+              failureReason: failReason,
+              rawResponse: payload,
+            },
+            { upsert: true, new: true }
+          );
+        } else {
+          mockStore.paymentAttempts.push({
+            _id: `pa_${Date.now()}`,
+            paymentId: failedPaymentId,
+            razorpayOrderId: rzpOrderId || order?.razorpayOrderId || '',
+            gateway: 'razorpay',
+            order: order?._id,
+            orderId: order?.orderId || customOrderId || 'N/A',
+            customerName: order?.shippingAddress?.fullName || 'Zivana Patron',
+            customerEmail: paymentEntity?.email || '',
+            customerPhone: paymentEntity?.contact || '',
+            amount: failAmount,
+            currency: paymentEntity?.currency || 'INR',
+            paymentMethod: paymentEntity?.method ? `Razorpay ${paymentEntity.method.toUpperCase()}` : 'Razorpay Online',
+            status: 'failed',
+            errorCode: failCode,
+            failureReason: failReason,
+            rawResponse: payload,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          });
+        }
+      } catch (logErr) {
+        console.warn('[PaymentAttempt] Failed to log failed attempt:', logErr.message);
+      }
+
       return res.status(200).json({ status: 'recorded_failure' });
     }
 
@@ -931,6 +1039,107 @@ export const razorpayWebhook = async (req, res) => {
       success: false,
       message: 'Internal error processing Razorpay webhook.',
     });
+  }
+};
+
+/**
+ * POST /api/payment/record-attempt
+ * Records real-time payment attempt failures/dismissals from checkout modal
+ */
+export const recordPaymentAttempt = async (req, res) => {
+  try {
+    const {
+      orderId,
+      razorpayOrderId,
+      paymentId,
+      status,
+      errorCode,
+      failureReason,
+      paymentMethod,
+    } = req.body;
+
+    if (!orderId) {
+      return res.status(400).json({ success: false, message: 'orderId is required' });
+    }
+
+    let order;
+    if (isMongoConnected) {
+      const orConditions = [{ orderId }];
+      if (mongoose.Types.ObjectId.isValid(orderId)) {
+        orConditions.push({ _id: orderId });
+      }
+      if (razorpayOrderId) {
+        orConditions.push({ razorpayOrderId });
+      }
+      order = await Order.findOne({ $or: orConditions });
+    } else {
+      order = mockStore.orders.find(
+        (o) =>
+          o.orderId === orderId ||
+          o._id === orderId ||
+          (razorpayOrderId && o.razorpayOrderId === razorpayOrderId)
+      );
+    }
+
+    const effectivePaymentId = paymentId || `att_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    const attemptData = {
+      paymentId: effectivePaymentId,
+      razorpayOrderId: razorpayOrderId || order?.razorpayOrderId || '',
+      gateway: 'razorpay',
+      order: order?._id,
+      orderId: order?.orderId || orderId,
+      customerName: order?.shippingAddress?.fullName || req.user?.name || 'Zivana Patron',
+      customerEmail: req.user?.email || order?.shippingAddress?.email || '',
+      customerPhone: order?.shippingAddress?.phone || req.user?.phone || '',
+      amount: order?.totalPrice || 0,
+      currency: 'INR',
+      paymentMethod: paymentMethod || 'Razorpay Online',
+      status: status || 'failed',
+      errorCode: errorCode || '',
+      failureReason: failureReason || 'Customer cancelled or payment declined at checkout.',
+      rawResponse: req.body,
+    };
+
+    if (isMongoConnected) {
+      await PaymentAttempt.findOneAndUpdate(
+        { paymentId: effectivePaymentId },
+        attemptData,
+        { upsert: true, new: true }
+      );
+
+      // If order is not paid, update paymentResult on order without changing orderStatus to confirmed
+      if (order && !order.isPaid) {
+        order.paymentResult = {
+          status: 'FAILED',
+          razorpay_order_id: razorpayOrderId || order.razorpayOrderId,
+          razorpay_payment_id: paymentId,
+          payment_message: failureReason || 'Payment failed/abandoned by patron.',
+          raw_response: req.body,
+        };
+        await order.save();
+      }
+    } else {
+      mockStore.paymentAttempts.push({
+        _id: `pa_${Date.now()}`,
+        ...attemptData,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
+      if (order && !order.isPaid) {
+        order.paymentResult = {
+          status: 'FAILED',
+          razorpay_order_id: razorpayOrderId || order.razorpayOrderId,
+          razorpay_payment_id: paymentId,
+          payment_message: failureReason || 'Payment failed/abandoned by patron.',
+          raw_response: req.body,
+        };
+      }
+    }
+
+    return res.status(200).json({ success: true, message: 'Payment attempt recorded' });
+  } catch (err) {
+    console.error('[Record Payment Attempt Error]:', err.message);
+    return res.status(500).json({ success: false, message: err.message });
   }
 };
 

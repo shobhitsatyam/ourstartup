@@ -3,6 +3,7 @@ import {
   createRazorpayOrder,
   verifyRazorpayPayment,
   razorpayWebhook,
+  recordPaymentAttempt,
   createCashfreeOrder,
   verifyCashfreePayment,
   cashfreeWebhook,
@@ -23,6 +24,9 @@ router.post('/razorpay/verify', optionalProtect, verifyRazorpayPayment);
 
 // 3. Webhook notification endpoint from Razorpay (RAW body HMAC-SHA256 signature verification)
 router.post('/razorpay/webhook', razorpayWebhook);
+
+// 4. Real-time client-side payment attempt diagnostics endpoint
+router.post('/record-attempt', optionalProtect, recordPaymentAttempt);
 
 /**
  * Legacy & Cashfree Payment Gateway Routes (Retained for backwards compatibility)

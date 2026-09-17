@@ -294,10 +294,29 @@ export default function CheckoutPage() {
           onDismiss: () => {
             setIsProcessing(false);
             addToast('Payment was not completed. You can retry or choose Cash on Delivery.', 'info');
+            // Asynchronously record payment dismissal for admin monitoring & diagnostics
+            api.post('/payment/record-attempt', {
+              orderId: createdOrder._id,
+              razorpayOrderId: rzpData.razorpayOrderId,
+              status: 'failed',
+              errorCode: 'PAYMENT_CANCELLED',
+              failureReason: 'Patron closed Razorpay checkout modal before payment completion.',
+              paymentMethod: paymentMethod === 'upi' ? 'Razorpay UPI' : 'Razorpay Card',
+            }).catch(() => {});
           },
           onError: (err) => {
             setIsProcessing(false);
             addToast(err?.description || 'Payment processing was declined. Please try again.', 'error');
+            // Asynchronously record payment failure for admin monitoring & diagnostics
+            api.post('/payment/record-attempt', {
+              orderId: createdOrder._id,
+              razorpayOrderId: rzpData.razorpayOrderId,
+              paymentId: err?.metadata?.payment_id || '',
+              status: 'failed',
+              errorCode: err?.code || 'GATEWAY_DECLINE',
+              failureReason: err?.description || 'Payment processing was declined at gateway.',
+              paymentMethod: paymentMethod === 'upi' ? 'Razorpay UPI' : 'Razorpay Card',
+            }).catch(() => {});
           },
         });
         return;

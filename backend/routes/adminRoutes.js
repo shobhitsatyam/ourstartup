@@ -8,6 +8,7 @@ import {
   deleteProduct,
   getAdminOrders,
   updateOrderStatus,
+  getAdminPayments,
   getAdminCustomers,
   getAdminCoupons,
   createCoupon,
@@ -45,6 +46,9 @@ router.route('/products/:id')
 // Order management
 router.get('/orders', getAdminOrders);
 router.put('/orders/:id/status', updateOrderStatus);
+
+// Payment attempts & transaction monitoring
+router.get('/payments', getAdminPayments);
 
 // Customer management
 router.get('/customers', getAdminCustomers);

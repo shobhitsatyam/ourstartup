@@ -2,6 +2,7 @@ import Order from '../models/Order.js';
 import Product from '../models/Product.js';
 import User from '../models/User.js';
 import Coupon from '../models/Coupon.js';
+import PaymentAttempt from '../models/PaymentAttempt.js';
 import { getNextSku } from '../models/SkuCounter.js';
 import { isMongoConnected } from '../config/db.js';
 import { mockStore } from '../config/mockStore.js';
@@ -22,7 +23,15 @@ export const getDashboardMetrics = async (req, res) => {
     ];
 
     if (isMongoConnected) {
-      const totalOrders = await Order.countDocuments();
+      const genuineOrderQuery = {
+        $or: [
+          { isPaid: true },
+          { paymentMethod: 'cod' },
+          { 'paymentResult.status': { $ne: 'FAILED' } },
+        ],
+      };
+
+      const totalOrders = await Order.countDocuments(genuineOrderQuery);
       const totalCustomers = await User.countDocuments({ role: 'user' });
       const totalProducts = await Product.countDocuments();
       const lowStockCount = await Product.countDocuments({ stock: { $lte: 5 } });
@@ -31,13 +40,18 @@ export const getDashboardMetrics = async (req, res) => {
         {
           $match: {
             orderStatus: { $nin: CANCELLED_STATUSES },
+            'paymentResult.status': { $ne: 'FAILED' },
+            $or: [
+              { isPaid: true },
+              { paymentMethod: 'cod' },
+            ],
           },
         },
         { $group: { _id: null, totalRevenue: { $sum: '$totalPrice' } } },
       ]);
       const totalRevenue = revenueAgg[0]?.totalRevenue || 0;
 
-      const recentOrders = await Order.find()
+      const recentOrders = await Order.find(genuineOrderQuery)
         .populate('user', 'name email phone')
         .sort({ createdAt: -1 })
         .limit(8);
@@ -59,20 +73,30 @@ export const getDashboardMetrics = async (req, res) => {
         },
       });
     } else {
-      const isOrderActive = (o) => {
-        const s = String(o.orderStatus || o.status || '').trim().toLowerCase();
-        return !['cancelled', 'canceled', 'refunded', 'returned'].includes(s);
+      const isGenuineOrder = (o) => {
+        const payStatus = String(o.paymentResult?.status || '').trim().toUpperCase();
+        if (payStatus === 'FAILED' && !o.isPaid) return false;
+        return true;
       };
 
-      const totalOrders = mockStore.orders.length;
+      const isOrderRevenueValid = (o) => {
+        if (!isGenuineOrder(o)) return false;
+        const s = String(o.orderStatus || o.status || '').trim().toLowerCase();
+        if (['cancelled', 'canceled', 'refunded', 'returned'].includes(s)) return false;
+        const method = String(o.paymentMethod || '').trim().toLowerCase();
+        return o.isPaid || method === 'cod';
+      };
+
+      const genuineOrdersList = mockStore.orders.filter(isGenuineOrder);
+      const totalOrders = genuineOrdersList.length;
       const totalCustomers = mockStore.users.filter((u) => u.role === 'user').length;
       const totalProducts = mockStore.products.length;
       const lowStockCount = mockStore.products.filter((p) => p.stock <= 5).length;
       const totalRevenue = mockStore.orders.reduce(
-        (sum, o) => sum + (isOrderActive(o) ? (Number(o.totalPrice) || Number(o.totalAmount) || 0) : 0),
+        (sum, o) => sum + (isOrderRevenueValid(o) ? (Number(o.totalPrice) || Number(o.totalAmount) || 0) : 0),
         0
       );
-      const recentOrders = mockStore.orders.slice(0, 8);
+      const recentOrders = genuineOrdersList.slice(0, 8);
       const topProducts = mockStore.products.slice(0, 5);
 
       return res.json({
@@ -319,12 +343,14 @@ export const deleteProduct = async (req, res) => {
 
 export const getAdminOrders = async (req, res) => {
   try {
-    const { status } = req.query;
+    const { status, tab } = req.query;
     const STATUS_MAP = {
       pending: 'Pending',
       confirmed: 'Confirmed',
       processing: 'Processing',
+      packed: 'Packed',
       shipped: 'Shipped',
+      'in transit': 'In Transit',
       'out for delivery': 'Out for Delivery',
       delivered: 'Delivered',
       cancelled: 'Cancelled',
@@ -335,14 +361,82 @@ export const getAdminOrders = async (req, res) => {
 
     if (isMongoConnected) {
       const query = {};
+
+      // 1. Tab-based filtering for genuine orders vs payment state
+      const selectedTab = (tab || 'all').trim().toLowerCase();
+      if (selectedTab === 'paid') {
+        // Genuine orders where online payment has been successfully verified/captured
+        query.isPaid = true;
+        query.paymentMethod = { $ne: 'cod' };
+      } else if (selectedTab === 'cod') {
+        // Genuine orders where paymentMethod is COD (independent of Razorpay)
+        query.paymentMethod = 'cod';
+      } else if (selectedTab === 'pending') {
+        // Genuine orders created in DB whose online payment is pending/incomplete (not hard-failed attempts)
+        query.isPaid = false;
+        query.paymentMethod = { $ne: 'cod' };
+        query.orderStatus = { $nin: ['Cancelled', 'cancelled', 'Canceled', 'canceled', 'Refunded', 'refunded'] };
+        query['paymentResult.status'] = { $ne: 'FAILED' };
+      } else if (selectedTab === 'cancelled') {
+        query.orderStatus = { $in: ['Cancelled', 'cancelled', 'Canceled', 'canceled'] };
+      } else if (selectedTab === 'refunded') {
+        query.$or = [
+          { orderStatus: { $in: ['Refunded', 'refunded'] } },
+          { 'paymentResult.status': 'REFUNDED' },
+        ];
+      } else {
+        // ALL ORDERS: Genuine ecommerce orders according to application's actual order lifecycle.
+        // Excludes records that are solely uncompleted failed payment attempts
+        query.$or = [
+          { isPaid: true },
+          { paymentMethod: 'cod' },
+          { 'paymentResult.status': { $ne: 'FAILED' } },
+        ];
+      }
+
+      // 2. Secondary orderStatus filter (e.g. Shipped, Delivered)
       if (status && status !== 'all') {
         const normalized = STATUS_MAP[status.trim().toLowerCase()] || status;
         query.orderStatus = normalized;
       }
+
       const orders = await Order.find(query).populate('user', 'name email phone').sort({ createdAt: -1 });
       return res.json({ success: true, data: orders });
     } else {
       let orders = mockStore.orders;
+      const selectedTab = (tab || 'all').trim().toLowerCase();
+
+      // Tab filtering in memory
+      if (selectedTab === 'paid') {
+        orders = orders.filter((o) => o.isPaid && o.paymentMethod !== 'cod');
+      } else if (selectedTab === 'cod') {
+        orders = orders.filter((o) => o.paymentMethod === 'cod');
+      } else if (selectedTab === 'pending') {
+        orders = orders.filter((o) => {
+          const s = String(o.orderStatus || o.status || '').trim().toLowerCase();
+          const paySt = String(o.paymentResult?.status || '').trim().toUpperCase();
+          return !o.isPaid && o.paymentMethod !== 'cod' && !['cancelled', 'canceled', 'refunded'].includes(s) && paySt !== 'FAILED';
+        });
+      } else if (selectedTab === 'cancelled') {
+        orders = orders.filter((o) => {
+          const s = String(o.orderStatus || o.status || '').trim().toLowerCase();
+          return s === 'cancelled' || s === 'canceled';
+        });
+      } else if (selectedTab === 'refunded') {
+        orders = orders.filter((o) => {
+          const s = String(o.orderStatus || o.status || '').trim().toLowerCase();
+          const paySt = String(o.paymentResult?.status || '').trim().toUpperCase();
+          return s === 'refunded' || paySt === 'REFUNDED';
+        });
+      } else {
+        // All Genuine orders
+        orders = orders.filter((o) => {
+          const paySt = String(o.paymentResult?.status || '').trim().toUpperCase();
+          return o.isPaid || o.paymentMethod === 'cod' || paySt !== 'FAILED';
+        });
+      }
+
+      // Secondary status filter
       if (status && status !== 'all') {
         const lower = status.trim().toLowerCase();
         orders = orders.filter((o) => {
@@ -350,9 +444,126 @@ export const getAdminOrders = async (req, res) => {
           return s === lower || (lower === 'cancelled' && s === 'canceled');
         });
       }
+
       return res.json({ success: true, data: orders });
     }
   } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+/**
+ * GET /api/admin/payments
+ * Fetches gateway payment attempts & transactions with diagnostics
+ */
+export const getAdminPayments = async (req, res) => {
+  try {
+    const { status, tab, search } = req.query;
+    const filterStatus = (status || tab || 'all').trim().toLowerCase();
+
+    let attempts = [];
+
+    if (isMongoConnected) {
+      const query = {};
+      if (filterStatus && filterStatus !== 'all') {
+        if (filterStatus === 'captured') {
+          query.status = 'captured';
+        } else if (filterStatus === 'failed') {
+          query.status = 'failed';
+        } else if (filterStatus === 'refunded') {
+          query.status = 'refunded';
+        }
+      }
+
+      if (search && search.trim()) {
+        const s = search.trim();
+        query.$or = [
+          { paymentId: { $regex: s, $options: 'i' } },
+          { razorpayOrderId: { $regex: s, $options: 'i' } },
+          { orderId: { $regex: s, $options: 'i' } },
+          { customerName: { $regex: s, $options: 'i' } },
+          { customerEmail: { $regex: s, $options: 'i' } },
+        ];
+      }
+
+      attempts = await PaymentAttempt.find(query).sort({ createdAt: -1 }).lean();
+
+      // Backwards Compatibility: If historical orders exist with paymentResult that aren't yet in PaymentAttempt
+      const existingPaymentIds = new Set(attempts.map((a) => a.paymentId).filter(Boolean));
+
+      const historicalOrders = await Order.find({
+        $or: [
+          { 'paymentResult.id': { $exists: true, $ne: null } },
+          { 'paymentResult.razorpay_payment_id': { $exists: true, $ne: null } },
+          { 'paymentResult.cf_payment_id': { $exists: true, $ne: null } },
+          { 'paymentResult.status': 'FAILED' },
+        ],
+      })
+        .populate('user', 'name email phone')
+        .lean();
+
+      for (const order of historicalOrders) {
+        const pResult = order.paymentResult || {};
+        const payId = pResult.razorpay_payment_id || pResult.cf_payment_id || pResult.id;
+        const normalizedPayId = payId || `order_pay_${order.orderId}`;
+
+        if (!existingPaymentIds.has(normalizedPayId)) {
+          const isCaptured = order.isPaid || pResult.status === 'SUCCESS';
+          const isFailed = pResult.status === 'FAILED';
+          const isRefunded = order.orderStatus === 'Refunded' || pResult.status === 'REFUNDED';
+          let st = 'pending';
+          if (isRefunded) st = 'refunded';
+          else if (isCaptured) st = 'captured';
+          else if (isFailed) st = 'failed';
+
+          if (filterStatus === 'all' || filterStatus === st) {
+            attempts.push({
+              _id: `hist_${order._id}`,
+              paymentId: payId || 'N/A',
+              razorpayOrderId: order.razorpayOrderId || pResult.razorpay_order_id || '',
+              gateway: order.paymentMethod === 'cashfree' ? 'cashfree' : (order.paymentMethod === 'cod' ? 'cod' : 'razorpay'),
+              order: order._id,
+              orderId: order.orderId,
+              customerName: order.shippingAddress?.fullName || order.user?.name || 'Zivana Patron',
+              customerEmail: order.user?.email || order.shippingAddress?.email || '',
+              customerPhone: order.shippingAddress?.phone || order.user?.phone || '',
+              amount: Number(order.totalPrice) || 0,
+              currency: 'INR',
+              paymentMethod: pResult.payment_method || (order.paymentMethod === 'cod' ? 'Cash on Delivery' : 'Razorpay Online'),
+              status: st,
+              errorCode: pResult.error_code || '',
+              failureReason: pResult.payment_message || (isFailed ? 'Payment failed at gateway' : ''),
+              createdAt: order.paidAt || order.createdAt || new Date(),
+              updatedAt: order.updatedAt || order.createdAt || new Date(),
+            });
+            existingPaymentIds.add(normalizedPayId);
+          }
+        }
+      }
+
+      // Re-sort combined list by date descending
+      attempts.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    } else {
+      attempts = [...(mockStore.paymentAttempts || [])];
+      if (filterStatus && filterStatus !== 'all') {
+        attempts = attempts.filter((p) => p.status === filterStatus);
+      }
+      if (search && search.trim()) {
+        const s = search.trim().toLowerCase();
+        attempts = attempts.filter(
+          (p) =>
+            (p.paymentId && p.paymentId.toLowerCase().includes(s)) ||
+            (p.orderId && p.orderId.toLowerCase().includes(s)) ||
+            (p.customerName && p.customerName.toLowerCase().includes(s)) ||
+            (p.customerEmail && p.customerEmail.toLowerCase().includes(s))
+        );
+      }
+      attempts.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    }
+
+    return res.json({ success: true, data: attempts });
+  } catch (error) {
+    console.error('[getAdminPayments Error]:', error.message);
     res.status(500).json({ success: false, message: error.message });
   }
 };
