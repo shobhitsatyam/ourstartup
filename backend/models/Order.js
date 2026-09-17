@@ -50,11 +50,16 @@ const orderSchema = new mongoose.Schema(
       index: true,
       default: '',
     },
+    razorpayOrderId: {
+      type: String,
+      index: true,
+      default: '',
+    },
     paymentMethod: {
       type: String,
       required: true,
       enum: ['cashfree', 'razorpay', 'upi', 'card', 'cod'],
-      default: 'cashfree',
+      default: 'razorpay',
     },
     paymentResult: {
       id: { type: String },

@@ -20,6 +20,7 @@ import {
 import api from '../services/api';
 import { useCart } from '../context/CartContext';
 import { useToast } from '../context/ToastContext';
+import { launchRazorpayCheckout } from '../services/razorpay';
 import { launchCashfreeCheckout } from '../services/cashfree';
 
 export default function OrderSuccessPage() {
@@ -67,68 +68,66 @@ export default function OrderSuccessPage() {
       }
 
       try {
-        // 1. First attempt server-side Cashfree verification
-        const verifyRes = await api.post('/payment/cashfree/verify', {
-          order_id: rawOrderId,
-        });
-
-        const vData = verifyRes.data;
-
-        if (vData?.success && vData?.status === 'SUCCESS') {
-          setOrder(vData.data);
-          setStatus('SUCCESS');
-          clearCart();
-          triggerConfetti();
-          return;
-        }
-
-        if (vData?.status === 'PENDING') {
-          setOrder(vData.data);
-          setStatus('PENDING');
-          setErrorMessage(vData.message || 'Payment is currently being cleared by your bank.');
-          return;
-        }
-
-        if (['FAILED', 'USER_DROPPED', 'CANCELLED'].includes(vData?.status)) {
-          setOrder(vData.data);
-          setStatus('FAILED');
-          setErrorMessage(vData.message || 'Payment attempt was cancelled or declined.');
-          return;
-        }
-
-        // Fallback: Query direct internal order endpoint
-        const orderRes = await api.get(`/orders/${rawOrderId}`);
-        if (orderRes.data?.success) {
+        // 1. Fetch internal order record directly from backend
+        const orderRes = await api.get(`/orders/${rawOrderId}`).catch(() => null);
+        if (orderRes?.data?.success) {
           const directOrder = orderRes.data.data;
           setOrder(directOrder);
           if (directOrder.isPaid || directOrder.paymentMethod === 'cod') {
             setStatus('SUCCESS');
             clearCart();
             triggerConfetti();
+            return;
+          }
+        }
+
+        // 2. If it's a legacy Cashfree order, attempt Cashfree verification
+        if (orderRes?.data?.data?.paymentMethod === 'cashfree' || (!orderRes && String(rawOrderId).startsWith('cf_'))) {
+          const verifyRes = await api.post('/payment/cashfree/verify', {
+            order_id: rawOrderId,
+          });
+
+          const vData = verifyRes.data;
+
+          if (vData?.success && vData?.status === 'SUCCESS') {
+            setOrder(vData.data);
+            setStatus('SUCCESS');
+            clearCart();
+            triggerConfetti();
+            return;
+          }
+
+          if (vData?.status === 'PENDING') {
+            setOrder(vData.data);
+            setStatus('PENDING');
+            setErrorMessage(vData.message || 'Payment is currently being cleared by your bank.');
+            return;
+          }
+
+          if (['FAILED', 'USER_DROPPED', 'CANCELLED'].includes(vData?.status)) {
+            setOrder(vData.data);
+            setStatus('FAILED');
+            setErrorMessage(vData.message || 'Payment attempt was cancelled or declined.');
+            return;
+          }
+        }
+
+        if (orderRes?.data?.data) {
+          const ord = orderRes.data.data;
+          if (ord.isPaid || ord.paymentMethod === 'cod') {
+            setStatus('SUCCESS');
+            clearCart();
+            triggerConfetti();
           } else {
             setStatus('PENDING');
+            setErrorMessage('Awaiting payment clearance or confirmation.');
           }
         }
       } catch (err) {
         console.error('[OrderSuccess] Verification error:', err);
-        // If verify endpoint threw an error, check if order is viewable as COD or already paid
-        try {
-          const fallbackRes = await api.get(`/orders/${rawOrderId}`);
-          if (fallbackRes.data?.success) {
-            const fallbackOrder = fallbackRes.data.data;
-            setOrder(fallbackOrder);
-            if (fallbackOrder.isPaid || fallbackOrder.paymentMethod === 'cod') {
-              setStatus('SUCCESS');
-              clearCart();
-              triggerConfetti();
-              return;
-            }
-          }
-        } catch (fErr) {}
-
         const serverMsg = err.response?.data?.message || err.message;
         setStatus('FAILED');
-        setErrorMessage(serverMsg || 'Failed to verify payment status with Cashfree.');
+        setErrorMessage(serverMsg || 'Failed to verify payment status.');
       }
     },
     [rawOrderId, clearCart]
@@ -153,7 +152,7 @@ export default function OrderSuccessPage() {
     return () => clearTimeout(timer);
   }, [status, pollCount, verifyAndLoadOrder]);
 
-  // Retry payment directly via Cashfree Hosted Checkout
+  // Retry payment directly via Razorpay or Cashfree
   const handleRetryPayment = async () => {
     const targetOrderId = order?._id || rawOrderId;
     if (!targetOrderId) {
@@ -163,12 +162,68 @@ export default function OrderSuccessPage() {
 
     setIsRetrying(true);
     try {
+      if (order?.paymentMethod === 'razorpay' || !order?.paymentMethod || order?.paymentMethod !== 'cashfree') {
+        const res = await api.post('/payment/razorpay/create-order', {
+          orderId: targetOrderId,
+        });
+
+        if (res.data?.success && res.data?.data) {
+          const rData = res.data.data;
+          await launchRazorpayCheckout({
+            key: rData.keyId,
+            amount: rData.amount,
+            currency: rData.currency || 'INR',
+            order_id: rData.razorpayOrderId,
+            name: 'Zivana Jewels',
+            description: `Order #${order?.orderId || targetOrderId}`,
+            prefill: rData.prefill || {},
+            notes: { orderId: order?.orderId || targetOrderId },
+            onSuccess: async (response) => {
+              try {
+                addToast('Verifying payment clearance with bank...', 'info');
+                const verifyRes = await api.post('/payment/razorpay/verify', {
+                  orderId: targetOrderId,
+                  razorpay_order_id: response.razorpay_order_id,
+                  razorpay_payment_id: response.razorpay_payment_id,
+                  razorpay_signature: response.razorpay_signature,
+                });
+
+                if (verifyRes.data?.success) {
+                  setOrder(verifyRes.data.data);
+                  setStatus('SUCCESS');
+                  clearCart();
+                  triggerConfetti();
+                  addToast('Payment verified successfully!', 'success');
+                } else {
+                  throw new Error(verifyRes.data?.message || 'Payment verification failed.');
+                }
+              } catch (vErr) {
+                console.error('[OrderSuccess] Verification Error:', vErr);
+                addToast(vErr.response?.data?.message || vErr.message || 'Payment verification failed.', 'error');
+              } finally {
+                setIsRetrying(false);
+              }
+            },
+            onDismiss: () => {
+              setIsRetrying(false);
+              addToast('Payment retry was cancelled.', 'info');
+            },
+            onError: (err) => {
+              setIsRetrying(false);
+              addToast(err?.description || 'Payment failed. Please try again.', 'error');
+            },
+          });
+          return;
+        }
+      }
+
+      // Fallback for legacy Cashfree orders
       const res = await api.post('/payment/cashfree/create-order', {
         orderId: targetOrderId,
       });
 
       if (res.data?.success && res.data?.data?.payment_session_id) {
-        addToast('Reopening Cashfree secure checkout portal...', 'info');
+        addToast('Reopening secure checkout portal...', 'info');
         await launchCashfreeCheckout(res.data.data.payment_session_id, '_self');
       } else {
         throw new Error(res.data?.message || 'Failed to initialize retry session.');
@@ -201,13 +256,15 @@ export default function OrderSuccessPage() {
 
             <div className="space-y-1.5">
               <span className="text-[10px] sm:text-xs font-bold uppercase tracking-[0.25em] text-[#7464B8]">
-                Cashfree PG Verification
+                {order?.paymentMethod === 'cashfree' ? 'Cashfree PG Verification' : 'Payment Verification'}
               </span>
               <h2 className="font-serif text-xl sm:text-2xl font-light text-[#17151F]">
                 SECURING YOUR HEIRLOOM
               </h2>
               <p className="text-xs sm:text-sm text-gray-500 font-light max-w-md mx-auto">
-                Verifying bank clearance and payment receipt with Cashfree servers. Please do not close this window.
+                {order?.paymentMethod === 'cashfree'
+                  ? 'Verifying bank clearance and payment receipt with Cashfree servers. Please do not close this window.'
+                  : 'Verifying bank clearance and payment receipt with secure payment gateway. Please do not close this window.'}
               </p>
             </div>
 
@@ -277,7 +334,7 @@ export default function OrderSuccessPage() {
                 ) : (
                   <>
                     <RotateCcw className="w-4 h-4 text-[#D6CFFF]" />
-                    <span>Retry Payment with Cashfree</span>
+                    <span>Retry Payment</span>
                   </>
                 )}
               </button>
@@ -319,7 +376,7 @@ export default function OrderSuccessPage() {
             <div className="p-4 rounded-2xl bg-amber-50/60 border border-amber-200 text-xs text-amber-900 space-y-1">
               <p className="font-semibold">Automatic Status Polling Active...</p>
               <p className="text-[11px] text-amber-800">
-                Checking Cashfree status attempt {pollCount + 1} of 5. Once confirmed, your order updates automatically.
+                Checking payment confirmation attempt {pollCount + 1} of 5. Once confirmed, your order updates automatically.
               </p>
             </div>
 
@@ -389,7 +446,7 @@ export default function OrderSuccessPage() {
                   ) : (
                     <CreditCard className="w-3.5 h-3.5 text-emerald-600" />
                   )}
-                  {isCod ? 'Cash on Delivery' : 'Prepaid (Cashfree)'}
+                  {isCod ? 'Cash on Delivery' : (order?.paymentMethod === 'razorpay' ? 'Prepaid (Razorpay)' : 'Prepaid Online')}
                 </span>
               </div>
               <div>

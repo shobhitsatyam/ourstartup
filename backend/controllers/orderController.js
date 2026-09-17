@@ -155,10 +155,10 @@ export const createOrder = async (req, res) => {
       const oceanPointsEarned = Math.floor(payableAmount / 100);
       const orderId = generateOrderId();
 
-      const isOnlinePayment = (paymentMethod || 'cashfree') !== 'cod';
+      const isOnlinePayment = (paymentMethod || 'razorpay') !== 'cod';
       const initialStatus = isOnlinePayment ? 'Pending' : 'Confirmed';
       const initialTimelineNote = isOnlinePayment
-        ? 'Order initialized. Awaiting Cashfree online payment verification.'
+        ? 'Order initialized. Awaiting Razorpay online payment verification.'
         : 'COD Order placed and confirmed at Zivana Jewels.';
 
       const order = new Order({
@@ -166,7 +166,7 @@ export const createOrder = async (req, res) => {
         user: req.user?._id || null,
         orderItems: verifiedOrderItems,
         shippingAddress,
-        paymentMethod: paymentMethod || 'cashfree',
+        paymentMethod: paymentMethod || 'razorpay',
         itemsPrice,
         taxPrice: 0,
         shippingPrice,
@@ -288,10 +288,10 @@ export const createOrder = async (req, res) => {
       const oceanPointsEarned = Math.floor(payableAmount / 100);
       const orderId = generateOrderId();
 
-      const isOnlineMock = (paymentMethod || 'cashfree') !== 'cod';
+      const isOnlineMock = (paymentMethod || 'razorpay') !== 'cod';
       const mockInitialStatus = isOnlineMock ? 'Pending' : 'Confirmed';
       const mockTimelineNote = isOnlineMock
-        ? 'Order initialized. Awaiting Cashfree online payment verification.'
+        ? 'Order initialized. Awaiting Razorpay online payment verification.'
         : 'COD Order placed and confirmed at Zivana Jewels.';
 
       const newOrder = {
@@ -300,7 +300,7 @@ export const createOrder = async (req, res) => {
         user: req.user?._id || 'guest',
         orderItems: verifiedOrderItems,
         shippingAddress,
-        paymentMethod: paymentMethod || 'cashfree',
+        paymentMethod: paymentMethod || 'razorpay',
         itemsPrice,
         taxPrice: 0,
         shippingPrice,

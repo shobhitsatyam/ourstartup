@@ -2050,13 +2050,30 @@ export default function AdminDashboardPage() {
                   ) : (
                     <CreditCard className="w-4 h-4 text-emerald-600" />
                   )}
-                  {selectedOrder.paymentMethod?.toUpperCase() || 'ONLINE'}
+                  {selectedOrder.paymentMethod?.toLowerCase() === 'cod'
+                    ? 'COD'
+                    : selectedOrder.paymentMethod?.toLowerCase() === 'razorpay'
+                    ? 'Razorpay'
+                    : selectedOrder.paymentMethod?.toLowerCase() === 'cashfree'
+                    ? 'Cashfree'
+                    : selectedOrder.paymentMethod?.toUpperCase() || 'ONLINE'}
                   <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                     selectedOrder.isPaid ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
                   }`}>
                     {selectedOrder.isPaid ? 'Paid' : 'Unpaid'}
                   </span>
                 </span>
+                {(selectedOrder.razorpayOrderId || selectedOrder.paymentResult?.razorpay_order_id || selectedOrder.paymentResult?.razorpay_payment_id) && (
+                  <div className="mt-1 text-[10.5px] font-mono text-gray-600">
+                    {selectedOrder.razorpayOrderId && <span>Order: {selectedOrder.razorpayOrderId} </span>}
+                    {selectedOrder.paymentResult?.razorpay_payment_id && <span>• Pay ID: {selectedOrder.paymentResult.razorpay_payment_id}</span>}
+                  </div>
+                )}
+                {(selectedOrder.cashfreeOrderId || selectedOrder.paymentResult?.cf_order_id) && !selectedOrder.razorpayOrderId && (
+                  <div className="mt-1 text-[10.5px] font-mono text-gray-600">
+                    CF Order: {selectedOrder.cashfreeOrderId || selectedOrder.paymentResult?.cf_order_id}
+                  </div>
+                )}
               </div>
 
               <div>

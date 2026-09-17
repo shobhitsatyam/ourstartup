@@ -65,7 +65,7 @@ export const createCashfreePgOrder = async ({
   const config = getCashfreeConfig();
 
   if (!config.appId || !config.secretKey) {
-    throw new Error('Cashfree credentials (CASHFREE_APP_ID / CASHFREE_SECRET_KEY) are not configured in backend environment variables.');
+    throw new Error('Cashfree payment service is unavailable. Please use Razorpay online payment.');
   }
 
   const payload = {

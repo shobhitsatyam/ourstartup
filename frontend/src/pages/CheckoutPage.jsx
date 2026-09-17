@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -21,7 +21,7 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import SmartCouponSuggestion from '../components/cart/SmartCouponSuggestion';
 import api from '../services/api';
-import { launchCashfreeCheckout } from '../services/cashfree';
+import { launchRazorpayCheckout } from '../services/razorpay';
 
 export default function CheckoutPage() {
   const {
@@ -67,6 +67,7 @@ export default function CheckoutPage() {
   // Payment Method: 'upi' | 'card' | 'cod'
   const [paymentMethod, setPaymentMethod] = useState('upi');
   const [isProcessing, setIsProcessing] = useState(false);
+  const activePendingOrderRef = useRef(null);
 
   // COD Handling Fee is ₹15 extra (Non-refundable)
   const codFee = paymentMethod === 'cod' ? 15 : 0;
@@ -199,41 +200,111 @@ export default function CheckoutPage() {
     }
 
     try {
-      // 1. Create Order on Backend
-      const orderPayload = {
-        orderItems: cartItems.map((item) => ({
-          product: item.product || item._id,
-          name: item.name,
-          price: item.price,
-          quantity: item.quantity,
-          size: item.size,
-        })),
-        shippingAddress: finalAddress,
-        paymentMethod: paymentMethod === 'cod' ? 'cod' : 'cashfree',
-        couponCode: appliedCoupon?.code || '',
-        redeemOceanPoints: redeemOceanPoints,
+      const finalAddress = {
+        fullName: addressForm.fullName.trim(),
+        phone: addressForm.phone.trim(),
+        house: addressForm.house.trim(),
+        street: addressForm.street.trim(),
+        area: addressForm.area.trim(),
+        city: addressForm.city.trim(),
+        state: addressForm.state.trim(),
+        pincode: addressForm.pincode.trim(),
+        landmark: addressForm.landmark.trim(),
       };
 
-      const orderRes = await api.post('/orders', orderPayload);
-      if (!orderRes.data?.success) {
-        throw new Error(orderRes.data?.message || 'Order creation failed');
-      }
+      let createdOrder = null;
 
-      const createdOrder = orderRes.data.data;
+      // 1. If Online Payment and an order was already created in this checkout attempt, reuse it (Idempotency)
+      if (paymentMethod !== 'cod' && activePendingOrderRef.current) {
+        createdOrder = activePendingOrderRef.current;
+      } else {
+        const orderPayload = {
+          orderItems: cartItems.map((item) => ({
+            product: item.product || item._id,
+            name: item.name,
+            price: item.price,
+            quantity: item.quantity,
+            size: item.size,
+          })),
+          shippingAddress: finalAddress,
+          paymentMethod: paymentMethod === 'cod' ? 'cod' : 'razorpay',
+          couponCode: appliedCoupon?.code || '',
+          redeemOceanPoints: redeemOceanPoints,
+        };
 
-      // 2. If Online Payment (UPI or Card): Initiate Cashfree Hosted Web Checkout
-      if (paymentMethod !== 'cod') {
-        const cfRes = await api.post('/payment/cashfree/create-order', { orderId: createdOrder._id });
-        if (cfRes.data?.success && cfRes.data?.data?.payment_session_id) {
-          addToast('Opening secure payment portal...', 'info');
-          await launchCashfreeCheckout(cfRes.data.data.payment_session_id, '_self');
-          return;
-        } else {
-          throw new Error(cfRes.data?.message || 'Failed to initialize payment session.');
+        const orderRes = await api.post('/orders', orderPayload);
+        if (!orderRes.data?.success) {
+          throw new Error(orderRes.data?.message || 'Order creation failed');
+        }
+
+        createdOrder = orderRes.data.data;
+        if (paymentMethod !== 'cod') {
+          activePendingOrderRef.current = createdOrder;
         }
       }
 
-      // COD or standard direct order
+      // 2. If Online Payment: Initiate Razorpay Checkout Modal
+      if (paymentMethod !== 'cod') {
+        const rzpRes = await api.post('/payment/razorpay/create-order', { orderId: createdOrder._id });
+        if (!rzpRes.data?.success || !rzpRes.data?.data) {
+          throw new Error(rzpRes.data?.message || 'Failed to initialize Razorpay payment session.');
+        }
+
+        const rzpData = rzpRes.data.data;
+
+        await launchRazorpayCheckout({
+          key: rzpData.keyId,
+          amount: rzpData.amount,
+          currency: rzpData.currency || 'INR',
+          order_id: rzpData.razorpayOrderId,
+          name: 'Zivana Jewels',
+          description: `Order #${createdOrder.orderId}`,
+          prefill: rzpData.prefill || {
+            name: finalAddress.fullName,
+            email: user?.email || '',
+            contact: finalAddress.phone,
+          },
+          notes: {
+            orderId: createdOrder.orderId,
+          },
+          onSuccess: async (response) => {
+            try {
+              addToast('Verifying payment clearance with bank...', 'info');
+              const verifyRes = await api.post('/payment/razorpay/verify', {
+                orderId: createdOrder._id,
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+              });
+
+              if (verifyRes.data?.success) {
+                activePendingOrderRef.current = null;
+                clearCart();
+                addToast('Payment verified & order placed successfully!', 'success');
+                navigate(`/order-success?orderId=${createdOrder._id}`);
+              } else {
+                throw new Error(verifyRes.data?.message || 'Payment verification failed.');
+              }
+            } catch (vErr) {
+              console.error('[Checkout] Verification Error:', vErr);
+              addToast(vErr.response?.data?.message || vErr.message || 'Payment verification failed.', 'error');
+              setIsProcessing(false);
+            }
+          },
+          onDismiss: () => {
+            setIsProcessing(false);
+            addToast('Payment was not completed. You can retry or choose Cash on Delivery.', 'info');
+          },
+          onError: (err) => {
+            setIsProcessing(false);
+            addToast(err?.description || 'Payment processing was declined. Please try again.', 'error');
+          },
+        });
+        return;
+      }
+
+      // 3. COD flow (completely untouched)
+      activePendingOrderRef.current = null;
       clearCart();
       addToast('Order placed successfully!', 'success');
       navigate(`/order-success?orderId=${createdOrder._id}`);
@@ -633,8 +704,13 @@ export default function CheckoutPage() {
                         className="mt-0.5 accent-[#17151F]"
                       />
                       <div>
-                        <p className="font-bold text-gray-900 text-sm">UPI</p>
-                        <p className="text-gray-500 mt-0.5">Google Pay • PhonePe • Paytm</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-bold text-gray-900 text-sm">UPI</p>
+                          <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-[#FAF9FF] text-[#7464B8] border border-[#D6CFFF]">
+                            via Razorpay
+                          </span>
+                        </div>
+                        <p className="text-gray-500 mt-0.5">Google Pay • PhonePe • Paytm • Any UPI App</p>
                       </div>
                     </div>
                   </label>
@@ -656,8 +732,13 @@ export default function CheckoutPage() {
                         className="mt-0.5 accent-[#17151F]"
                       />
                       <div>
-                        <p className="font-bold text-gray-900 text-sm">Credit / Debit Card</p>
-                        <p className="text-gray-500 mt-0.5">Visa • Mastercard • RuPay</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-bold text-gray-900 text-sm">Credit / Debit Card</p>
+                          <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-[#FAF9FF] text-[#7464B8] border border-[#D6CFFF]">
+                            via Razorpay
+                          </span>
+                        </div>
+                        <p className="text-gray-500 mt-0.5">Visa • Mastercard • RuPay • Netbanking</p>
                       </div>
                     </div>
                   </label>

@@ -1,9 +1,11 @@
 import express from 'express';
 import {
+  createRazorpayOrder,
+  verifyRazorpayPayment,
+  razorpayWebhook,
   createCashfreeOrder,
   verifyCashfreePayment,
   cashfreeWebhook,
-  createRazorpayOrder,
   verifyPayment,
 } from '../controllers/paymentController.js';
 import { protect, optionalProtect } from '../middleware/authMiddleware.js';
@@ -11,22 +13,27 @@ import { protect, optionalProtect } from '../middleware/authMiddleware.js';
 const router = express.Router();
 
 /**
- * Cashfree Payment Gateway Routes (Active Online Payment Gateway)
+ * Razorpay Payment Gateway Routes (Production Online Gateway)
  */
-// 1. Create Cashfree hosted order and return payment_session_id
-router.post('/cashfree/create-order', protect, createCashfreeOrder);
+// 1. Create Razorpay order (server-side validation & calculation in paise)
+router.post('/razorpay/create-order', protect, createRazorpayOrder);
 
-// 2. Verify payment status from Cashfree (idempotent, supports both POST and GET, authenticated or guest callback)
-router.post('/cashfree/verify', optionalProtect, verifyCashfreePayment);
-router.get('/cashfree/verify/:orderId', optionalProtect, verifyCashfreePayment);
+// 2. Verify payment status from Razorpay (HMAC-SHA256 signature verification)
+router.post('/razorpay/verify', optionalProtect, verifyRazorpayPayment);
 
-// 3. Webhook notification endpoint from Cashfree (public, verified with HMAC-SHA256 signature)
-router.post('/cashfree/webhook', cashfreeWebhook);
+// 3. Webhook notification endpoint from Razorpay (RAW body HMAC-SHA256 signature verification)
+router.post('/razorpay/webhook', razorpayWebhook);
 
 /**
- * Legacy Razorpay Routes (Deprecated, retained for backwards compatibility)
+ * Legacy & Cashfree Payment Gateway Routes (Retained for backwards compatibility)
  */
+router.post('/cashfree/create-order', protect, createCashfreeOrder);
+router.post('/cashfree/verify', optionalProtect, verifyCashfreePayment);
+router.get('/cashfree/verify/:orderId', optionalProtect, verifyCashfreePayment);
+router.post('/cashfree/webhook', cashfreeWebhook);
+
+// Legacy routes
 router.post('/razorpay-order', protect, createRazorpayOrder);
-router.post('/verify', protect, verifyPayment);
+router.post('/verify', optionalProtect, verifyRazorpayPayment);
 
 export default router;
